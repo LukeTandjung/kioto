@@ -30,6 +30,9 @@
             wayland
             xorg.libxcb
             xorg.libX11
+            vulkan-loader
+            mesa
+            libglvnd
           ];
 
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
@@ -39,6 +42,9 @@
             wayland
             xorg.libxcb
             xorg.libX11
+            vulkan-loader
+            mesa
+            libglvnd
           ]);
 
           packages = with pkgs; [
@@ -58,6 +64,10 @@
             mkdir -p /tmp/nix-xcode-shims
             ln -sf /usr/bin/xcrun /tmp/nix-xcode-shims/xcrun
             export PATH="/tmp/nix-xcode-shims:/Applications/Xcode.app/Contents/Developer/usr/bin:$PATH"
+
+            if [ -d /run/opengl-driver/lib ]; then
+              export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/run/opengl-driver/lib"
+            fi
 
             echo "Rust development shell active! (rustc ${pkgs.rustc.version})"
           '';
