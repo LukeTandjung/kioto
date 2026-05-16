@@ -32,6 +32,15 @@
             xorg.libX11
           ];
 
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
+            fontconfig
+            freetype
+            libxkbcommon
+            wayland
+            xorg.libxcb
+            xorg.libX11
+          ]);
+
           packages = with pkgs; [
             rustc
             clippy
