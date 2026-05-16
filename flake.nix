@@ -20,6 +20,7 @@
         default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
             cargo
+            pkg-config
           ];
 
           packages = with pkgs; [
@@ -27,6 +28,7 @@
             clippy
             rust-analyzer
             yazi
+            fontconfig
 
           ];
 
