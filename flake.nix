@@ -23,12 +23,20 @@
             pkg-config
           ];
 
+          buildInputs = with pkgs; [
+            fontconfig
+            freetype
+            libxkbcommon
+            wayland
+            xorg.libxcb
+            xorg.libX11
+          ];
+
           packages = with pkgs; [
             rustc
             clippy
             rust-analyzer
             yazi
-            fontconfig
 
           ];
 
