@@ -1,13 +1,15 @@
-[package]
-name = "kioto"
+[workspace]
+resolver = "3"
+members = [
+  "crates/kioto",
+  "crates/ui",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 
-[workspace]
-resolver = "3"
-members = ["ui"]
-
-[dependencies]
+[workspace.dependencies]
 gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["font-kit", "wayland", "x11"] }
 gpui-component = { git = "https://github.com/longbridge/gpui-component" }

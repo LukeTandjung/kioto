@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; }
+  body { background: #0E0E0E; padding: 28px; font-family: var(--font-sans); color: var(--fg-0); }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .row + .row { margin-top: 18px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-family: inherit; font-size: 12px; font-weight: 500; line-height: 16px; padding: 4px 12px; border-radius: 6px; border: 0; cursor: pointer; color: #fff; }
+  .btn-primary { background: #404040; box-shadow: inset 0 2px 4px rgba(255,255,255,0.10); }
+  .btn-primary:hover { background: #525252; }
+  .btn-ghost { background: rgba(255,255,255,0.046); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.096); }
+  .btn-secondary { background: rgba(255,255,255,0.096); }
+  .btn-icon { width: 24px; height: 24px; padding: 0; justify-content: center; background: transparent; color: #B3B3B3; border-radius: 6px; }
+  .btn-icon:hover { background: rgba(255,255,255,0.046); color: #fff; }
+  .btn-lg { padding: 6px 14px; font-size: 14px; }
+  .btn-pill { padding: 6px 12px; border-radius: 9999px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.85); }
+  .btn[disabled] { opacity: 0.35; cursor: not-allowed; }
+  .label { font-size: 11px; color: var(--fg-3); font-family: var(--font-mono); width: 80px; }
+  svg { width: 12px; height: 12px; }
+</style>
+</head>
+<body>
+<div class="row">
+  <div class="label">primary</div>
+  <button class="btn btn-primary"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/></svg>Build Concepts</button>
+  <button class="btn btn-primary">Add Fragment</button>
+  <button class="btn btn-primary btn-lg">Build Concept</button>
+  <button class="btn btn-primary" disabled>Disabled</button>
+</div>
+<div class="row">
+  <div class="label">secondary</div>
+  <button class="btn btn-secondary">Cancel</button>
+  <button class="btn btn-ghost">Ghost</button>
+  <button class="btn btn-pill">Select Fragments</button>
+</div>
+<div class="row">
+  <div class="label">icon</div>
+  <button class="btn btn-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm5.5 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm5.5 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z"/></svg></button>
+  <button class="btn btn-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/></svg></button>
+  <button class="btn btn-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg></button>
+</div>
+</body>
+</html>

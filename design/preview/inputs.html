@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; }
+  body { background: #0E0E0E; padding: 28px; font-family: var(--font-sans); color: var(--fg-0); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
+  .stack { display: flex; flex-direction: column; gap: 6px; }
+  .label { font-size: 12px; font-weight: 500; }
+  .help { font-size: 11px; color: var(--fg-3); }
+  .input { background: rgba(255,255,255,0.05); border-radius: 8px; height: 32px; padding: 0 10px; display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.5); font-size: 12px; }
+  .input.lg { height: 40px; font-size: 14px; color: #fff; }
+  .input.focused { background: rgba(255,255,255,0.096); box-shadow: 0 0 0 2px rgba(255,255,255,0.85); color: #fff; }
+  textarea.input { padding: 8px 10px; height: 72px; resize: none; line-height: 20px; font-family: inherit; border: 0; outline: 0; width: 100%; box-sizing: border-box; color: #fff; }
+  svg { width: 12px; height: 12px; color: #A8A8A8; flex: 0 0 auto; }
+  .cursor::after { content: ""; display: inline-block; width: 1px; height: 14px; background: #fff; vertical-align: middle; margin-left: 2px; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="stack">
+    <div class="label">Search · default</div>
+    <div class="input"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clip-rule="evenodd"/></svg>Search...</div>
+  </div>
+  <div class="stack">
+    <div class="label">Search · focused</div>
+    <div class="input focused"><svg viewBox="0 0 20 20" fill="currentColor" style="color:#fff"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clip-rule="evenodd"/></svg><span class="cursor">limits</span></div>
+  </div>
+  <div class="stack">
+    <div class="label">Text field · Name</div>
+    <div class="input lg">Hello</div>
+    <div class="help">Title Case · short.</div>
+  </div>
+  <div class="stack">
+    <div class="label">Textarea · Description</div>
+    <textarea class="input">Describe what this fragment is.</textarea>
+  </div>
+</div>
+</body>
+</html>

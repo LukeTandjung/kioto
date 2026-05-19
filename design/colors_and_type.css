@@ -1,0 +1,316 @@
+/* ────────────────────────────────────────────────────────────────
+   Concise — design tokens
+   A sleek, near-black "carbon" surface system. Color is built almost
+   entirely from white-on-black translucency overlays, with text and
+   icon greys tuned to the same temperature. Inter throughout.
+   ──────────────────────────────────────────────────────────────── */
+
+/* ────────────────────────────────────────────────────────────────
+   PP Mori — primary face. Pangram Pangram, free-for-indie license.
+   The free trial pack ships Extralight / Regular / Semibold / Black
+   (plus italics) — not Medium or Extrabold. We map UI weights onto
+   what's available: 500 borrows Semibold, 700 borrows Black.
+   ──────────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: "PP Mori";
+  src: url("fonts/PPMori-Extralight.otf") format("opentype");
+  font-weight: 200 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Mori";
+  src: url("fonts/PPMori-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Mori";
+  src: url("fonts/PPMori-Italic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Mori";
+  src: url("fonts/PPMori-Semibold.otf") format("opentype");
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Mori";
+  src: url("fonts/PPMori-SemiboldItalic.otf") format("opentype");
+  font-weight: 500 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Mori";
+  src: url("fonts/PPMori-Black.otf") format("opentype");
+  font-weight: 700 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Inter — kept as fallback for the rare moments a PP Mori weight is missing. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+/* Ranade — wordmark only. */
+@import url("https://api.fontshare.com/v2/css?f[]=ranade@400,500,600,700&display=swap");
+
+/* JetBrains Mono — code / math. */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  /* ────────────── Palette: raw ────────────── */
+  --carbon-0:   #000000;          /* true black, rare */
+  --carbon-1:   #0E0E0E;          /* app background — rgb(14,14,14) */
+  --carbon-2:   #1A1A1A;          /* lifted surfaces */
+  --carbon-3:   #262626;          /* hover */
+  --carbon-4:   #404040;          /* buttons / pressable */
+  --carbon-5:   #525252;          /* button hover */
+  --carbon-6:   #737373;          /* disabled */
+
+  /* The whole UI is white-with-alpha on carbon — these are the
+     exact values lifted from the Concise figma. */
+  --white-046:  rgba(255, 255, 255, 0.046);  /* sidebar / panel fill */
+  --white-05:   rgba(255, 255, 255, 0.05);   /* input fill / hairline border */
+  --white-096:  rgba(255, 255, 255, 0.096);  /* composer fill */
+  --white-10:   rgba(255, 255, 255, 0.10);   /* button inner highlight, ctrl fill */
+  --white-15:   rgba(255, 255, 255, 0.15);   /* checkbox border */
+  --white-30:   rgba(255, 255, 255, 0.30);   /* separators */
+
+  /* ────────────── Foreground (text + icon) ────────────── */
+  --fg-0:       rgb(255, 255, 255);          /* primary text */
+  --fg-1:       rgba(255, 255, 255, 0.85);   /* secondary text */
+  --fg-2:       rgba(255, 255, 255, 0.60);   /* tertiary / inactive icon */
+  --fg-3:       rgba(255, 255, 255, 0.50);   /* placeholder / metadata */
+  --fg-mute:    rgba(255, 255, 255, 0.35);   /* disabled */
+
+  --icon-strong:  rgba(255, 255, 255, 0.85);
+  --icon-base:    #B3B3B3;                   /* rgb(179,179,179) — button glyphs */
+  --icon-mute:    #A8A8A8;                   /* rgb(168,168,168) — leading icons */
+  --icon-dim:     rgba(255, 255, 255, 0.40);
+
+  /* ────────────── Semantic surfaces ────────────── */
+  --bg-app:      var(--carbon-1);
+  --bg-sidebar:  var(--white-046);
+  --bg-panel:    var(--white-046);
+  --bg-input:    var(--white-05);
+  --bg-input-lg: var(--white-096);
+  --bg-button:   var(--carbon-4);
+  --bg-overlay:  rgba(14, 14, 14, 0.72);     /* dialog scrim */
+
+  --border-faint:  var(--white-05);
+  --border-base:   var(--white-10);
+  --border-strong: var(--white-15);
+
+  /* ────────────── Accent ────────────── */
+  /* The figma uses a single warm/gold note only as the avatar ring;
+     the rest of the system is monochrome. Reserve --accent for tight,
+     intentional use (active tab dot, send-button hover glow). */
+  --accent:        #E8B84A;                   /* warm amber */
+  --accent-soft:   rgba(232, 184, 74, 0.18);
+  --accent-on:     #0E0E0E;
+
+  /* ────────────── Status ────────────── */
+  --success:  #4ADE80;
+  --warning:  #F59E0B;
+  --danger:   #F87171;
+  --info:     #60A5FA;
+
+  /* ────────────── Type ────────────── */
+  --font-sans: "PP Mori", "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont,
+               "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+               Consolas, monospace;
+  --font-display: "PP Mori", "Inter", ui-sans-serif, sans-serif;
+  --font-wordmark: "Ranade", "PP Mori", "Inter", ui-sans-serif, sans-serif;
+
+  /* Base scale — the figma is dense; 12/14 carry most of the UI. */
+  --fs-10:  10px;
+  --fs-11:  11px;
+  --fs-12:  12px;        /* primary UI text */
+  --fs-13:  13px;
+  --fs-14:  14px;        /* composer body, buttons */
+  --fs-16:  16px;
+  --fs-18:  18px;
+  --fs-20:  20px;        /* dialog titles */
+  --fs-24:  24px;        /* "What do you want to learn today?" */
+  --fs-32:  32px;
+  --fs-48:  48px;        /* marketing only */
+
+  /* Line heights */
+  --lh-tight:   1.0;
+  --lh-snug:    1.20;
+  --lh-normal:  1.43;     /* 20/14 — the composer ratio */
+  --lh-relaxed: 1.55;
+
+  /* Weights */
+  --fw-regular:   400;
+  --fw-medium:    500;
+  --fw-semibold:  600;
+  --fw-bold:      700;
+
+  /* Letter spacing — Inter ships with sensible defaults; only use
+     these for tightening display sizes. */
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.02em;
+
+  /* ────────────── Radii ────────────── */
+  --radius-1:  4px;       /* inline inputs, checkbox */
+  --radius-2:  6px;       /* buttons, multi-select chips */
+  --radius-3:  8px;       /* search input, composer */
+  --radius-4:  12px;      /* panels */
+  --radius-5:  16px;
+  --radius-full: 9999px;
+
+  /* ────────────── Spacing (4-base) ────────────── */
+  --space-1:  4px;
+  --space-2:  6px;        /* panel item gap */
+  --space-3:  8px;        /* checkbox row gap */
+  --space-4:  10px;       /* item group gap */
+  --space-5:  12px;       /* panel padding */
+  --space-6:  16px;       /* body padding */
+  --space-7:  20px;       /* composer header→body gap */
+  --space-8:  24px;
+  --space-9:  32px;
+  --space-10: 40px;
+
+  /* ────────────── Elevation ────────────── */
+  /* The system is mostly flat — depth is faked with the inset-top
+     highlight on press surfaces. Keep outer shadow restrained. */
+  --shadow-button-inset: inset 0px 2px 4px 0px rgba(255, 255, 255, 0.10);
+  --shadow-button-press: inset 0px 1px 2px 0px rgba(0, 0, 0, 0.20);
+
+  --shadow-popover: 0 1px 2px rgba(0,0,0,0.30),
+                    0 8px 24px rgba(0,0,0,0.45);
+  --shadow-dialog:  0 2px 6px rgba(0,0,0,0.40),
+                    0 24px 64px rgba(0,0,0,0.55);
+
+  /* Focus ring — narrow, white, no glow. */
+  --ring: 0 0 0 2px rgba(255, 255, 255, 0.85);
+  --ring-subtle: 0 0 0 1px rgba(255, 255, 255, 0.25);
+
+  /* Motion */
+  --ease-out:  cubic-bezier(0.16, 1, 0.30, 1);
+  --ease-in:   cubic-bezier(0.65, 0, 0.85, 0);
+  --ease-std:  cubic-bezier(0.4, 0, 0.2, 1);
+
+  --dur-1: 90ms;        /* hover state */
+  --dur-2: 160ms;       /* panel show / focus */
+  --dur-3: 240ms;       /* dialog */
+
+  /* Layout */
+  --sidebar-w:    60px;
+  --panel-w:      212px;
+  --panel-icon:   12px;
+  --hit-target:   28px;     /* compact controls */
+  --hit-target-lg:36px;     /* sidebar tabs, avatar */
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Semantic typographic styles. Apply by class or via composition.
+   ──────────────────────────────────────────────────────────────── */
+
+.t-display {
+  font-family: var(--font-display);
+  font-size: var(--fs-24);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-0);
+}
+.t-h1 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-20);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-0);
+}
+.t-h2 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-16);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg-0);
+}
+.t-section-title {
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-bold);
+  line-height: 16px;
+  color: var(--fg-0);
+}
+.t-body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-normal);
+  color: var(--fg-0);
+}
+.t-ui {
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+  line-height: 16px;
+  color: var(--fg-0);
+}
+.t-ui-muted {
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-regular);
+  line-height: 16px;
+  color: var(--fg-3);
+}
+.t-placeholder {
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+  line-height: 16px;
+  color: var(--fg-3);
+}
+.t-meta {
+  font-family: var(--font-sans);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-regular);
+  line-height: 16px;
+  color: var(--fg-3);
+  letter-spacing: var(--tracking-wide);
+}
+.t-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-normal);
+  color: var(--fg-1);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Element defaults — opt in by adding `.concise` to the body.
+   ──────────────────────────────────────────────────────────────── */
+
+.concise {
+  background: var(--bg-app);
+  color: var(--fg-0);
+  font-family: var(--font-sans);
+  font-size: var(--fs-14);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01";
+}
+.concise h1 { font: var(--fw-semibold) var(--fs-32)/1.2 var(--font-sans); letter-spacing: -0.02em; }
+.concise h2 { font: var(--fw-semibold) var(--fs-24)/1.2 var(--font-sans); letter-spacing: -0.015em; }
+.concise h3 { font: var(--fw-semibold) var(--fs-20)/1.3 var(--font-sans); letter-spacing: -0.01em; }
+.concise h4 { font: var(--fw-semibold) var(--fs-16)/1.3 var(--font-sans); }
+.concise p  { font: var(--fw-regular)  var(--fs-14)/1.55 var(--font-sans); color: var(--fg-1); }
+.concise code, .concise pre { font-family: var(--font-mono); font-size: var(--fs-13); color: var(--fg-1); }
+.concise ::placeholder { color: var(--fg-3); }
+.concise ::selection { background: rgba(255, 255, 255, 0.18); }

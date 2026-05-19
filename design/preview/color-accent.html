@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; }
+  body { background: #0E0E0E; padding: 18px; font-family: var(--font-sans); color: var(--fg-0); }
+  .row { display: flex; gap: 12px; }
+  .card { flex: 1; border-radius: 10px; padding: 14px; box-sizing: border-box; height: 140px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.05); }
+  .swatch { width: 40px; height: 40px; border-radius: 50%; }
+  .name { font-size: 12px; font-weight: 600; }
+  .role { font-size: 11px; color: var(--fg-3); margin-top: 2px; }
+  .value { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); }
+</style>
+</head>
+<body>
+<div class="row">
+  <div class="card" style="background: rgba(232,184,74,0.08); border-color: rgba(232,184,74,0.18)">
+    <div class="swatch" style="background:#E8B84A"></div>
+    <div>
+      <div class="name">accent</div>
+      <div class="role">Warm gold · avatar ring only</div>
+      <div class="value">#E8B84A</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="swatch" style="background:#4ADE80; width:24px; height:24px"></div>
+    <div><div class="name">success</div><div class="value">#4ADE80</div></div>
+  </div>
+  <div class="card">
+    <div class="swatch" style="background:#F59E0B; width:24px; height:24px"></div>
+    <div><div class="name">warning</div><div class="value">#F59E0B</div></div>
+  </div>
+  <div class="card">
+    <div class="swatch" style="background:#F87171; width:24px; height:24px"></div>
+    <div><div class="name">danger</div><div class="value">#F87171</div></div>
+  </div>
+  <div class="card">
+    <div class="swatch" style="background:#60A5FA; width:24px; height:24px"></div>
+    <div><div class="name">info</div><div class="value">#60A5FA</div></div>
+  </div>
+</div>
+</body>
+</html>

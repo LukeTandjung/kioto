@@ -1,0 +1,1516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Concise — Visual Guidelines</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="colors_and_type.css">
+<style>
+  html, body { margin: 0; background: #0E0E0E; }
+  body {
+    color: var(--fg-0);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  /* ─── Page shell ─── */
+  .shell {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 56px 56px 120px;
+    gap: 64px;
+  }
+  @media (max-width: 980px) {
+    .shell { grid-template-columns: 1fr; padding: 32px 24px 80px; gap: 32px; }
+    .rail { position: static !important; }
+  }
+
+  /* ─── Left rail ─── */
+  .rail {
+    position: sticky;
+    top: 56px;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .mark {
+    font-family: var(--font-wordmark);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    font-size: 28px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.18em;
+  }
+  .mark .brace { color: rgba(255,255,255,0.32); font-weight: 400; }
+  .mark .dot   { color: var(--accent); }
+
+  .rail-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+    line-height: 1.55;
+  }
+  .rail-meta span { color: var(--fg-0); }
+
+  .toc { display: flex; flex-direction: column; gap: 2px; }
+  .toc a {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--fg-2);
+    font-size: 13px;
+    font-weight: 500;
+    transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+  }
+  .toc a:hover { background: var(--white-046); color: var(--fg-0); }
+  .toc a .num { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+  .toc a:hover .num { color: var(--fg-2); }
+
+  /* ─── Main column ─── */
+  main { min-width: 0; display: flex; flex-direction: column; gap: 88px; }
+
+  /* ─── Section primitives ─── */
+  section { scroll-margin-top: 40px; }
+  .section-head {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    align-items: baseline;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--white-05);
+    margin-bottom: 28px;
+  }
+  .section-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.08em;
+  }
+  .section-title {
+    font-family: var(--font-sans);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+    margin: 0;
+  }
+  .section-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+  }
+  .lede {
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--fg-1);
+    max-width: 620px;
+    margin: 0 0 32px;
+  }
+
+  /* ─── Grid helpers ─── */
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .g5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  @media (max-width: 760px) {
+    .g2, .g3, .g4, .g5 { grid-template-columns: 1fr 1fr; }
+  }
+
+  .card {
+    background: var(--white-046);
+    border-radius: var(--radius-4);
+    padding: 20px;
+    border: 1px solid transparent;
+  }
+  .card.outlined { border-color: var(--white-05); }
+  .card-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 16px; gap: 12px;
+  }
+  .card-eyebrow {
+    font: 700 10px/1 var(--font-sans);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+  .mono { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); letter-spacing: 0.04em; }
+  .mono strong { color: var(--fg-1); font-weight: 400; }
+
+  /* ─── 01 IDENTITY ─── */
+  .identity {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 16px;
+    align-items: stretch;
+  }
+  @media (max-width: 760px) { .identity { grid-template-columns: 1fr; } }
+  .wm-hero {
+    background:
+      radial-gradient(circle at 30% 40%, rgba(232,184,74,0.06), transparent 55%),
+      #0a0a0a;
+    border: 1px solid var(--white-05);
+    border-radius: 16px;
+    padding: 72px 48px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wm-hero .mark { font-size: 100px; }
+  .wm-hero .mark .brace { color: rgba(255,255,255,0.28); }
+
+  .identity-meta {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .meta-tile {
+    background: var(--white-046);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .meta-tile .k { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); letter-spacing: 0.1em; text-transform: uppercase; }
+  .meta-tile .v { font-size: 14px; color: var(--fg-0); font-weight: 500; line-height: 1.4; }
+
+  /* ─── 02 COLOR ─── */
+  .swatch-row { display: grid; gap: 10px; }
+  .swatch-row.r5 { grid-template-columns: repeat(5, 1fr); }
+  .swatch-row.r4 { grid-template-columns: repeat(4, 1fr); }
+  .swatch-row.r3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 760px) {
+    .swatch-row.r5, .swatch-row.r4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  .swatch {
+    border-radius: 10px;
+    padding: 14px;
+    height: 132px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    border: 1px solid var(--white-05);
+  }
+  .swatch.has-bg-border { border-color: rgba(255,255,255,0.04); }
+  .swatch .top { display: flex; flex-direction: column; gap: 2px; }
+  .swatch .nm { font-size: 11px; font-weight: 500; color: var(--fg-0); text-transform: uppercase; letter-spacing: 0.04em; }
+  .swatch .role { font-size: 11px; color: var(--fg-3); line-height: 1.4; }
+  .swatch .hex { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); letter-spacing: 0.02em; }
+
+  /* Overlay swatches: show the alpha tint over a carbon backdrop within the card */
+  .overlay-stage {
+    background: #0E0E0E;
+    border-radius: 12px;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 760px) { .overlay-stage { grid-template-columns: repeat(2, 1fr); } }
+  .overlay {
+    height: 116px;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .overlay .nm { font-size: 11px; color: var(--fg-0); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+  .overlay .hex { font-family: var(--font-mono); font-size: 10px; color: var(--fg-2); }
+
+  /* foreground stack */
+  .fg-stack { display: flex; flex-direction: column; gap: 0; }
+  .fg-row {
+    display: grid;
+    grid-template-columns: 220px 1fr 90px 90px;
+    align-items: center;
+    padding: 14px 8px;
+    border-bottom: 1px solid var(--white-05);
+    gap: 16px;
+  }
+  .fg-row:last-child { border-bottom: 0; }
+  .fg-sample { font-size: 15px; font-weight: 500; }
+  .fg-name { font-size: 12px; font-weight: 500; color: var(--fg-1); text-transform: uppercase; letter-spacing: 0.05em; }
+  .fg-role { font-size: 12px; color: var(--fg-3); }
+  .fg-hex { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); text-align: right; }
+
+  /* Accent feature */
+  .accent-feature {
+    background: var(--white-046);
+    border-radius: 14px;
+    padding: 28px;
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 32px;
+    align-items: center;
+  }
+  @media (max-width: 760px) { .accent-feature { grid-template-columns: 1fr; } }
+  .accent-disc {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 220px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin: 0 auto;
+    box-shadow: 0 24px 80px rgba(232,184,74,0.18);
+  }
+  .accent-copy h4 { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .accent-copy p { margin: 0 0 12px; color: var(--fg-2); font-size: 14px; line-height: 1.55; max-width: 420px; }
+  .accent-uses { display: flex; gap: 10px; flex-wrap: wrap; }
+  .accent-uses .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 6px; background: var(--white-05);
+    font-family: var(--font-mono); font-size: 11px; color: var(--fg-1);
+  }
+  .accent-uses .chip .ring {
+    width: 10px; height: 10px; border-radius: 50%;
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+  .accent-uses .chip .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ─── 03 TYPE ─── */
+  .type-display-card {
+    background: var(--white-046);
+    border-radius: 14px;
+    padding: 40px 40px 32px;
+    margin-bottom: 16px;
+  }
+  .type-row {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    align-items: baseline;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--white-05);
+    gap: 24px;
+  }
+  .type-row:last-child { border-bottom: 0; }
+  .type-row .meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); text-align: right; line-height: 1.6; }
+  .type-row .meta span { display: block; }
+  .type-row .meta .label { color: var(--fg-1); }
+
+  .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .type-grid { grid-template-columns: 1fr; } }
+
+  .face-card {
+    background: var(--white-046);
+    border-radius: 14px;
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .face-card .face-name { font-size: 12px; color: var(--fg-2); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .face-card .face-spec { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+  .face-card .face-show {
+    font-size: 56px; line-height: 1; letter-spacing: -0.02em; color: var(--fg-0);
+  }
+  .face-card.mono .face-show { font-family: var(--font-mono); font-size: 32px; letter-spacing: 0; }
+  .face-card.ranade .face-show { font-family: var(--font-wordmark); font-weight: 700; letter-spacing: -0.04em; }
+  .face-card .face-foot {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-top: 14px;
+    border-top: 1px solid var(--white-05);
+    color: var(--fg-3); font-size: 11px;
+  }
+
+  /* ─── 04 SPACE & LAYOUT ─── */
+  .space-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 100px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--white-05);
+    gap: 16px;
+  }
+  .space-row:last-child { border-bottom: 0; }
+  .space-row .label { font-size: 12px; color: var(--fg-1); font-weight: 500; }
+  .space-row .bar { height: 8px; background: var(--white-10); border-radius: 2px; }
+  .space-row .meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); text-align: right; }
+
+  .layout-diagram {
+    background:
+      linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+      #0a0a0a;
+    background-size: 4px 100%;
+    border: 1px solid var(--white-05);
+    border-radius: 14px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 60px 180px 1fr;
+    gap: 0;
+    height: 200px;
+    position: relative;
+  }
+  .layout-diagram .lay-col {
+    background: var(--white-046);
+    border-radius: 8px;
+    position: relative;
+    margin-right: 12px;
+    border: 1px dashed var(--white-05);
+  }
+  .layout-diagram .lay-col:last-child { background: transparent; border: 1px dashed var(--white-05); margin-right: 0; }
+  .layout-diagram .lay-label {
+    position: absolute; bottom: 8px; left: 8px;
+    font-family: var(--font-mono); font-size: 10px; color: var(--fg-2);
+  }
+  .layout-diagram .lay-w {
+    position: absolute; top: 8px; left: 8px;
+    font-family: var(--font-mono); font-size: 10px; color: var(--fg-0);
+    font-weight: 500;
+  }
+
+  /* ─── 05 RADII & ELEVATION ─── */
+  .radii-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .radii-row { grid-template-columns: repeat(3, 1fr); } }
+  .radii-cell {
+    background: var(--white-046);
+    padding: 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    border-radius: 14px;
+  }
+  .radii-shape {
+    width: 64px; height: 64px;
+    background: var(--white-10);
+  }
+  .radii-cell .nm { font-family: var(--font-mono); font-size: 11px; color: var(--fg-1); }
+  .radii-cell .role { font-size: 10px; color: var(--fg-3); text-align: center; line-height: 1.4; }
+
+  .elev-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .elev-row { grid-template-columns: 1fr; } }
+  .elev-cell {
+    background: var(--white-046);
+    border-radius: 14px;
+    padding: 32px 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .elev-sample {
+    width: 100%;
+    height: 80px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 500; color: var(--fg-0);
+  }
+  .elev-flat   { background: var(--white-05); }
+  .elev-press  { background: var(--carbon-4); box-shadow: inset 0 2px 4px rgba(255,255,255,0.10); }
+  .elev-pop    { background: var(--carbon-2); box-shadow: 0 1px 2px rgba(0,0,0,0.30), 0 8px 24px rgba(0,0,0,0.45); }
+  .elev-cell .nm  { font-size: 12px; color: var(--fg-0); font-weight: 500; }
+  .elev-cell .desc { font-size: 11px; color: var(--fg-3); text-align: center; line-height: 1.5; max-width: 220px; }
+
+  /* ─── 06 ICONOGRAPHY ─── */
+  .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 0;
+    background: var(--white-046);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  @media (max-width: 760px) { .icon-grid { grid-template-columns: repeat(4, 1fr); } }
+  .icon-cell {
+    padding: 24px 12px 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    border-right: 1px solid var(--white-05);
+    border-bottom: 1px solid var(--white-05);
+  }
+  .icon-cell:nth-child(8n) { border-right: 0; }
+  .icon-cell img {
+    width: 20px; height: 20px;
+    filter: invert(1);
+    opacity: 0.85;
+  }
+  .icon-cell .nm { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); text-align: center; }
+
+  .icon-sizes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .icon-size-cell {
+    background: var(--white-046);
+    border-radius: 12px;
+    padding: 24px 16px 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .icon-size-cell .ic {
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-size-cell img { filter: invert(1); opacity: 0.95; }
+  .icon-size-cell .nm { font-family: var(--font-mono); font-size: 11px; color: var(--fg-1); }
+  .icon-size-cell .role { font-size: 11px; color: var(--fg-3); text-align: center; }
+
+  /* ─── 07 MOTION ─── */
+  .motion-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 200px;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--white-05);
+    gap: 24px;
+  }
+  .motion-row:last-child { border-bottom: 0; }
+  .motion-row .nm { font-size: 13px; font-weight: 500; color: var(--fg-0); }
+  .motion-row .desc { font-size: 12px; color: var(--fg-2); line-height: 1.5; }
+  .motion-row .ease { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); text-align: right; line-height: 1.5; }
+  .motion-row .ease span { display: block; }
+
+  /* ─── 08 VOICE ─── */
+  .voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .voice-grid { grid-template-columns: 1fr; } }
+  .voice-card {
+    background: var(--white-046);
+    border-radius: 14px;
+    padding: 22px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .voice-card .tag {
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 700 10px/1 var(--font-sans);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 8px; border-radius: 4px;
+  }
+  .voice-card .tag.do { background: rgba(74, 222, 128, 0.12); color: var(--success); }
+  .voice-card .tag.dont { background: rgba(248, 113, 113, 0.12); color: var(--danger); }
+  .voice-card .quote {
+    font-size: 18px; line-height: 1.4; font-weight: 500; color: var(--fg-0);
+    letter-spacing: -0.01em;
+  }
+  .voice-card .why { font-size: 12px; color: var(--fg-3); line-height: 1.55; }
+
+  /* ─── 09 COMPONENTS ─── */
+  .components { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .components { grid-template-columns: 1fr; } }
+
+  .demo {
+    background: var(--white-046);
+    border-radius: 14px;
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .demo .demo-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .demo .demo-title { font-size: 13px; color: var(--fg-1); font-weight: 500; }
+  .demo .demo-tag { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); }
+  .demo .demo-stage {
+    background: var(--carbon-1);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 12px;
+    min-height: 140px;
+    justify-content: center;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 0 14px;
+    height: 32px;
+    border-radius: var(--radius-2);
+    font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+    color: var(--fg-0);
+    cursor: pointer;
+    border: 0;
+    transition: background var(--dur-1) var(--ease-out);
+  }
+  .btn-primary { background: var(--carbon-4); box-shadow: inset 0 2px 4px rgba(255,255,255,0.10); }
+  .btn-primary:hover { background: var(--carbon-5); }
+  .btn-ghost { background: var(--white-05); color: var(--fg-1); }
+  .btn-ghost:hover { background: var(--white-10); color: var(--fg-0); }
+  .btn-press { background: var(--carbon-4); box-shadow: inset 0 1px 2px rgba(0,0,0,0.20); }
+  .btn-disabled { background: var(--carbon-4); opacity: 0.35; cursor: not-allowed; }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+  /* Inputs */
+  .input {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--white-05);
+    height: 28px;
+    border-radius: var(--radius-3);
+    padding: 0 10px;
+    color: var(--fg-0);
+    font-size: 12px;
+  }
+  .input img { width: 12px; height: 12px; filter: invert(1); opacity: 0.6; }
+  .input .placeholder { color: var(--fg-3); }
+
+  .input-lg {
+    background: var(--white-096);
+    border-radius: var(--radius-3);
+    padding: 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .input-lg .composer-text { font-size: 14px; color: var(--fg-0); line-height: 20px; }
+  .input-lg .composer-bar { display: flex; justify-content: space-between; align-items: center; }
+  .input-lg .composer-bar .tools { display: flex; gap: 8px; }
+  .input-lg .send {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--carbon-4);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.10);
+  }
+  .input-lg .send img { width: 14px; height: 14px; filter: invert(1); opacity: 0.85; }
+
+  /* Sidebar mini */
+  .sidebar-demo {
+    display: flex; flex-direction: column; gap: 10px;
+    align-items: center;
+    background: var(--white-046);
+    width: 60px;
+    padding: 12px 0;
+    border-radius: 10px;
+    border: 1px solid var(--white-05);
+  }
+  .sidebar-tab {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sidebar-tab img { width: 18px; height: 18px; filter: invert(1); opacity: 0.6; }
+  .sidebar-tab.active { background: var(--white-10); }
+  .sidebar-tab.active img { opacity: 1; }
+  .sb-avatar { width: 36px; height: 36px; border-radius: 50%; background: url('assets/avatar-sample.jpg') center/cover; box-shadow: 0 0 0 2px var(--accent); margin-top: auto; }
+
+  /* Panel item */
+  .panel-demo {
+    background: var(--white-046);
+    border-radius: 12px;
+    padding: 12px;
+    width: 100%;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .panel-demo .panel-title {
+    font-size: 12px; font-weight: 700; color: var(--fg-0);
+    margin: 0 4px 4px;
+    line-height: 16px;
+  }
+  .panel-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+  }
+  .panel-item img { width: 12px; height: 12px; filter: invert(1); opacity: 0.7; }
+  .panel-item .pn { font-size: 12px; font-weight: 500; color: var(--fg-0); line-height: 16px; }
+  .panel-item.active { background: var(--white-05); }
+
+  /* Checkbox */
+  .check-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+  .check {
+    width: 14px; height: 14px;
+    border-radius: 4px;
+    border: 1px solid var(--white-15);
+    background: transparent;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .check.on { background: var(--white-10); border-color: rgba(255,255,255,0.25); }
+  .check.on::after {
+    content: ""; width: 8px; height: 8px;
+    background-image: url('assets/icons/check.svg');
+    background-size: contain; background-repeat: no-repeat;
+    filter: invert(1);
+  }
+  .check-label { font-size: 12px; color: var(--fg-0); font-weight: 500; }
+
+  /* Dialog */
+  .dialog-demo {
+    background: var(--carbon-2);
+    border: 1px solid var(--white-05);
+    border-radius: var(--radius-4);
+    padding: 22px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+    display: flex; flex-direction: column; gap: 14px;
+    width: 100%;
+  }
+  .dialog-demo .dt {
+    font-size: 18px; font-weight: 600; color: var(--fg-0); letter-spacing: -0.01em;
+  }
+  .dialog-demo .dh { font-size: 12px; color: var(--fg-3); line-height: 1.5; }
+  .dialog-demo .da { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+
+  /* ─── PRINT ─── */
+  @media print {
+    @page { size: A4 portrait; margin: 14mm 14mm 16mm; }
+
+    html, body { background: #0E0E0E !important; }
+    body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    .shell {
+      display: block !important;
+      max-width: none !important;
+      padding: 0 !important;
+      gap: 0 !important;
+    }
+
+    /* Hide the sticky rail; render a compact cover-style header instead */
+    .rail { display: none !important; }
+
+    main { gap: 0 !important; }
+
+    section {
+      break-inside: avoid;
+      break-before: page;
+      padding-top: 6mm;
+      padding-bottom: 6mm;
+    }
+    section#identity { break-before: auto; padding-top: 0; }
+
+    /* Allow long sections (color, icons, components) to flow across pages */
+    section#color, section#icons, section#components, section#type, section#voice, section#layout {
+      break-inside: auto;
+    }
+
+    .section-head { break-after: avoid; }
+    .card, .demo, .face-card, .voice-card, .meta-tile, .elev-cell, .radii-cell, .accent-feature, .wm-hero, .type-display-card, .type-row, .motion-row, .fg-row, .swatch, .overlay {
+      break-inside: avoid;
+    }
+
+    .lede { max-width: none; }
+
+    /* Force grid columns to stay multi-column on print regardless of media query */
+    .g2 { grid-template-columns: 1fr 1fr !important; }
+    .g3 { grid-template-columns: repeat(3, 1fr) !important; }
+    .g4 { grid-template-columns: repeat(4, 1fr) !important; }
+    .swatch-row.r5 { grid-template-columns: repeat(5, 1fr) !important; }
+    .swatch-row.r4 { grid-template-columns: repeat(4, 1fr) !important; }
+    .icon-grid { grid-template-columns: repeat(8, 1fr) !important; }
+    .overlay-stage { grid-template-columns: repeat(5, 1fr) !important; }
+    .radii-row { grid-template-columns: repeat(6, 1fr) !important; }
+    .elev-row { grid-template-columns: repeat(3, 1fr) !important; }
+    .components { grid-template-columns: 1fr 1fr !important; }
+    .voice-grid { grid-template-columns: 1fr 1fr !important; }
+    .type-grid { grid-template-columns: 1fr 1fr !important; }
+    .identity { grid-template-columns: 1.2fr 1fr !important; }
+    .accent-feature { grid-template-columns: 1fr 1.4fr !important; }
+
+    /* Hide TOC links underline focus rings in print */
+    a { color: inherit; text-decoration: none; }
+
+    /* Cover header — small mark + meta at the top of page one */
+    .print-cover {
+      display: flex !important;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 0 16px;
+      border-bottom: 1px solid var(--white-05);
+      margin-bottom: 28px;
+      break-after: avoid;
+    }
+
+    .colophon { break-before: page; }
+  }
+
+  .print-cover { display: none; }
+
+  /* Footer */
+  .colophon {
+    margin-top: 24px;
+    padding-top: 32px;
+    border-top: 1px solid var(--white-05);
+    display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  }
+  .colophon .col { display: flex; flex-direction: column; gap: 4px; }
+  .colophon .lbl { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); letter-spacing: 0.1em; text-transform: uppercase; }
+  .colophon .val { font-size: 13px; color: var(--fg-1); }
+
+</style>
+</head>
+<body class="concise">
+
+<div class="shell">
+
+  <!-- ─── LEFT RAIL ─── -->
+  <aside class="rail">
+    <a href="#top" style="text-decoration:none;color:inherit;">
+      <div class="mark"><span class="brace">{</span><span>Concise<span class="dot">.</span></span><span class="brace">}</span></div>
+    </a>
+
+    <div class="rail-meta">
+      <span>Visual Guidelines</span><br>
+      v1.0 · May 2026<br>
+      Carbon system, single product
+    </div>
+
+    <nav class="toc">
+      <a href="#identity"><span class="num">01</span><span>Identity</span></a>
+      <a href="#color"><span class="num">02</span><span>Color</span></a>
+      <a href="#type"><span class="num">03</span><span>Type</span></a>
+      <a href="#layout"><span class="num">04</span><span>Space &amp; Layout</span></a>
+      <a href="#shape"><span class="num">05</span><span>Shape &amp; Elevation</span></a>
+      <a href="#icons"><span class="num">06</span><span>Iconography</span></a>
+      <a href="#motion"><span class="num">07</span><span>Motion</span></a>
+      <a href="#voice"><span class="num">08</span><span>Voice</span></a>
+      <a href="#components"><span class="num">09</span><span>Components</span></a>
+    </nav>
+  </aside>
+
+  <!-- ─── MAIN ─── -->
+  <main id="top">
+
+    <!-- Print-only cover header -->
+    <div class="print-cover">
+      <div class="mark" style="font-size: 24px;"><span class="brace">{</span><span>Concise<span class="dot">.</span></span><span class="brace">}</span></div>
+      <div class="rail-meta" style="text-align: right;"><span>Visual Guidelines</span><br>v1.0 · May 2026 · Carbon system</div>
+    </div>
+
+    <!-- ───────────── COVER / 01 IDENTITY ───────────── -->
+    <section id="identity">
+      <div class="section-head">
+        <div class="section-num">01</div>
+        <h2 class="section-title">Identity</h2>
+        <div class="section-kicker">Ranade · #E8B84A</div>
+      </div>
+      <p class="lede">
+        Concise is a quiet, near-black workbench for the student who already knows what they want to learn. The interface stays out of the way so source material — equations, diagrams, a student's own writing — is what reads loudest. The brand mark concentrates that idea into a single typographic gesture.
+      </p>
+
+      <div class="identity">
+        <div class="wm-hero">
+          <div class="mark"><span class="brace">{</span><span>Concise<span class="dot">.</span></span><span class="brace">}</span></div>
+        </div>
+        <div class="identity-meta">
+          <div class="meta-tile">
+            <div class="k">Wordmark face</div>
+            <div class="v">Ranade · Heavy · −0.04em</div>
+          </div>
+          <div class="meta-tile">
+            <div class="k">Braces</div>
+            <div class="v">Always 32% white. Scoped object — knowledge-graph DNA.</div>
+          </div>
+          <div class="meta-tile">
+            <div class="k">The dot</div>
+            <div class="v">Always #E8B84A. The single warm note in the system.</div>
+          </div>
+          <div class="meta-tile">
+            <div class="k">Drop the braces</div>
+            <div class="v">Below 18px only. Keep the gold dot.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── 02 COLOR ───────────── -->
+    <section id="color">
+      <div class="section-head">
+        <div class="section-num">02</div>
+        <h2 class="section-title">Color</h2>
+        <div class="section-kicker">97% greyscale · one warm note</div>
+      </div>
+      <p class="lede">
+        There is exactly one canvas color: <strong style="color:var(--fg-0);font-weight:500">carbon #0E0E0E</strong>. Every other surface is a translucent white tint stacked over it. Depth is a function of alpha, never of shadow. Saturation appears once, deliberately, in the warm gold accent.
+      </p>
+
+      <!-- Carbon -->
+      <div style="margin-bottom: 28px;">
+        <div class="card-head">
+          <div class="card-eyebrow">2.1 Carbon — the only canvas</div>
+          <div class="mono"><strong>--carbon-1</strong> is the app background</div>
+        </div>
+        <div class="swatch-row r5">
+          <div class="swatch has-bg-border" style="background:#000000">
+            <div class="top"><div class="nm">Carbon 0</div><div class="role">True black · rare</div></div>
+            <div class="hex">#000000</div>
+          </div>
+          <div class="swatch has-bg-border" style="background:#0E0E0E; outline: 1px solid var(--accent); outline-offset: -1px;">
+            <div class="top"><div class="nm">Carbon 1 · app</div><div class="role">The only canvas</div></div>
+            <div class="hex">#0E0E0E</div>
+          </div>
+          <div class="swatch has-bg-border" style="background:#1A1A1A">
+            <div class="top"><div class="nm">Carbon 2</div><div class="role">Lifted dialog</div></div>
+            <div class="hex">#1A1A1A</div>
+          </div>
+          <div class="swatch has-bg-border" style="background:#262626">
+            <div class="top"><div class="nm">Carbon 3</div><div class="role">Hover surface</div></div>
+            <div class="hex">#262626</div>
+          </div>
+          <div class="swatch has-bg-border" style="background:#404040">
+            <div class="top"><div class="nm">Carbon 4 · button</div><div class="role">Solid CTA</div></div>
+            <div class="hex">#404040</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overlays (the real surfacing language) -->
+      <div style="margin-bottom: 28px;">
+        <div class="card-head">
+          <div class="card-eyebrow">2.2 White overlays — how surfaces are built</div>
+          <div class="mono">Always rendered over <strong>carbon-1</strong></div>
+        </div>
+        <div class="overlay-stage">
+          <div class="overlay" style="background: rgba(255,255,255,0.046)">
+            <div class="nm">White/046</div>
+            <div><div style="font-size:11px;color:var(--fg-3);">Sidebar · panel fill</div><div class="hex">α 0.046</div></div>
+          </div>
+          <div class="overlay" style="background: rgba(255,255,255,0.05)">
+            <div class="nm">White/05</div>
+            <div><div style="font-size:11px;color:var(--fg-3);">Input · hairline</div><div class="hex">α 0.05</div></div>
+          </div>
+          <div class="overlay" style="background: rgba(255,255,255,0.096)">
+            <div class="nm">White/096</div>
+            <div><div style="font-size:11px;color:var(--fg-3);">Composer fill</div><div class="hex">α 0.096</div></div>
+          </div>
+          <div class="overlay" style="background: rgba(255,255,255,0.10)">
+            <div class="nm">White/10</div>
+            <div><div style="font-size:11px;color:var(--fg-3);">Inner highlight</div><div class="hex">α 0.10</div></div>
+          </div>
+          <div class="overlay" style="background: rgba(255,255,255,0.15)">
+            <div class="nm">White/15</div>
+            <div><div style="font-size:11px;color:var(--fg-3);">Checkbox border</div><div class="hex">α 0.15</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Foreground -->
+      <div style="margin-bottom: 28px;">
+        <div class="card-head">
+          <div class="card-eyebrow">2.3 Foreground — text &amp; icons</div>
+          <div class="mono">Five tiers, all neutral</div>
+        </div>
+        <div class="card outlined">
+          <div class="fg-stack">
+            <div class="fg-row">
+              <div style="display:flex;flex-direction:column;gap:2px"><div class="fg-name">fg-0</div><div class="fg-role">Primary text · active icon</div></div>
+              <div class="fg-sample" style="color: rgb(255,255,255)">What do you want to learn today?</div>
+              <div class="fg-hex">#FFFFFF</div>
+              <div class="fg-hex">α 1.00</div>
+            </div>
+            <div class="fg-row">
+              <div style="display:flex;flex-direction:column;gap:2px"><div class="fg-name">fg-1</div><div class="fg-role">Secondary text · body</div></div>
+              <div class="fg-sample" style="color: rgba(255,255,255,0.85)">Concept Store</div>
+              <div class="fg-hex">#FFFFFF</div>
+              <div class="fg-hex">α 0.85</div>
+            </div>
+            <div class="fg-row">
+              <div style="display:flex;flex-direction:column;gap:2px"><div class="fg-name">fg-2</div><div class="fg-role">Tertiary · inactive icon</div></div>
+              <div class="fg-sample" style="color: rgba(255,255,255,0.60)">Sequence and Convergence</div>
+              <div class="fg-hex">#FFFFFF</div>
+              <div class="fg-hex">α 0.60</div>
+            </div>
+            <div class="fg-row">
+              <div style="display:flex;flex-direction:column;gap:2px"><div class="fg-name">fg-3</div><div class="fg-role">Placeholder · metadata</div></div>
+              <div class="fg-sample" style="color: rgba(255,255,255,0.50)">Search...</div>
+              <div class="fg-hex">#FFFFFF</div>
+              <div class="fg-hex">α 0.50</div>
+            </div>
+            <div class="fg-row">
+              <div style="display:flex;flex-direction:column;gap:2px"><div class="fg-name">fg-mute</div><div class="fg-role">Disabled state</div></div>
+              <div class="fg-sample" style="color: rgba(255,255,255,0.35)">Disabled label</div>
+              <div class="fg-hex">#FFFFFF</div>
+              <div class="fg-hex">α 0.35</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accent feature -->
+      <div>
+        <div class="card-head">
+          <div class="card-eyebrow">2.4 The accent — one warm note</div>
+          <div class="mono"><strong>--accent</strong> · #E8B84A</div>
+        </div>
+        <div class="accent-feature">
+          <div class="accent-disc"></div>
+          <div class="accent-copy">
+            <h4>Reserved for two places only.</h4>
+            <p>
+              The accent is the wordmark's dot and the avatar's ring — nothing else. It is a quiet signature, not a paint bucket. Status colour, buttons, links, and highlights all stay neutral. If a future surface earns the accent, we add it deliberately, one site at a time.
+            </p>
+            <div class="accent-uses">
+              <span class="chip"><span class="dot"></span>Wordmark dot</span>
+              <span class="chip"><span class="ring"></span>Avatar ring</span>
+              <span class="chip" style="opacity:0.55"><span style="width:6px;height:6px;border-radius:1px;background:var(--accent)"></span>Reserved · ask first</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── 03 TYPE ───────────── -->
+    <section id="type">
+      <div class="section-head">
+        <div class="section-num">03</div>
+        <h2 class="section-title">Type</h2>
+        <div class="section-kicker">PP Mori · Ranade · JetBrains Mono</div>
+      </div>
+      <p class="lede">
+        Three faces with a clear hierarchy of role. PP Mori carries the entire interface. Ranade exists only inside the wordmark. JetBrains Mono carries math and code. The product is dense and small — most UI is set at 12px medium; the only display moment is the composer's opening prompt.
+      </p>
+
+      <!-- Display scale -->
+      <div class="type-display-card">
+        <div class="card-head" style="margin-bottom: 0;">
+          <div class="card-eyebrow">3.1 Display scale</div>
+          <div class="mono">PP Mori · the composer prompt is the largest UI moment</div>
+        </div>
+        <div class="type-row">
+          <div style="font-size: 32px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15;">What do you want to learn today?</div>
+          <div class="meta"><span class="label">Display</span><span>32 / 1.15</span><span>SemiBold · −0.02em</span></div>
+        </div>
+        <div class="type-row">
+          <div style="font-size: 24px; font-weight: 400; line-height: 1.2; letter-spacing: -0.01em;">What do you want to learn today?</div>
+          <div class="meta"><span class="label">Prompt</span><span>24 / 1.2</span><span>Regular · −0.01em</span></div>
+        </div>
+        <div class="type-row">
+          <div style="font-size: 20px; font-weight: 600; line-height: 1.2; letter-spacing: -0.015em;">Build Concept</div>
+          <div class="meta"><span class="label">Dialog title</span><span>20 / 1.2</span><span>SemiBold</span></div>
+        </div>
+        <div class="type-row">
+          <div style="font-size: 14px; font-weight: 500; line-height: 1.43;">The student is reading at this size most of the time — composer body, dialog descriptions, captions.</div>
+          <div class="meta"><span class="label">Body</span><span>14 / 1.43</span><span>Medium</span></div>
+        </div>
+        <div class="type-row">
+          <div style="font-size: 12px; font-weight: 700; line-height: 16px;">CONCEPT STORE</div>
+          <div class="meta"><span class="label">Section title</span><span>12 / 16</span><span>Bold</span></div>
+        </div>
+        <div class="type-row">
+          <div style="font-size: 12px; font-weight: 500; line-height: 16px;">Sequence and Conve…</div>
+          <div class="meta"><span class="label">UI · panel item</span><span>12 / 16</span><span>Medium</span></div>
+        </div>
+        <div class="type-row">
+          <div style="font-size: 12px; font-weight: 500; line-height: 16px; color: var(--fg-3);">Search...</div>
+          <div class="meta"><span class="label">Placeholder</span><span>12 / 16</span><span>fg-3</span></div>
+        </div>
+      </div>
+
+      <!-- Faces -->
+      <div class="type-grid">
+        <div class="face-card ranade">
+          <div class="face-name">Ranade</div>
+          <div class="face-show">{Concise<span style="color:var(--accent);">.</span>}</div>
+          <div class="face-foot">
+            <span>Wordmark only · never in UI</span>
+            <span class="mono">700 · −0.04em</span>
+          </div>
+        </div>
+        <div class="face-card">
+          <div class="face-name">PP Mori</div>
+          <div class="face-show">Aa Gg 0123</div>
+          <div class="face-foot">
+            <span>Whole interface · falls back to Inter</span>
+            <span class="mono">400 · 500 · 700</span>
+          </div>
+        </div>
+        <div class="face-card mono">
+          <div class="face-name">JetBrains Mono</div>
+          <div class="face-show">∂f/∂x · l1, l0</div>
+          <div class="face-foot">
+            <span>Math · code · metadata</span>
+            <span class="mono">400 · 500</span>
+          </div>
+        </div>
+        <div class="face-card">
+          <div class="face-name" style="color: var(--fg-2)">Pairing rule</div>
+          <div style="font-size: 18px; line-height: 1.4; color: var(--fg-1); padding-top: 8px;">
+            PP Mori for words. JetBrains Mono for symbols. Ranade only inside the brace lockup. Never mix Ranade with body copy.
+          </div>
+          <div class="face-foot">
+            <span style="color: var(--fg-3)">3 families · clear roles</span>
+            <span class="mono">no exceptions</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── 04 SPACE & LAYOUT ───────────── -->
+    <section id="layout">
+      <div class="section-head">
+        <div class="section-num">04</div>
+        <h2 class="section-title">Space &amp; Layout</h2>
+        <div class="section-kicker">4px base · fixed rails</div>
+      </div>
+      <p class="lede">
+        The system runs on a 4px grid with a tight set of step values. The shell is desktop-only at 1280×832: a fixed 60px sidebar, a fixed 180px panel, a 514px composer floating in whatever space remains. The right two-thirds of the canvas stays empty by design.
+      </p>
+
+      <div class="g2" style="margin-bottom: 16px;">
+        <div class="card outlined">
+          <div class="card-head">
+            <div class="card-eyebrow">4.1 Spacing scale</div>
+            <div class="mono">multiples of 4px</div>
+          </div>
+          <div class="space-row"><div class="label">space-1</div><div><div class="bar" style="width: 4px;"></div></div><div class="meta">4 px</div></div>
+          <div class="space-row"><div class="label">space-2</div><div><div class="bar" style="width: 6px;"></div></div><div class="meta">6 px</div></div>
+          <div class="space-row"><div class="label">space-3</div><div><div class="bar" style="width: 8px;"></div></div><div class="meta">8 px</div></div>
+          <div class="space-row"><div class="label">space-4</div><div><div class="bar" style="width: 10px;"></div></div><div class="meta">10 px</div></div>
+          <div class="space-row"><div class="label">space-5</div><div><div class="bar" style="width: 12px;"></div></div><div class="meta">12 px</div></div>
+          <div class="space-row"><div class="label">space-6</div><div><div class="bar" style="width: 16px;"></div></div><div class="meta">16 px</div></div>
+          <div class="space-row"><div class="label">space-7</div><div><div class="bar" style="width: 20px;"></div></div><div class="meta">20 px</div></div>
+          <div class="space-row"><div class="label">space-8</div><div><div class="bar" style="width: 24px;"></div></div><div class="meta">24 px</div></div>
+          <div class="space-row"><div class="label">space-9</div><div><div class="bar" style="width: 32px;"></div></div><div class="meta">32 px</div></div>
+          <div class="space-row"><div class="label">space-10</div><div><div class="bar" style="width: 40px;"></div></div><div class="meta">40 px</div></div>
+        </div>
+
+        <div class="card outlined">
+          <div class="card-head">
+            <div class="card-eyebrow">4.2 The shell</div>
+            <div class="mono">1280 × 832 · desktop only</div>
+          </div>
+          <div class="layout-diagram">
+            <div class="lay-col">
+              <div class="lay-w">60</div>
+              <div class="lay-label">sidebar</div>
+            </div>
+            <div class="lay-col">
+              <div class="lay-w">180</div>
+              <div class="lay-label">panel</div>
+            </div>
+            <div class="lay-col">
+              <div class="lay-w" style="color:var(--fg-3)">composer · 514 centred</div>
+              <div class="lay-label">empty canvas</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
+            <div class="meta-tile">
+              <div class="k">Body padding</div>
+              <div class="v">16 px</div>
+            </div>
+            <div class="meta-tile">
+              <div class="k">Panel padding · gap</div>
+              <div class="v">12 · 12 px</div>
+            </div>
+            <div class="meta-tile">
+              <div class="k">Hit · compact</div>
+              <div class="v">28 px</div>
+            </div>
+            <div class="meta-tile">
+              <div class="k">Hit · sidebar tab</div>
+              <div class="v">36 px</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── 05 SHAPE & ELEVATION ───────────── -->
+    <section id="shape">
+      <div class="section-head">
+        <div class="section-num">05</div>
+        <h2 class="section-title">Shape &amp; Elevation</h2>
+        <div class="section-kicker">Crisp radii · flat planes</div>
+      </div>
+      <p class="lede">
+        Radii are restrained — nothing larger than 12px. Outer shadows are essentially absent. The one elevation trick is an inner top highlight on pressable surfaces: a polished pebble look that says <em>this is a thing you can press</em>.
+      </p>
+
+      <div class="card-head">
+        <div class="card-eyebrow">5.1 Radii</div>
+        <div class="mono">4 · 6 · 8 · 12 · 16 · ∞</div>
+      </div>
+      <div class="radii-row" style="margin-bottom: 24px;">
+        <div class="radii-cell">
+          <div class="radii-shape" style="border-radius: 4px"></div>
+          <div class="nm">4 px</div>
+          <div class="role">Checkbox</div>
+        </div>
+        <div class="radii-cell">
+          <div class="radii-shape" style="border-radius: 6px"></div>
+          <div class="nm">6 px</div>
+          <div class="role">Buttons, chips</div>
+        </div>
+        <div class="radii-cell">
+          <div class="radii-shape" style="border-radius: 8px"></div>
+          <div class="nm">8 px</div>
+          <div class="role">Search, composer</div>
+        </div>
+        <div class="radii-cell">
+          <div class="radii-shape" style="border-radius: 12px"></div>
+          <div class="nm">12 px</div>
+          <div class="role">Panels, dialogs</div>
+        </div>
+        <div class="radii-cell">
+          <div class="radii-shape" style="border-radius: 16px"></div>
+          <div class="nm">16 px</div>
+          <div class="role">Marketing only</div>
+        </div>
+        <div class="radii-cell">
+          <div class="radii-shape" style="border-radius: 50%"></div>
+          <div class="nm">full</div>
+          <div class="role">Avatar</div>
+        </div>
+      </div>
+
+      <div class="card-head">
+        <div class="card-eyebrow">5.2 Elevation</div>
+        <div class="mono">Depth = translucency · not shadow</div>
+      </div>
+      <div class="elev-row">
+        <div class="elev-cell">
+          <div class="elev-sample elev-flat">Flat surface</div>
+          <div class="nm">Flat</div>
+          <div class="desc">Panels and inputs sit at zero. A 5% white tint is the only signal of edge.</div>
+        </div>
+        <div class="elev-cell">
+          <div class="elev-sample elev-press">Pressable</div>
+          <div class="nm">Inner highlight</div>
+          <div class="desc"><span class="mono">inset 0 2px 4px rgba(255,255,255,0.10)</span> — the polished-pebble sheen on CTAs.</div>
+        </div>
+        <div class="elev-cell">
+          <div class="elev-sample elev-pop">Floating dialog</div>
+          <div class="nm">Outer shadow</div>
+          <div class="desc">Reserved for true overlays — dialogs and popovers sitting on a 72% carbon scrim.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── 06 ICONOGRAPHY ───────────── -->
+    <section id="icons">
+      <div class="section-head">
+        <div class="section-num">06</div>
+        <h2 class="section-title">Iconography</h2>
+        <div class="section-kicker">Heroicons · monochrome only</div>
+      </div>
+      <p class="lede">
+        Heroicons is the entire system — <em>mini</em> inside inputs, <em>outline</em> on sidebar tabs, <em>solid</em> on the settings cog, <em>micro</em> for file-type badges. Stroke is 1.5px throughout. No icon ever carries colour beyond the foreground scale. No emoji, no unicode glyphs.
+      </p>
+
+      <div style="margin-bottom: 24px;">
+        <div class="card-head">
+          <div class="card-eyebrow">6.1 The set</div>
+          <div class="mono">Every glyph in the product</div>
+        </div>
+        <div class="icon-grid">
+          <div class="icon-cell"><img src="assets/icons/magnifying-glass.svg" alt=""><div class="nm">magnifying-glass</div></div>
+          <div class="icon-cell"><img src="assets/icons/plus.svg" alt=""><div class="nm">plus</div></div>
+          <div class="icon-cell"><img src="assets/icons/chevron-right.svg" alt=""><div class="nm">chevron-right</div></div>
+          <div class="icon-cell"><img src="assets/icons/chevron-down.svg" alt=""><div class="nm">chevron-down</div></div>
+          <div class="icon-cell"><img src="assets/icons/check.svg" alt=""><div class="nm">check</div></div>
+          <div class="icon-cell"><img src="assets/icons/x-mark.svg" alt=""><div class="nm">x-mark</div></div>
+          <div class="icon-cell"><img src="assets/icons/ellipsis-horizontal.svg" alt=""><div class="nm">ellipsis</div></div>
+          <div class="icon-cell"><img src="assets/icons/sparkles.svg" alt=""><div class="nm">sparkles</div></div>
+          <div class="icon-cell"><img src="assets/icons/book-open.svg" alt=""><div class="nm">book-open</div></div>
+          <div class="icon-cell"><img src="assets/icons/document-text.svg" alt=""><div class="nm">document-text</div></div>
+          <div class="icon-cell"><img src="assets/icons/folder.svg" alt=""><div class="nm">folder</div></div>
+          <div class="icon-cell"><img src="assets/icons/photo.svg" alt=""><div class="nm">photo</div></div>
+          <div class="icon-cell"><img src="assets/icons/play-circle.svg" alt=""><div class="nm">play-circle</div></div>
+          <div class="icon-cell"><img src="assets/icons/light-bulb.svg" alt=""><div class="nm">light-bulb</div></div>
+          <div class="icon-cell"><img src="assets/icons/question-mark-circle.svg" alt=""><div class="nm">question-mark</div></div>
+          <div class="icon-cell"><img src="assets/icons/cog-6-tooth.svg" alt=""><div class="nm">cog-6-tooth</div></div>
+          <div class="icon-cell"><img src="assets/icons/arrow-up-tray.svg" alt=""><div class="nm">arrow-up-tray</div></div>
+          <div class="icon-cell"><img src="assets/icons/paper-airplane.svg" alt=""><div class="nm">paper-airplane</div></div>
+          <div class="icon-cell"><img src="assets/icons/photo-mini.svg" alt=""><div class="nm">photo-mini</div></div>
+          <div class="icon-cell"><img src="assets/icons/photo-outline.svg" alt=""><div class="nm">photo-outline</div></div>
+          <div class="icon-cell"><img src="assets/icons/book-open-outline.svg" alt=""><div class="nm">book-open-outline</div></div>
+          <div class="icon-cell"><img src="assets/icons/book-open-solid.svg" alt=""><div class="nm">book-open-solid</div></div>
+          <div class="icon-cell"><img src="assets/icons/cog-6-tooth-solid.svg" alt=""><div class="nm">cog-6-tooth-solid</div></div>
+          <div class="icon-cell" style="opacity:0.5"><div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-3);padding-top:4px;">+more</div><div class="nm">heroicons.com</div></div>
+        </div>
+      </div>
+
+      <div class="card-head">
+        <div class="card-eyebrow">6.2 Sizes &amp; pairing</div>
+        <div class="mono">Glyph size is dictated by container size</div>
+      </div>
+      <div class="icon-sizes">
+        <div class="icon-size-cell">
+          <div class="ic" style="width:28px;height:28px;background:var(--white-05);border-radius:6px;display:flex;align-items:center;justify-content:center;">
+            <img src="assets/icons/magnifying-glass.svg" alt="" style="width:12px;height:12px;">
+          </div>
+          <div class="nm">12 px · mini</div>
+          <div class="role">Inside 28px inputs and buttons</div>
+        </div>
+        <div class="icon-size-cell">
+          <div class="ic" style="width:36px;height:36px;background:var(--white-05);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+            <img src="assets/icons/book-open.svg" alt="" style="width:18px;height:18px;">
+          </div>
+          <div class="nm">18 px · outline</div>
+          <div class="role">Sidebar tabs (36px hit target)</div>
+        </div>
+        <div class="icon-size-cell">
+          <div class="ic" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;">
+            <img src="assets/icons/cog-6-tooth-solid.svg" alt="" style="width:20px;height:20px;">
+          </div>
+          <div class="nm">20 px · solid</div>
+          <div class="role">Settings cog, profile bottom</div>
+        </div>
+        <div class="icon-size-cell">
+          <div class="ic" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;">
+            <img src="assets/icons/photo-mini.svg" alt="" style="width:16px;height:16px;">
+          </div>
+          <div class="nm">16 px · micro</div>
+          <div class="role">Fragment Store file-type badges</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── 07 MOTION ───────────── -->
+    <section id="motion">
+      <div class="section-head">
+        <div class="section-num">07</div>
+        <h2 class="section-title">Motion</h2>
+        <div class="section-kicker">Quiet · purposeful · no bounce</div>
+      </div>
+      <p class="lede">
+        Motion in Concise is a sidekick, not the show. Hovers swap an alpha tier, presses flip the inner highlight to an inner shadow, popovers fade-and-rise by 4 pixels, dialogs by 8. Nothing overshoots. Nothing scales. The student stays oriented.
+      </p>
+
+      <div class="card outlined">
+        <div class="motion-row">
+          <div class="nm">Hover</div>
+          <div class="desc">Background steps up one alpha tier — e.g. <span class="mono"><strong>white/046</strong> → <strong>white/096</strong></span>. No scale, no translate.</div>
+          <div class="ease"><span>90 ms</span><span>ease-out</span></div>
+        </div>
+        <div class="motion-row">
+          <div class="nm">Press</div>
+          <div class="desc">Inner top-highlight flips to <span class="mono">inset 0 1px 2px rgba(0,0,0,0.20)</span>. The button pushes in.</div>
+          <div class="ease"><span>instant</span><span>—</span></div>
+        </div>
+        <div class="motion-row">
+          <div class="nm">Popover</div>
+          <div class="desc">Fade in. 4px translateY from below.</div>
+          <div class="ease"><span>160 ms</span><span>cubic-bezier(.16, 1, .3, 1)</span></div>
+        </div>
+        <div class="motion-row">
+          <div class="nm">Dialog</div>
+          <div class="desc">Fade in. 8px translateY from below. Scrim fades over 200ms.</div>
+          <div class="ease"><span>240 ms</span><span>ease-out</span></div>
+        </div>
+        <div class="motion-row">
+          <div class="nm">Focus</div>
+          <div class="desc">A 2px white ring at 85% alpha appears. Field borders change to <span class="mono">white/15</span>. No glow.</div>
+          <div class="ease"><span>90 ms</span><span>ease-out</span></div>
+        </div>
+        <div class="motion-row">
+          <div class="nm">Disabled</div>
+          <div class="desc">35% alpha. Pointer events off.</div>
+          <div class="ease"><span>—</span><span>—</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── 08 VOICE ───────────── -->
+    <section id="voice">
+      <div class="section-head">
+        <div class="section-num">08</div>
+        <h2 class="section-title">Voice</h2>
+        <div class="section-kicker">Utilitarian · second-person · no hedging</div>
+      </div>
+      <p class="lede">
+        Concise talks <em>to</em> the student, not <em>about</em> itself. Section titles are nouns. Prompts pose a single question. Dialog titles are imperative verbs. Math vocabulary appears uncut — the audience knows what these words mean. We don't apologise for the domain.
+      </p>
+
+      <div class="voice-grid">
+        <div class="voice-card">
+          <div class="tag do">Do</div>
+          <div class="quote">"What do you want to learn today?"</div>
+          <div class="why">Open with a single question. Second person, no preamble. The user is here to do work — say so.</div>
+        </div>
+        <div class="voice-card">
+          <div class="tag dont">Don't</div>
+          <div class="quote" style="color: var(--fg-3); text-decoration: line-through;">"Welcome back! Let's get started!"</div>
+          <div class="why">No exclamation marks. No marketing register. The app is a workbench, not a landing page.</div>
+        </div>
+        <div class="voice-card">
+          <div class="tag do">Do</div>
+          <div class="quote">"Build Concept" · "Add Fragments" · "Concept Store"</div>
+          <div class="why">Imperative verbs for actions. Title Case nouns for sections. Short, specific, lifted from the domain.</div>
+        </div>
+        <div class="voice-card">
+          <div class="tag dont">Don't</div>
+          <div class="quote" style="color: var(--fg-3); text-decoration: line-through;">"Generate with AI" · "Smart Suggestions"</div>
+          <div class="why">Never reference the model by name. Actions read as if the student performed them.</div>
+        </div>
+        <div class="voice-card">
+          <div class="tag do">Do</div>
+          <div class="quote">Search...</div>
+          <div class="why">Placeholders are sentence case with a lowercase ellipsis (three dots, not Unicode "…").</div>
+        </div>
+        <div class="voice-card">
+          <div class="tag dont">Don't</div>
+          <div class="quote" style="color: var(--fg-3); text-decoration: line-through;">"Type to search your stuff…"</div>
+          <div class="why">No filler. No "your stuff". Specific or omitted.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── 09 COMPONENTS ───────────── -->
+    <section id="components">
+      <div class="section-head">
+        <div class="section-num">09</div>
+        <h2 class="section-title">Components</h2>
+        <div class="section-kicker">Visual contract · not a library</div>
+      </div>
+      <p class="lede">
+        The pieces below are a visual contract. Production wiring lives in <span class="mono">@base-ui-components/react</span>; the JSX in <span class="mono">ui_kits/web_app/</span> is the styled skin. Every component answers the same questions: which white-alpha tier is the fill, which radius, which icon size, which hover tier.
+      </p>
+
+      <div class="components">
+
+        <!-- Buttons -->
+        <div class="demo">
+          <div class="demo-head"><div class="demo-title">Buttons</div><div class="demo-tag">radius-2 · 32 px</div></div>
+          <div class="demo-stage">
+            <div class="btn-row">
+              <button class="btn btn-primary"><img src="assets/icons/sparkles.svg" alt="" style="width:12px;height:12px;filter:invert(1);opacity:0.9">Build Concept</button>
+              <button class="btn btn-primary btn-press">Pressed</button>
+              <button class="btn btn-ghost">Cancel</button>
+              <button class="btn btn-primary btn-disabled" disabled>Disabled</button>
+            </div>
+          </div>
+          <div class="mono">primary · inset top highlight ⇄ inset shadow on press</div>
+        </div>
+
+        <!-- Inputs -->
+        <div class="demo">
+          <div class="demo-head"><div class="demo-title">Search input</div><div class="demo-tag">radius-3 · 28 px</div></div>
+          <div class="demo-stage">
+            <div class="input" style="max-width: 260px;">
+              <img src="assets/icons/magnifying-glass.svg" alt="">
+              <span class="placeholder">Search...</span>
+            </div>
+            <div class="input" style="max-width: 260px;">
+              <img src="assets/icons/magnifying-glass.svg" alt="">
+              <span>limits</span>
+            </div>
+          </div>
+          <div class="mono">white/05 fill · 12px leading icon · fg-3 placeholder</div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="demo">
+          <div class="demo-head"><div class="demo-title">Sidebar</div><div class="demo-tag">60 px · fixed</div></div>
+          <div class="demo-stage" style="flex-direction: row; align-items: stretch; gap: 16px;">
+            <div class="sidebar-demo">
+              <div class="sidebar-tab active"><img src="assets/icons/book-open.svg" alt=""></div>
+              <div class="sidebar-tab"><img src="assets/icons/document-text.svg" alt=""></div>
+              <div class="sidebar-tab"><img src="assets/icons/folder.svg" alt=""></div>
+              <div class="sidebar-tab"><img src="assets/icons/cog-6-tooth.svg" alt=""></div>
+              <div style="flex: 1;"></div>
+              <div class="sb-avatar"></div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:8px; justify-content:center;">
+              <div class="mono">36 px tabs · 18 px outline glyphs</div>
+              <div class="mono">active = white/10 fill</div>
+              <div class="mono">avatar carries the gold ring</div>
+            </div>
+          </div>
+          <div class="mono">white/046 fill · 1 px white/05 border</div>
+        </div>
+
+        <!-- Panel -->
+        <div class="demo">
+          <div class="demo-head"><div class="demo-title">Panel</div><div class="demo-tag">180 px · radius-4</div></div>
+          <div class="demo-stage">
+            <div class="panel-demo" style="max-width: 200px;">
+              <div class="panel-title">Concept Store</div>
+              <div class="panel-item active">
+                <img src="assets/icons/light-bulb.svg" alt="">
+                <span class="pn">Limits</span>
+              </div>
+              <div class="panel-item">
+                <img src="assets/icons/light-bulb.svg" alt="">
+                <span class="pn">Sequence and Conve…</span>
+              </div>
+              <div class="panel-item">
+                <img src="assets/icons/light-bulb.svg" alt="">
+                <span class="pn">Cauchy sequence</span>
+              </div>
+              <div class="panel-item">
+                <img src="assets/icons/light-bulb.svg" alt="">
+                <span class="pn">Holomorphic maps</span>
+              </div>
+            </div>
+          </div>
+          <div class="mono">12 px Bold title · 12 px Medium items · ellipsis from CSS</div>
+        </div>
+
+        <!-- Composer -->
+        <div class="demo" style="grid-column: span 2;">
+          <div class="demo-head"><div class="demo-title">Composer</div><div class="demo-tag">514 px · white/096</div></div>
+          <div class="demo-stage" style="padding: 32px;">
+            <div style="max-width: 514px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 18px;">
+              <div style="font-size: 24px; font-weight: 400; letter-spacing: -0.01em; line-height: 1.2; text-align: center; color: var(--fg-0);">What do you want to learn today?</div>
+              <div class="input-lg">
+                <div class="composer-text">I want to learn more about limits, including the different types of limits in the respective metric, norm, and inner product space.</div>
+                <div class="composer-bar">
+                  <div class="tools">
+                    <div style="width:24px;height:24px;border-radius:6px;background:var(--white-05);display:flex;align-items:center;justify-content:center;"><img src="assets/icons/arrow-up-tray.svg" alt="" style="width:12px;height:12px;filter:invert(1);opacity:0.7"></div>
+                    <div style="width:24px;height:24px;border-radius:6px;background:var(--white-05);display:flex;align-items:center;justify-content:center;"><img src="assets/icons/photo-mini.svg" alt="" style="width:12px;height:12px;filter:invert(1);opacity:0.7"></div>
+                  </div>
+                  <div class="send"><img src="assets/icons/paper-airplane.svg" alt=""></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mono">the only lifted surface · white/096 fill · radius-3 · inner-top highlight on the send button</div>
+        </div>
+
+        <!-- Multi-select -->
+        <div class="demo">
+          <div class="demo-head"><div class="demo-title">Multi-select</div><div class="demo-tag">checkbox · 14 px</div></div>
+          <div class="demo-stage">
+            <div style="display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 220px;">
+              <div class="check-row"><span class="check on"></span><span class="check-label">Calculus.pdf</span></div>
+              <div class="check-row"><span class="check on"></span><span class="check-label">Metric spaces.pdf</span></div>
+              <div class="check-row"><span class="check"></span><span class="check-label">Topology notes.pdf</span></div>
+              <div class="check-row"><span class="check"></span><span class="check-label">Inner products.png</span></div>
+            </div>
+          </div>
+          <div class="mono">4 px radius · white/10 fill · white/15 border</div>
+        </div>
+
+        <!-- Dialog -->
+        <div class="demo">
+          <div class="demo-head"><div class="demo-title">Dialog</div><div class="demo-tag">radius-4 · scrim 72%</div></div>
+          <div class="demo-stage" style="background: rgba(14,14,14,0.72); padding: 24px;">
+            <div class="dialog-demo">
+              <div class="dt">Build Concept</div>
+              <div class="dh">Select the fragments your concept will be built from.</div>
+              <div class="da">
+                <button class="btn btn-ghost">Cancel</button>
+                <button class="btn btn-primary">Build Concept</button>
+              </div>
+            </div>
+          </div>
+          <div class="mono">carbon-2 fill · soft outer shadow · sits on a carbon scrim</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Colophon -->
+    <div class="colophon">
+      <div class="col">
+        <div class="lbl">System</div>
+        <div class="val">Concise — Carbon</div>
+      </div>
+      <div class="col">
+        <div class="lbl">Version</div>
+        <div class="val">v1.0 · May 2026</div>
+      </div>
+      <div class="col">
+        <div class="lbl">Tokens</div>
+        <div class="val">colors_and_type.css</div>
+      </div>
+      <div class="col">
+        <div class="lbl">UI kit</div>
+        <div class="val">ui_kits/web_app/</div>
+      </div>
+      <div class="col">
+        <div class="lbl">Surfaces</div>
+        <div class="val">1 · single-product</div>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+<script>
+  (async () => {
+    try { if (document.fonts && document.fonts.ready) { await document.fonts.ready; } } catch (e) {}
+    // wait for images (icons + avatar) to settle
+    const imgs = Array.from(document.images);
+    await Promise.all(imgs.map(img => img.complete ? null : new Promise(res => { img.onload = img.onerror = res; })));
+    setTimeout(() => window.print(), 500);
+  })();
+</script>
+
+</body>
+</html>

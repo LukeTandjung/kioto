@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; }
+  body { background: #0E0E0E; padding: 24px; font-family: var(--font-sans); color: var(--fg-0); display: flex; gap: 24px; align-items: flex-start; }
+  .panel { width: 200px; background: rgba(255,255,255,0.046); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+  .item { display: flex; flex-direction: column; gap: 4px; }
+  .row { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+  .row svg { width: 12px; height: 12px; color: #A8A8A8; flex: 0 0 auto; }
+  .sub { padding-left: 18px; font-size: 12px; color: rgba(255,255,255,0.5); }
+  .panel.notes .row svg { color: #fff; }
+  .panel.notes .sub { padding-left: 12px; }
+  .indent { padding-left: 12px; }
+  .indent2 { padding-left: 24px; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .label { font-size: 11px; color: var(--fg-3); font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<div class="stack">
+  <div class="label">concept item</div>
+  <div class="panel">
+    <div class="item">
+      <div class="row"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-.879-9.121a1 1 0 1 1 1.04-1.66 1 1 0 0 1-.04 1.66ZM9 13a1 1 0 1 0 2 0 1 1 0 0 0-2 0ZM8.94 5.62a2.5 2.5 0 1 1 2.85 4.13l-.4.28a1 1 0 1 1-1.15-1.63l.4-.29a.5.5 0 1 0-.6-.8 1 1 0 1 1-1.1-1.69Z" clip-rule="evenodd"/></svg>Metric Spaces</div>
+      <div class="sub">Definition</div>
+      <div class="sub">Metric functions</div>
+    </div>
+    <div class="item">
+      <div class="row"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-.879-9.121a1 1 0 1 1 1.04-1.66 1 1 0 0 1-.04 1.66ZM9 13a1 1 0 1 0 2 0 1 1 0 0 0-2 0ZM8.94 5.62a2.5 2.5 0 1 1 2.85 4.13l-.4.28a1 1 0 1 1-1.15-1.63l.4-.29a.5.5 0 1 0-.6-.8 1 1 0 1 1-1.1-1.69Z" clip-rule="evenodd"/></svg>Inner Product Spaces</div>
+      <div class="sub">Definition</div>
+    </div>
+  </div>
+</div>
+<div class="stack">
+  <div class="label">notes — nested</div>
+  <div class="panel notes">
+    <div class="item">
+      <div class="row"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 3.5A1.5 1.5 0 0 1 4.5 2h7A1.5 1.5 0 0 1 13 3.5V11h2.5a.5.5 0 0 1 .5.5v2A2.5 2.5 0 0 1 13.5 16h-8A2.5 2.5 0 0 1 3 13.5v-10Z"/></svg>Real Analysis</div>
+      <div class="indent" style="color: rgba(255,255,255,0.7); font-size: 12px">Real Number System</div>
+      <div class="indent2" style="color: rgba(255,255,255,0.5); font-size: 12px">Basic Axioms</div>
+      <div class="indent2" style="color: rgba(255,255,255,0.5); font-size: 12px">Suprema &amp; Infima</div>
+      <div class="indent2" style="color: rgba(255,255,255,0.5); font-size: 12px">Completeness</div>
+    </div>
+  </div>
+</div>
+<div class="stack">
+  <div class="label">fragment file</div>
+  <div class="panel">
+    <div class="item">
+      <div class="row"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 4a2 2 0 0 1 2-2h2.586a1 1 0 0 1 .707.293l1.414 1.414A1 1 0 0 0 9.414 4H12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Z"/></svg>Lecture 1</div>
+      <div class="sub" style="display:flex; align-items:center; gap:6px"><svg viewBox="0 0 16 16" fill="currentColor" style="width:10px; height:10px; color:#A8A8A8"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/></svg>week_one_slides.pdf</div>
+      <div class="sub" style="display:flex; align-items:center; gap:6px"><svg viewBox="0 0 16 16" fill="currentColor" style="width:10px; height:10px; color:#A8A8A8"><rect x="1" y="2" width="14" height="12" rx="2"/></svg>board_screen.png</div>
+      <div class="sub" style="display:flex; align-items:center; gap:6px"><svg viewBox="0 0 16 16" fill="currentColor" style="width:10px; height:10px; color:#A8A8A8"><circle cx="8" cy="8" r="6.5"/></svg>live_tutorial_cast.mp4</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

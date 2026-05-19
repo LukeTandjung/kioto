@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; }
+  body { background: #0E0E0E; padding: 28px; font-family: var(--font-sans); color: var(--fg-0); display: flex; gap: 24px; align-items: flex-start; }
+  .trigger { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.096); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.5); }
+  .trigger svg { width: 12px; height: 12px; color: #B3B3B3; }
+  .popover { width: 200px; background: rgba(255,255,255,0.046); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; font-weight: 500; }
+  .row.muted { color: rgba(255,255,255,0.65); }
+  .check { width: 16px; height: 16px; border-radius: 4px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+  .check.on { background: #fff; border-color: #fff; }
+  .check svg { width: 10px; height: 10px; color: #0E0E0E; }
+  .sep { height: 1px; background: rgba(255,255,255,0.05); margin: 2px -8px; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .label { font-size: 11px; color: var(--fg-3); font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<div class="stack">
+  <div class="label">trigger · closed</div>
+  <div class="trigger">Select Concepts <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg></div>
+</div>
+<div class="stack">
+  <div class="label">popover · open with selection</div>
+  <div class="popover">
+    <div class="row"><div class="check on"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></div>Metric Spaces</div>
+    <div class="row"><div class="check"></div>Norm Spaces</div>
+    <div class="row"><div class="check on"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></div>Inner Product Spa…</div>
+    <div class="row"><div class="check"></div>Relationship betw…</div>
+    <div class="row"><div class="check"></div>Sequence and Co…</div>
+  </div>
+</div>
+<div class="stack">
+  <div class="label">checkbox states</div>
+  <div class="popover" style="width: 180px">
+    <div class="row"><div class="check"></div>Unchecked</div>
+    <div class="row"><div class="check on"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></div>Checked</div>
+    <div class="row" style="opacity:0.4"><div class="check"></div>Disabled</div>
+  </div>
+</div>
+</body>
+</html>
