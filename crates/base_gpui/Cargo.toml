@@ -1,0 +1,14 @@
+[package]
+name = "base_gpui"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "base_gpui"
+path = "src/main.rs"
+
+[dependencies]
+gpui.workspace = true
+gpui-hooks = "0.1.3"
+core-text = "=21.0.0"

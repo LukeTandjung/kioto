@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+  "crates/base_gpui",
   "crates/kioto",
   "crates/ui",
 ]
