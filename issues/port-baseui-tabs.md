@@ -33,7 +33,6 @@ Current GPUI implementation:
 - `crates/base_gpui/src/tabs/tabs_tab.rs`
 - `crates/base_gpui/src/tabs/tabs_panel.rs`
 - `crates/base_gpui/src/tabs/tabs_indicator.rs`
-- `crates/base_gpui/src/utils/use_controlled.rs`
 
 Out of scope / drop from Base UI:
 
@@ -60,7 +59,7 @@ Out of scope / drop from Base UI:
 - [x] `TabsPanel<T>` builder exists.
 - [x] `TabsIndicator` builder exists.
 - [x] `TabsRoot<T>` has `default_value(...)` builder API.
-- [ ] `TabsRoot<T>` has controlled `value(...)` builder API.
+- [x] `TabsRoot<T>` has controlled `value(...)` builder API.
 - [x] `TabsRoot<T>` has `on_value_change(...)` builder API.
 - [x] `TabsRoot<T>` has `orientation(...)` builder API.
 - [x] `TabsList` has `activate_on_focus(...)` builder API.
@@ -69,14 +68,14 @@ Out of scope / drop from Base UI:
 - [x] `TabsTab<T>` has `disabled(...)` builder API.
 - [x] `TabsPanel<T>` has `value(...)` builder API.
 - [x] `TabsPanel<T>` has `keep_mounted(...)` builder API.
-- [ ] Public API consistently constrains tab values as `T: Clone + Eq + 'static`.
-- [ ] `tabs/mod.rs` exposes ergonomic barrel exports for component names.
+- [x] Public API consistently constrains tab values as `T: Clone + Eq + 'static`.
+- [x] `tabs/mod.rs` exposes ergonomic barrel exports for component names.
 
 ### Correctness / compile readiness
 
 - [ ] `crates/base_gpui` passes `cargo check -p base_gpui`.
-- [ ] `TabsPanel<T>::default()` initializes `keep_mounted`, not a nonexistent `disabled` field.
-- [ ] `utils/use_controlled.rs` is either completed or removed if not needed.
+- [x] `TabsPanel<T>::default()` initializes `keep_mounted`, not a nonexistent `disabled` field.
+- [x] React-style `utils/use_controlled.rs` is replaced with a small Rust helper for selecting controlled vs internal values.
 - [ ] Dead fields are either used by behavior or intentionally documented.
 - [ ] Add a small example/demo using the Tabs components.
 
