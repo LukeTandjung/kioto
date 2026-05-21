@@ -14,16 +14,16 @@ use gpui::{
     div
 };
 
-pub struct TabsRoot<T: 'static> {
+pub struct TabsRoot<T: Clone + Eq + 'static> {
     base: Div,
     children: Vec<AnyElement>,
     default_value: Option<T>,
     value: Option<T>,
-    on_value_change: Option<Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
+    on_value_change: Option<Rc<dyn Fn(Option<&T>, &ClickEvent, &mut Window, &mut App) + 'static>>,
     orientation: Option<SharedString>,
 }
 
-impl<T> Default for TabsRoot<T> {
+impl<T: Clone + Eq + 'static> Default for TabsRoot<T> {
     fn default() -> Self {
         Self {
             base: div(),
@@ -36,27 +36,32 @@ impl<T> Default for TabsRoot<T> {
     }
 }
 
-impl<T> ParentElement for TabsRoot<T> {
+impl<T: Clone + Eq + 'static> ParentElement for TabsRoot<T> {
     fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
         self.children.extend(elements);
     }
 }
 
-impl<T> Styled for TabsRoot<T> {
+impl<T: Clone + Eq + 'static> Styled for TabsRoot<T> {
     fn style(&mut self) -> &mut StyleRefinement {
         self.base.style()
     }
 }
 
-impl<T> RenderOnce for TabsRoot<T> {
+impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         self.base.children(self.children)
     }
 }
 
-impl<T> TabsRoot<T> {
+impl<T: Clone + Eq + 'static> TabsRoot<T> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn value(mut self, value: T) -> Self {
+        self.value = Some(value);
+        self
     }
     
     pub fn default_value(mut self, default_value: T) -> Self {
@@ -64,7 +69,7 @@ impl<T> TabsRoot<T> {
         self
     }
 
-    pub fn on_value_change(mut self, on_value_change: Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>) -> Self {
+    pub fn on_value_change(mut self, on_value_change: Rc<dyn Fn(Option<&T>, &ClickEvent, &mut Window, &mut App) + 'static>) -> Self {
         self.on_value_change = Some(on_value_change);
         self     
     }
