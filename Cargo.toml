@@ -14,3 +14,7 @@ edition = "2024"
 gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["font-kit", "wayland", "x11"] }
 gpui-component = { git = "https://github.com/longbridge/gpui-component" }
+gpui-hooks = { git = "https://github.com/leset0ng/gpui-hooks" }
+
+[patch.crates-io]
+gpui = { git = "https://github.com/zed-industries/zed" }
