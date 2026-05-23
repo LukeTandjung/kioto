@@ -1,25 +1,14 @@
-use std::rc::Rc;
-
-use gpui_hooks::hooks::{UseCallbackHook, UseRefHook, UseStateHook};
-
-pub trait UseControlledHook {
-    fn use_controlled<T: Clone + 'static>(
-        &self,
-        controlled: Option<T>,
-        default: Option<T>,
-    ) -> (Option<T>, Box<dyn Fn(Option<T>)>);
-}
-
-impl<H> UseControlledHook for H
-where
-    H: UseCallbackHook + UseRefHook + UseStateHook,
-{
-    fn use_controlled<T: Clone + 'static>(
-        &self,
-        controlled: Option<T>,
-        default: Option<T>,
-    ) -> (Option<T>, Box<dyn Fn(Option<T>)>) {
-        let is_controlled_ref = self.use_ref(|| controlled.is_some());
+pub fn use_controlled<T: Clone + Equal + 'static>(
+    controlled: Option<Option<T>>,
+    default: Option<Option<T>>,
+    id: SharedString
+) -> (Option<Option<T>>, Box<dyn Fn(Option<Option<T>>)>) {
+    let 
+    
+    let value = match controlled {
+        Some(non_null_vaue) => Some(non_null_value),
+        None => 
+    }
         let (value_state, set_value_state) = self.use_state(|| default);
 
         let is_controlled = *is_controlled_ref.borrow();
