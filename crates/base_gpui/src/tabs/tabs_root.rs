@@ -15,6 +15,7 @@ use gpui::{
 };
 
 pub struct TabsRoot<T: Clone + Eq + 'static> {
+    id: SharedString,
     base: Div,
     children: Vec<AnyElement>,
     default_value: Option<T>,
@@ -26,6 +27,7 @@ pub struct TabsRoot<T: Clone + Eq + 'static> {
 impl<T: Clone + Eq + 'static> Default for TabsRoot<T> {
     fn default() -> Self {
         Self {
+            id: SharedString::new("tabs"),
             base: div(),
             children: Vec::from([]),
             default_value: None,
