@@ -28,11 +28,13 @@ Base UI source reference:
 
 Current GPUI implementation:
 
-- `crates/base_gpui/src/tabs/tabs_root.rs`
-- `crates/base_gpui/src/tabs/tabs_list.rs`
-- `crates/base_gpui/src/tabs/tabs_tab.rs`
-- `crates/base_gpui/src/tabs/tabs_panel.rs`
-- `crates/base_gpui/src/tabs/tabs_indicator.rs`
+- `crates/base_gpui/src/tabs/layers/tabs_root.rs`
+- `crates/base_gpui/src/tabs/layers/tabs_list.rs`
+- `crates/base_gpui/src/tabs/layers/tabs_tab.rs`
+- `crates/base_gpui/src/tabs/layers/tabs_panel.rs`
+- `crates/base_gpui/src/tabs/layers/tabs_indicator.rs`
+- `crates/base_gpui/src/tabs/state/tabs_state.rs`
+- `crates/base_gpui/src/tabs/child/tabs_child.rs`
 
 Out of scope / drop from Base UI:
 
@@ -73,11 +75,19 @@ Out of scope / drop from Base UI:
 
 ### Correctness / compile readiness
 
-- [ ] `crates/base_gpui` passes `cargo check -p base_gpui`.
+- [x] `crates/base_gpui` passes `cargo check -p base_gpui`.
 - [x] `TabsPanel<T>::default()` initializes `keep_mounted`, not a nonexistent `disabled` field.
 - [x] React-style `utils/use_controlled.rs` is replaced with a small Rust helper for selecting controlled vs internal values.
 - [ ] Dead fields are either used by behavior or intentionally documented.
 - [ ] Add a small example/demo using the Tabs components.
+
+### Architecture / internal primitives
+
+- [x] Add typed Tabs child tree so `TabsRoot<T>` can drill shared state before `AnyElement` erasure.
+- [x] Add reusable `GenericState` trait for component state containers.
+- [x] Add reusable `GenericChild` trait for state-context propagation through child layers.
+- [x] Add reusable `ControlledState<S>` helper for controlled/uncontrolled state resolution backed by GPUI keyed entity state.
+- [x] Reorganize `base_gpui` architecture into `api`, `utils`, and component-specific `state`, `child`, and `layers` folders.
 
 ### Stateful/stateless behavior
 
@@ -88,16 +98,16 @@ Out of scope / drop from Base UI:
 - [ ] In uncontrolled mode, user interaction calls `on_value_change(...)` and then mutates internal selected value unless canceled/blocked by API design.
 - [ ] In uncontrolled mode, automatic fallback changes mutate internal selected value.
 - [ ] In controlled mode, automatic fallback does not override the caller-provided value.
-- [ ] Decide implementation style: `window.use_keyed_state(...)`, explicit `Entity<TabsState<T>>`, or both.
-- [ ] If using `window.use_keyed_state(...)`, require stable `ElementId` on `TabsRoot<T>`.
+- [x] Decide implementation style: `window.use_keyed_state(...)`, explicit `Entity<TabsState<T>>`, or both.
+- [x] If using `window.use_keyed_state(...)`, require stable `ElementId` on `TabsRoot<T>`.
 - [ ] If using explicit `Entity<TabsState<T>>`, provide ergonomic wrapper constructors around it.
 - [ ] Document usage examples for both controlled and uncontrolled Tabs.
 
 ### Shared state model
 
-- [ ] Introduce GPUI-native shared tabs state owned by `TabsRoot<T>` or `Entity<TabsState<T>>`.
-- [ ] Track current selected value as `Option<T>`.
-- [ ] Track whether the root is controlled or uncontrolled.
+- [x] Introduce GPUI-native shared tabs state owned by `TabsRoot<T>` or `Entity<TabsState<T>>`.
+- [x] Track current selected value as `Option<T>`.
+- [x] Track whether the root is controlled or uncontrolled.
 - [ ] Track orientation as a typed enum instead of free-form string.
 - [ ] Track registered tabs in order.
 - [ ] Track tab metadata: value, disabled state, index, and optional measured bounds.
@@ -108,9 +118,9 @@ Out of scope / drop from Base UI:
 
 ### Selection behavior
 
-- [ ] In uncontrolled mode, initialize selection from `default_value` when provided.
+- [x] In uncontrolled mode, initialize selection from `default_value` when provided.
 - [ ] In uncontrolled mode, when no `default_value` is provided, select the first enabled tab.
-- [ ] Support `None` as selected value, meaning no active tab.
+- [x] Support `None` as selected value, meaning no active tab.
 - [ ] Clicking/pressing an enabled inactive tab selects it.
 - [ ] Clicking/pressing the already active tab is a no-op.
 - [ ] Clicking/pressing a disabled tab is a no-op.
