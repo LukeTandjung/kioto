@@ -1,12 +1,7 @@
-pub mod tabs_root;
-pub mod tabs_list;
-pub mod tabs_tab;
-pub mod tabs_indicator;
-pub mod tabs_panel;
+pub mod child;
+pub mod layers;
+pub mod state;
 
-pub use tabs_indicator::TabsIndicator;
-pub use tabs_list::TabsList;
-pub use tabs_panel::TabsPanel;
-pub use tabs_root::TabsRoot;
-pub use tabs_tab::TabsTab;
-
+pub use child::TabsChild;
+pub use layers::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab};
+pub use state::TabsState;

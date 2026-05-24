@@ -1,4 +1,3 @@
-pub mod hooks;
-pub mod traits;
+pub mod state;
 
-pub use hooks::use_controlled;
+pub use state::ControlledState;
