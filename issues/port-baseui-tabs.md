@@ -35,6 +35,7 @@ Current GPUI implementation:
 - `crates/base_gpui/src/tabs/layers/tabs_indicator.rs`
 - `crates/base_gpui/src/tabs/state/tabs_state.rs`
 - `crates/base_gpui/src/tabs/state/tabs_props.rs`
+- `crates/base_gpui/src/tabs/state/tabs_runtime.rs`
 - `crates/base_gpui/src/tabs/child/tabs_child.rs`
 - `crates/base_gpui/src/utils/state/controlled_context.rs`
 
@@ -88,7 +89,7 @@ Out of scope / drop from Base UI:
 - [x] Add typed Tabs child tree so `TabsRoot<T>` can drill shared state before `AnyElement` erasure.
 - [x] Add reusable `GenericState` trait for component state containers.
 - [x] Add reusable `GenericChild` trait for state-context propagation through child layers.
-- [x] Add reusable `ControlledContext<S, D>` helper for controlled/uncontrolled state resolution backed by GPUI keyed entity state plus injected component props.
+- [x] Add reusable `ControlledContext<S, P, R>` helper for controlled/uncontrolled state resolution backed by GPUI keyed entity state plus injected component props and runtime state.
 - [x] Reorganize `base_gpui` architecture into `api`, `utils`, and component-specific `state`, `child`, and `layers` folders.
 
 ### Stateful/stateless behavior
@@ -110,7 +111,7 @@ Out of scope / drop from Base UI:
 - [x] Introduce GPUI-native shared tabs state owned by `TabsRoot<T>` or `Entity<TabsState<T>>`.
 - [x] Track current selected value as `Option<T>`.
 - [x] Track whether the root is controlled or uncontrolled.
-- [ ] Track orientation as a typed enum instead of free-form string.
+- [x] Track orientation as a typed enum instead of free-form string.
 - [ ] Track registered tabs in order.
 - [ ] Track tab metadata: value, disabled state, index, and optional measured bounds.
 - [ ] Track registered panels in order.
@@ -173,8 +174,8 @@ Out of scope / drop from Base UI:
 
 - [ ] Root exposes orientation and activation direction to styling logic.
 - [ ] List exposes orientation and activation direction to styling logic.
-- [ ] Tab exposes active, disabled, and orientation state to styling logic.
-- [ ] Panel exposes hidden, orientation, and activation direction state to styling logic.
+- [ ] Tab computes active, disabled, and orientation state; expose it to styling logic.
+- [ ] Panel computes hidden and orientation state; expose it plus activation direction to styling logic.
 - [ ] Indicator exposes active tab position/size, orientation, and activation direction state.
 
 ### Tests / verification
