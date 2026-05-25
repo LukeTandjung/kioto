@@ -34,7 +34,9 @@ Current GPUI implementation:
 - `crates/base_gpui/src/tabs/layers/tabs_panel.rs`
 - `crates/base_gpui/src/tabs/layers/tabs_indicator.rs`
 - `crates/base_gpui/src/tabs/state/tabs_state.rs`
+- `crates/base_gpui/src/tabs/state/tabs_props.rs`
 - `crates/base_gpui/src/tabs/child/tabs_child.rs`
+- `crates/base_gpui/src/utils/state/controlled_context.rs`
 
 Out of scope / drop from Base UI:
 
@@ -86,16 +88,16 @@ Out of scope / drop from Base UI:
 - [x] Add typed Tabs child tree so `TabsRoot<T>` can drill shared state before `AnyElement` erasure.
 - [x] Add reusable `GenericState` trait for component state containers.
 - [x] Add reusable `GenericChild` trait for state-context propagation through child layers.
-- [x] Add reusable `ControlledState<S>` helper for controlled/uncontrolled state resolution backed by GPUI keyed entity state.
+- [x] Add reusable `ControlledContext<S, D>` helper for controlled/uncontrolled state resolution backed by GPUI keyed entity state plus injected component props.
 - [x] Reorganize `base_gpui` architecture into `api`, `utils`, and component-specific `state`, `child`, and `layers` folders.
 
 ### Stateful/stateless behavior
 
-- [ ] Support Base UI-style controlled/stateless usage: caller passes `value(...)` and owns the selected tab.
-- [ ] Support Base UI-style uncontrolled/stateful usage: caller passes `default_value(...)` and Tabs owns the selected tab internally.
-- [ ] Define clear precedence: if `value(...)` is supplied, the root is controlled; otherwise it is uncontrolled.
-- [ ] In controlled mode, user interaction calls `on_value_change(...)` but does not mutate internal selected value.
-- [ ] In uncontrolled mode, user interaction calls `on_value_change(...)` and then mutates internal selected value unless canceled/blocked by API design.
+- [x] Support Base UI-style controlled/stateless usage: caller passes `value(...)` and owns the selected tab.
+- [x] Support Base UI-style uncontrolled/stateful usage: caller passes `default_value(...)` and Tabs owns the selected tab internally.
+- [x] Define clear precedence: if `value(...)` is supplied, the root is controlled; otherwise it is uncontrolled.
+- [x] In controlled mode, user interaction calls `on_value_change(...)` but does not mutate internal selected value.
+- [x] In uncontrolled mode, user interaction calls `on_value_change(...)` and then mutates internal selected value unless canceled/blocked by API design.
 - [ ] In uncontrolled mode, automatic fallback changes mutate internal selected value.
 - [ ] In controlled mode, automatic fallback does not override the caller-provided value.
 - [x] Decide implementation style: `window.use_keyed_state(...)`, explicit `Entity<TabsState<T>>`, or both.
@@ -121,12 +123,12 @@ Out of scope / drop from Base UI:
 - [x] In uncontrolled mode, initialize selection from `default_value` when provided.
 - [ ] In uncontrolled mode, when no `default_value` is provided, select the first enabled tab.
 - [x] Support `None` as selected value, meaning no active tab.
-- [ ] Clicking/pressing an enabled inactive tab selects it.
-- [ ] Clicking/pressing the already active tab is a no-op.
-- [ ] Clicking/pressing a disabled tab is a no-op.
-- [ ] User-initiated selection calls `on_value_change`.
-- [ ] Controlled mode calls `on_value_change` but does not mutate internal selected value.
-- [ ] Uncontrolled mode mutates internal selected value after change notification.
+- [x] Clicking an enabled inactive tab selects it.
+- [x] Clicking the already active tab is a no-op.
+- [x] Clicking a disabled tab is a no-op.
+- [x] User-initiated selection calls `on_value_change`.
+- [x] Controlled mode calls `on_value_change` but does not mutate internal selected value.
+- [x] Uncontrolled mode mutates internal selected value after change notification.
 - [ ] If selected tab becomes disabled in uncontrolled mode, fall back to first enabled tab or `None`.
 - [ ] If selected tab is removed in uncontrolled mode, fall back to first enabled tab or `None`.
 - [ ] Controlled mode preserves the externally supplied value even if disabled or missing.
@@ -151,10 +153,10 @@ Out of scope / drop from Base UI:
 
 ### Panel behavior
 
-- [ ] `TabsPanel<T>` renders as visible when its value equals selected value.
-- [ ] `TabsPanel<T>` is hidden or omitted when its value does not equal selected value.
-- [ ] `keep_mounted = false` means inactive panels are not rendered.
-- [ ] `keep_mounted = true` means inactive panels remain mounted but hidden.
+- [x] `TabsPanel<T>` renders as visible when its value equals selected value.
+- [x] `TabsPanel<T>` is hidden or omitted when its value does not equal selected value.
+- [x] `keep_mounted = false` means inactive panels are not rendered.
+- [x] `keep_mounted = true` means inactive panels remain mounted but hidden.
 - [ ] Panels receive/access state needed for styling: hidden, orientation, activation direction.
 
 ### Indicator behavior
