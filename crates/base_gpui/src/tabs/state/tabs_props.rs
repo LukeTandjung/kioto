@@ -44,16 +44,10 @@ impl<T: Clone + Eq + 'static> ControlledContext<TabsState<T>, TabsProps<T>> {
         window: &mut Window,
         cx: &mut App,
     ) {
-        let current = self.selected_value(cx);
-
-        if current == value {
-            return;
-        }
-
-        if let Some(on_value_change) = self.props().on_value_change() {
-            on_value_change(value.as_ref(), event, window, cx);
-        }
-
-        self.set_state(value, cx);
+        self.set_state(value, cx, |props, next, cx| {
+            props.on_value_change().map(|on_value_change| {
+                on_value_change(next, event, window, cx);
+            });
+        });
     }
 }

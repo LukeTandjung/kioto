@@ -42,7 +42,18 @@ impl<S: GenericState + 'static, D: Clone + 'static> ControlledContext<S, D> {
             .unwrap_or_else(|| self.entity.read(cx).get_value().cloned())
     }
 
-    pub fn set_state(&self, next: Option<S::Value>, cx: &mut App) {
+    pub fn set_state(
+        &self,
+        next: Option<S::Value>,
+        cx: &mut App,
+        notify: impl FnOnce(&D, Option<&S::Value>, &mut App),
+    ) {
+        if self.get_state(cx) == next {
+            return;
+        }
+
+        notify(&self.props, next.as_ref(), cx);
+
         if self.controlled.is_none() {
             self.entity.update(cx, |state, cx| {
                 state.set_value(next);
