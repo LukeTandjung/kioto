@@ -4,15 +4,17 @@ use gpui::{App, ClickEvent, Window};
 
 use crate::utils::ControlledContext;
 
-use super::TabsState;
+use super::{TabsOrientation, TabsRuntime, TabsState};
 
 pub struct TabsProps<T: Clone + Eq + 'static> {
+    orientation: TabsOrientation,
     on_value_change: Option<Rc<dyn Fn(Option<&T>, &ClickEvent, &mut Window, &mut App) + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Clone for TabsProps<T> {
     fn clone(&self) -> Self {
         Self {
+            orientation: self.orientation,
             on_value_change: self.on_value_change.clone(),
         }
     }
@@ -20,9 +22,17 @@ impl<T: Clone + Eq + 'static> Clone for TabsProps<T> {
 
 impl<T: Clone + Eq + 'static> TabsProps<T> {
     pub fn new(
+        orientation: TabsOrientation,
         on_value_change: Option<Rc<dyn Fn(Option<&T>, &ClickEvent, &mut Window, &mut App) + 'static>>,
     ) -> Self {
-        Self { on_value_change }
+        Self {
+            orientation,
+            on_value_change,
+        }
+    }
+
+    pub fn orientation(&self) -> TabsOrientation {
+        self.orientation
     }
 
     pub fn on_value_change(
@@ -32,7 +42,7 @@ impl<T: Clone + Eq + 'static> TabsProps<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> ControlledContext<TabsState<T>, TabsProps<T>> {
+impl<T: Clone + Eq + 'static> ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>> {
     pub fn selected_value(&self, cx: &App) -> Option<T> {
         self.get_state(cx)
     }

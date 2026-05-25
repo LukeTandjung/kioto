@@ -6,7 +6,7 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsProps, TabsState},
+    tabs::{TabsProps, TabsRuntime, TabsState},
     utils::ControlledContext,
 };
 
@@ -15,7 +15,7 @@ pub struct TabsTab<T: Clone + Eq + 'static> {
     id: ElementId,
     base: Div,
     children: Vec<AnyElement>,
-    context: Option<ControlledContext<TabsState<T>, TabsProps<T>>>,
+    context: Option<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>,
     value: Option<T>,
     disabled: bool,
 }
@@ -46,15 +46,20 @@ impl<T: Clone + Eq + 'static> Styled for TabsTab<T> {
 }
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let context = self.context;
         let value = self.value;
         let disabled = self.disabled;
+        let active = match (context.as_ref(), value.as_ref()) {
+            (Some(context), Some(value)) => context.selected_value(cx).as_ref() == Some(value),
+            _ => false,
+        };
+        let _orientation = context.as_ref().map(|context| context.props().orientation());
 
         self.base
             .id(self.id)
             .children(self.children)
-            .when(!disabled, |this| {
+            .when(!disabled && !active, |this| {
                 this.when_some(context.zip(value), |this, (context, value)| {
                     this.on_click(move |event, window, cx| {
                         context.select_value(Some(value.clone()), event, window, cx);
@@ -64,10 +69,10 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>>>
+impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>
     for TabsTab<T>
 {
-    fn add_state_context(mut self, context: ControlledContext<TabsState<T>, TabsProps<T>>) -> Self {
+    fn add_state_context(mut self, context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>) -> Self {
         self.context = Some(context);
         self
     }

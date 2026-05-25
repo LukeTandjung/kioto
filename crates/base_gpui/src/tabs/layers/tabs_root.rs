@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, ClickEvent, Div, ElementId, IntoElement, ParentElement, RenderOnce, SharedString,
-    StyleRefinement, Styled, Window, div,
+    App, ClickEvent, Div, ElementId, IntoElement, ParentElement, RenderOnce, StyleRefinement,
+    Styled, Window, div,
 };
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsChild, TabsProps, TabsState},
+    tabs::{TabsChild, TabsOrientation, TabsProps, TabsRuntime, TabsState},
     utils::ControlledContext,
 };
 
@@ -18,7 +18,7 @@ pub struct TabsRoot<T: Clone + Eq + 'static> {
     default_value: Option<T>,
     value: Option<Option<T>>,
     on_value_change: Option<Rc<dyn Fn(Option<&T>, &ClickEvent, &mut Window, &mut App) + 'static>>,
-    orientation: Option<SharedString>,
+    orientation: TabsOrientation,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRoot<T> {
@@ -30,7 +30,7 @@ impl<T: Clone + Eq + 'static> Default for TabsRoot<T> {
             default_value: None,
             value: None,
             on_value_change: None,
-            orientation: Some(SharedString::from("horizontal")),
+            orientation: TabsOrientation::Horizontal,
         }
     }
 }
@@ -43,13 +43,14 @@ impl<T: Clone + Eq + 'static> Styled for TabsRoot<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let context = ControlledContext::<TabsState<T>, TabsProps<T>>::new(
+        let context = ControlledContext::<TabsState<T>, TabsProps<T>, TabsRuntime<T>>::new(
             self.id.clone(),
             cx,
             window,
             self.value,
             self.default_value,
-            TabsProps::new(self.on_value_change),
+            TabsProps::new(self.orientation, self.on_value_change),
+            TabsRuntime::new(),
         );
 
         self.base.children(
@@ -98,8 +99,8 @@ impl<T: Clone + Eq + 'static> TabsRoot<T> {
         self
     }
 
-    pub fn orientation(mut self, orientation: impl Into<SharedString>) -> Self {
-        self.orientation = Some(orientation.into());
+    pub fn orientation(mut self, orientation: TabsOrientation) -> Self {
+        self.orientation = orientation;
         self
     }
 }

@@ -5,7 +5,7 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsProps, TabsState},
+    tabs::{TabsProps, TabsRuntime, TabsState},
     utils::ControlledContext,
 };
 
@@ -13,7 +13,7 @@ use crate::{
 pub struct TabsPanel<T: Clone + Eq + 'static> {
     base: Div,
     children: Vec<AnyElement>,
-    context: Option<ControlledContext<TabsState<T>, TabsProps<T>>>,
+    context: Option<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>,
     value: Option<T>,
     keep_mounted: bool,
 }
@@ -52,11 +52,16 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
             (Some(value), Some(selected)) => value == selected,
             _ => false,
         };
+        let hidden = !active;
+        let _orientation = self
+            .context
+            .as_ref()
+            .map(|context| context.props().orientation());
 
         if active || self.keep_mounted {
             self.base
                 .children(self.children)
-                .when(!active, |this| this.invisible())
+                .when(hidden, |this| this.invisible())
                 .into_any_element()
         } else {
             div().into_any_element()
@@ -64,10 +69,10 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>>>
+impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>
     for TabsPanel<T>
 {
-    fn add_state_context(mut self, context: ControlledContext<TabsState<T>, TabsProps<T>>) -> Self {
+    fn add_state_context(mut self, context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>) -> Self {
         self.context = Some(context);
         self
     }
