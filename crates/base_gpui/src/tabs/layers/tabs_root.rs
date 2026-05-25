@@ -6,8 +6,9 @@ use gpui::{
 };
 
 use crate::{
-    tabs::{TabsChild, TabsState},
-    api::GenericChild, utils::ControlledState,
+    api::GenericChild,
+    tabs::{TabsChild, TabsProps, TabsState},
+    utils::ControlledContext,
 };
 
 pub struct TabsRoot<T: Clone + Eq + 'static> {
@@ -42,18 +43,20 @@ impl<T: Clone + Eq + 'static> Styled for TabsRoot<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let state = ControlledState::<TabsState<T>>::new(
+        let context = ControlledContext::<TabsState<T>, TabsProps<T>>::new(
             self.id.clone(),
             cx,
             window,
             self.value,
             self.default_value,
+            TabsProps::new(self.on_value_change),
         );
-        let _value = state.get_state(cx);
 
-        self.base.children(self.children.into_iter().map(|child| {
-            child.add_state_context(state.clone())
-        }))
+        self.base.children(
+            self.children
+                .into_iter()
+                .map(|child| child.add_state_context(context.clone())),
+        )
     }
 }
 
@@ -81,15 +84,18 @@ impl<T: Clone + Eq + 'static> TabsRoot<T> {
         self.value = Some(value);
         self
     }
-    
+
     pub fn default_value(mut self, default_value: Option<T>) -> Self {
         self.default_value = default_value;
         self
     }
 
-    pub fn on_value_change(mut self, on_value_change: Rc<dyn Fn(Option<&T>, &ClickEvent, &mut Window, &mut App) + 'static>) -> Self {
-        self.on_value_change = Some(on_value_change);
-        self     
+    pub fn on_value_change(
+        mut self,
+        on_value_change: impl Fn(Option<&T>, &ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_value_change = Some(Rc::new(on_value_change));
+        self
     }
 
     pub fn orientation(mut self, orientation: impl Into<SharedString>) -> Self {

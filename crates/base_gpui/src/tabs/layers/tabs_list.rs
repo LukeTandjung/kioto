@@ -2,7 +2,11 @@ use gpui::{
     App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window, div,
 };
 
-use crate::{tabs::TabsState, api::GenericChild, utils::ControlledState};
+use crate::{
+    api::GenericChild,
+    tabs::{TabsProps, TabsState},
+    utils::ControlledContext,
+};
 
 use super::TabsTab;
 
@@ -10,7 +14,7 @@ use super::TabsTab;
 pub struct TabsList<T: Clone + Eq + 'static> {
     base: Div,
     children: Vec<TabsTab<T>>,
-    state: Option<ControlledState<TabsState<T>>>,
+    context: Option<ControlledContext<TabsState<T>, TabsProps<T>>>,
     activate_on_focus: bool,
     loop_focus: bool,
 }
@@ -20,7 +24,7 @@ impl<T: Clone + Eq + 'static> Default for TabsList<T> {
         Self {
             base: div(),
             children: Vec::from([]),
-            state: None,
+            context: None,
             activate_on_focus: false,
             loop_focus: true,
         }
@@ -35,19 +39,21 @@ impl<T: Clone + Eq + 'static> Styled for TabsList<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        let state = self.state;
+        let context = self.context;
         self.base.children(self.children.into_iter().map(|tab| {
-            match state.clone() {
-                Some(state) => tab.add_state_context(state).into_any_element(),
+            match context.clone() {
+                Some(context) => tab.add_state_context(context).into_any_element(),
                 None => tab.into_any_element(),
             }
         }))
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledState<TabsState<T>>> for TabsList<T> {
-    fn add_state_context(mut self, state: ControlledState<TabsState<T>>) -> Self {
-        self.state = Some(state);
+impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>>>
+    for TabsList<T>
+{
+    fn add_state_context(mut self, context: ControlledContext<TabsState<T>, TabsProps<T>>) -> Self {
+        self.context = Some(context);
         self
     }
 }

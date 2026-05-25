@@ -2,8 +2,8 @@ use gpui::{AnyElement, IntoElement};
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsIndicator, TabsList, TabsPanel, TabsState},
-    utils::ControlledState,
+    tabs::{TabsIndicator, TabsList, TabsPanel, TabsProps, TabsState},
+    utils::ControlledContext,
 };
 
 pub enum TabsChild<T: Clone + Eq + 'static> {
@@ -24,11 +24,13 @@ impl<T: Clone + Eq + 'static> IntoElement for TabsChild<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledState<TabsState<T>>> for TabsChild<T> {
-    fn add_state_context(self, state: ControlledState<TabsState<T>>) -> Self {
+impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>>>
+    for TabsChild<T>
+{
+    fn add_state_context(self, context: ControlledContext<TabsState<T>, TabsProps<T>>) -> Self {
         match self {
-            Self::List(list) => Self::List(list.add_state_context(state)),
-            Self::Panel(panel) => Self::Panel(panel.add_state_context(state)),
+            Self::List(list) => Self::List(list.add_state_context(context)),
+            Self::Panel(panel) => Self::Panel(panel.add_state_context(context)),
             Self::Indicator(indicator) => Self::Indicator(indicator),
         }
     }

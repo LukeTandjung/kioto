@@ -1,15 +1,19 @@
 use gpui::{
-    AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
-    div,
+    prelude::FluentBuilder as _, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce,
+    StyleRefinement, Styled, Window, div,
 };
 
-use crate::{tabs::TabsState, api::GenericChild, utils::ControlledState};
+use crate::{
+    api::GenericChild,
+    tabs::{TabsProps, TabsState},
+    utils::ControlledContext,
+};
 
 #[derive(IntoElement)]
 pub struct TabsPanel<T: Clone + Eq + 'static> {
     base: Div,
     children: Vec<AnyElement>,
-    state: Option<ControlledState<TabsState<T>>>,
+    context: Option<ControlledContext<TabsState<T>, TabsProps<T>>>,
     value: Option<T>,
     keep_mounted: bool,
 }
@@ -19,7 +23,7 @@ impl<T: Clone + Eq + 'static> Default for TabsPanel<T> {
         Self {
             base: div(),
             children: Vec::from([]),
-            state: None,
+            context: None,
             value: None,
             keep_mounted: false,
         }
@@ -39,14 +43,32 @@ impl<T: Clone + Eq + 'static> Styled for TabsPanel<T> {
 }
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        self.base.children(self.children)
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let selected = self
+            .context
+            .as_ref()
+            .and_then(|context| context.selected_value(cx));
+        let active = match (self.value.as_ref(), selected.as_ref()) {
+            (Some(value), Some(selected)) => value == selected,
+            _ => false,
+        };
+
+        if active || self.keep_mounted {
+            self.base
+                .children(self.children)
+                .when(!active, |this| this.invisible())
+                .into_any_element()
+        } else {
+            div().into_any_element()
+        }
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledState<TabsState<T>>> for TabsPanel<T> {
-    fn add_state_context(mut self, state: ControlledState<TabsState<T>>) -> Self {
-        self.state = Some(state);
+impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>>>
+    for TabsPanel<T>
+{
+    fn add_state_context(mut self, context: ControlledContext<TabsState<T>, TabsProps<T>>) -> Self {
+        self.context = Some(context);
         self
     }
 }
