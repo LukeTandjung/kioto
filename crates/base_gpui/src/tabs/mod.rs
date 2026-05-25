@@ -4,4 +4,4 @@ pub mod state;
 
 pub use child::TabsChild;
 pub use layers::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab};
-pub use state::TabsState;
+pub use state::{TabsProps, TabsState};
