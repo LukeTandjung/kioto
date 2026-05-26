@@ -59,6 +59,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsIndicator<T> {
             .unwrap_or_else(|| {
                 TabsIndicatorRenderState::new(
                     false,
+                    None,
+                    None,
                     TabsOrientation::Horizontal,
                     Default::default(),
                 )

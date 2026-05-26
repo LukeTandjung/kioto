@@ -1,4 +1,4 @@
-use gpui::{App, ElementId, Window};
+use gpui::{App, Bounds, ElementId, Pixels, Window};
 
 use crate::{
     api::GenericContext,
@@ -95,6 +95,11 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         self.inner.set_runtime(cx, |runtime, _| {
             runtime.register_panel(value, index);
         });
+    }
+
+    pub fn register_tab_bounds(&self, bounds: Vec<Bounds<Pixels>>, cx: &mut App) {
+        self.inner
+            .set_runtime_if_changed(cx, |runtime| runtime.set_tab_bounds(bounds));
     }
 
     pub fn highlight_first_tab(&self, cx: &mut App) {
@@ -211,11 +216,17 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
     }
 
     pub fn indicator_render_state(&self, cx: &App) -> TabsIndicatorRenderState {
-        TabsIndicatorRenderState::new(
-            self.selected_value(cx).is_some(),
-            self.props().orientation(),
-            self.activation_direction(cx),
-        )
+        let selected = self.selected_value(cx);
+
+        self.inner.get_runtime(cx, |runtime| {
+            TabsIndicatorRenderState::new(
+                selected.is_some(),
+                runtime.active_tab_position(selected.as_ref()),
+                runtime.active_tab_size(selected.as_ref()),
+                self.props().orientation(),
+                runtime.activation_direction(),
+            )
+        })
     }
 
     pub fn sync_activation_direction_with_selected_value(&self, cx: &mut App) {

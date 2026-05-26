@@ -51,6 +51,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
         let render_state = context
             .as_ref()
             .map(|context| context.list_render_state(_cx));
+        let bounds_context = context.clone();
         let select_left_context = context.clone();
         let select_right_context = context.clone();
         let select_up_context = context.clone();
@@ -67,6 +68,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
         };
 
         base
+            .on_children_prepainted(move |bounds, _window, cx| {
+                if let Some(context) = bounds_context.as_ref() {
+                    context.register_tab_bounds(bounds, cx);
+                }
+            })
             .id("tabs-list")
             .key_context(TABS_LIST_KEY_CONTEXT)
             .focusable()

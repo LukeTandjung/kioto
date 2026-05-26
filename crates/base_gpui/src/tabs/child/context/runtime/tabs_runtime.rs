@@ -1,4 +1,8 @@
-use super::{TabsActivationDirection, TabsPanelMetadata, TabsTabMetadata};
+use gpui::{Bounds, Pixels};
+
+use super::{
+    TabsActivationDirection, TabsPanelMetadata, TabsTabMetadata, TabsTabPosition, TabsTabSize,
+};
 
 #[derive(Clone)]
 pub struct TabsRuntime<T: Clone + Eq + 'static> {
@@ -8,6 +12,7 @@ pub struct TabsRuntime<T: Clone + Eq + 'static> {
     last_synced_selected_value: Option<Option<T>>,
     activation_direction: TabsActivationDirection,
     activation_previous_value: Option<Option<T>>,
+    tab_bounds: Vec<(usize, Bounds<Pixels>)>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
@@ -19,6 +24,7 @@ impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
             last_synced_selected_value: None,
             activation_direction: TabsActivationDirection::None,
             activation_previous_value: None,
+            tab_bounds: Vec::new(),
         }
     }
 }
@@ -64,6 +70,34 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
 
     pub fn panels(&self) -> &[TabsPanelMetadata<T>] {
         &self.panels
+    }
+
+    pub fn set_tab_bounds(&mut self, bounds: Vec<Bounds<Pixels>>) -> bool {
+        let next = bounds.into_iter().enumerate().collect::<Vec<_>>();
+
+        if self.tab_bounds == next {
+            return false;
+        }
+
+        self.tab_bounds = next;
+        true
+    }
+
+    pub fn active_tab_position(&self, selected: Option<&T>) -> Option<TabsTabPosition> {
+        let bounds = self.active_tab_bounds(selected)?;
+
+        Some(TabsTabPosition::new(
+            bounds.left(),
+            bounds.right(),
+            bounds.top(),
+            bounds.bottom(),
+        ))
+    }
+
+    pub fn active_tab_size(&self, selected: Option<&T>) -> Option<TabsTabSize> {
+        let bounds = self.active_tab_bounds(selected)?;
+
+        Some(TabsTabSize::new(bounds.size.width, bounds.size.height))
     }
 
     pub fn highlighted_tab_index(&self) -> Option<usize> {
@@ -166,5 +200,15 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         self.tabs
             .iter()
             .any(|tab| !tab.disabled() && tab.value() == value)
+    }
+
+    fn active_tab_bounds(&self, selected: Option<&T>) -> Option<Bounds<Pixels>> {
+        let selected = selected?;
+        let index = self.index_of_value(selected)?;
+
+        self.tab_bounds
+            .iter()
+            .find(|(tab_index, _)| *tab_index == index)
+            .map(|(_, bounds)| *bounds)
     }
 }

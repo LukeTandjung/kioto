@@ -95,6 +95,11 @@ impl Render for TabsTest {
                                     .h(px(2.0))
                                     .rounded_full()
                                     .style_with_state(|state, indicator| {
+                                        let indicator = match state.active_tab_size {
+                                            Some(size) => indicator.w(size.width),
+                                            None => indicator,
+                                        };
+
                                         if state.selected {
                                             indicator.bg(rgb(0x111827))
                                         } else {
