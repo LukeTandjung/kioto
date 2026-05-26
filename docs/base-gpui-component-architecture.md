@@ -271,7 +271,9 @@ Current Tabs render states include:
 - `TabsListRenderState`: orientation and activation direction.
 - `TabsTabRenderState`: active, disabled, highlighted, and orientation.
 - `TabsPanelRenderState`: hidden, orientation, and activation direction.
-- `TabsIndicatorRenderState`: selected, orientation, and activation direction placeholder state; active tab bounds are pending.
+- `TabsIndicatorRenderState`: selected state, active tab position/size, orientation, and activation direction.
+
+Tabs uses `Div::on_children_prepainted` on `TabsList<T>` to capture GPUI child bounds after layout. Those bounds are routed through `TabsContext<T>` into `TabsRuntime<T>`, and `TabsIndicator<T>` reads the active tab position/size through `TabsIndicatorRenderState`.
 
 Render layers should not independently recompute shared component state when the component context can compute it. Prefer context helpers such as:
 
