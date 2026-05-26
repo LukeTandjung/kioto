@@ -33,11 +33,15 @@ Current GPUI implementation:
 - `crates/base_gpui/src/tabs/layers/tabs_tab.rs`
 - `crates/base_gpui/src/tabs/layers/tabs_panel.rs`
 - `crates/base_gpui/src/tabs/layers/tabs_indicator.rs`
-- `crates/base_gpui/src/tabs/state/tabs_state.rs`
-- `crates/base_gpui/src/tabs/state/tabs_props.rs`
-- `crates/base_gpui/src/tabs/state/tabs_runtime.rs`
 - `crates/base_gpui/src/tabs/child/tabs_child.rs`
-- `crates/base_gpui/src/utils/state/controlled_context.rs`
+- `crates/base_gpui/src/tabs/child/context/tabs_context.rs`
+- `crates/base_gpui/src/tabs/child/context/props/tabs_orientation.rs`
+- `crates/base_gpui/src/tabs/child/context/props/tabs_props.rs`
+- `crates/base_gpui/src/tabs/child/context/runtime/tabs_panel_metadata.rs`
+- `crates/base_gpui/src/tabs/child/context/runtime/tabs_runtime.rs`
+- `crates/base_gpui/src/tabs/child/context/runtime/tabs_tab_metadata.rs`
+- `crates/base_gpui/src/tabs/child/context/state/tabs_state.rs`
+- `crates/base_gpui/src/api/child/context/generic_context.rs`
 
 Out of scope / drop from Base UI:
 
@@ -82,15 +86,15 @@ Out of scope / drop from Base UI:
 - [x] `TabsPanel<T>::default()` initializes `keep_mounted`, not a nonexistent `disabled` field.
 - [x] React-style `utils/use_controlled.rs` is replaced with a small Rust helper for selecting controlled vs internal values.
 - [ ] Dead fields are either used by behavior or intentionally documented.
-- [ ] Add a small example/demo using the Tabs components.
+- [x] Add a small example/demo using the Tabs components.
 
 ### Architecture / internal primitives
 
 - [x] Add typed Tabs child tree so `TabsRoot<T>` can drill shared state before `AnyElement` erasure.
 - [x] Add reusable `GenericState` trait for component state containers.
 - [x] Add reusable `GenericChild` trait for state-context propagation through child layers.
-- [x] Add reusable `ControlledContext<S, P, R>` helper for controlled/uncontrolled state resolution backed by GPUI keyed entity state plus injected component props and runtime state.
-- [x] Reorganize `base_gpui` architecture into `api`, `utils`, and component-specific `state`, `child`, and `layers` folders.
+- [x] Add reusable `GenericContext<S, P, R>` helper for controlled/uncontrolled state resolution backed by GPUI keyed entity state plus injected component props and runtime state.
+- [x] Reorganize `base_gpui` architecture into `api` and component-specific `child/context/{props,runtime,state}` plus `layers` folders.
 
 ### Stateful/stateless behavior
 
@@ -114,10 +118,13 @@ Out of scope / drop from Base UI:
 - [x] Track orientation as a typed enum instead of free-form string.
 - [x] Track registered tabs in order.
 - [x] Track tab metadata: value, disabled state, and index; measured bounds still pending.
-- [ ] Track registered panels in order.
-- [ ] Track highlighted/focused tab index separately from selected value.
+- [x] Pre-register tab runtime metadata before fallback so uncontrolled fallback uses the current child tree.
+- [x] Track registered panels in order.
+- [x] Track panel metadata: value and index.
+- [x] Pre-register panel runtime metadata before fallback/render.
+- [x] Track highlighted/focused tab index separately from selected value.
 - [ ] Track tab activation direction: `Left`, `Right`, `Up`, `Down`, `None`.
-- [ ] Support dynamic registration/unregistration of tabs and panels.
+- [x] Support dynamic registration/unregistration of tabs and panels.
 
 ### Selection behavior
 
