@@ -5,15 +5,14 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsProps, TabsRuntime, TabsState},
-    utils::ControlledContext,
+    tabs::{TabsContext, TabsRuntime},
 };
 
 #[derive(IntoElement)]
 pub struct TabsPanel<T: Clone + Eq + 'static> {
     base: Div,
     children: Vec<AnyElement>,
-    context: Option<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>,
+    context: Option<TabsContext<T>>,
     value: Option<T>,
     keep_mounted: bool,
     index: Option<usize>,
@@ -74,11 +73,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
 }
 
 impl<T: Clone + Eq + 'static>
-    GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsPanel<T>
+    GenericChild<TabsContext<T>> for TabsPanel<T>
 {
     fn add_state_context(
         mut self,
-        context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>,
+        context: TabsContext<T>,
     ) -> Self {
         self.context = Some(context);
         self

@@ -7,8 +7,7 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsChild, TabsOrientation, TabsProps, TabsRuntime, TabsState},
-    utils::ControlledContext,
+    tabs::{TabsChild, TabsContext, TabsOrientation, TabsProps, TabsRuntime},
 };
 
 #[derive(IntoElement)]
@@ -44,7 +43,7 @@ impl<T: Clone + Eq + 'static> Styled for TabsRoot<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let context = ControlledContext::<TabsState<T>, TabsProps<T>, TabsRuntime<T>>::new(
+        let context = TabsContext::new(
             self.id.clone(),
             cx,
             window,

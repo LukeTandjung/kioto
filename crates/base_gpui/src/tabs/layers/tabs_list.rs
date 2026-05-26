@@ -4,8 +4,7 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsProps, TabsRuntime, TabsState},
-    utils::ControlledContext,
+    tabs::{TabsContext, TabsRuntime},
 };
 
 use super::TabsTab;
@@ -14,7 +13,7 @@ use super::TabsTab;
 pub struct TabsList<T: Clone + Eq + 'static> {
     base: Div,
     children: Vec<TabsTab<T>>,
-    context: Option<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>,
+    context: Option<TabsContext<T>>,
     activate_on_focus: bool,
     loop_focus: bool,
 }
@@ -62,11 +61,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
 }
 
 impl<T: Clone + Eq + 'static>
-    GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsList<T>
+    GenericChild<TabsContext<T>> for TabsList<T>
 {
     fn add_state_context(
         mut self,
-        context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>,
+        context: TabsContext<T>,
     ) -> Self {
         self.context = Some(context);
         self

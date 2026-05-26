@@ -4,7 +4,7 @@ use gpui::{App, ElementId, Entity, SharedString, Window};
 
 use crate::api::GenericState;
 
-pub struct ControlledContext<S: GenericState + 'static, P: Clone + 'static, R: 'static> {
+pub struct GenericContext<S: GenericState + 'static, P: Clone + 'static, R: 'static> {
     controlled: Option<Option<S::Value>>,
     entity: Entity<S>,
     props: P,
@@ -12,7 +12,7 @@ pub struct ControlledContext<S: GenericState + 'static, P: Clone + 'static, R: '
 }
 
 impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> Clone
-    for ControlledContext<S, P, R>
+    for GenericContext<S, P, R>
 {
     fn clone(&self) -> Self {
         Self {
@@ -24,7 +24,7 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> Clone
     }
 }
 
-impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> ControlledContext<S, P, R> {
+impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S, P, R> {
     pub fn new(
         id: impl Into<ElementId>,
         cx: &mut App,
