@@ -2,9 +2,12 @@ use std::rc::Rc;
 
 use gpui::{App, ClickEvent, Window};
 
-use crate::utils::ControlledContext;
+use crate::{
+    tabs::{TabsRuntime, TabsState},
+    utils::ControlledContext,
+};
 
-use super::{TabsOrientation, TabsRuntime, TabsState};
+use super::TabsOrientation;
 
 pub struct TabsProps<T: Clone + Eq + 'static> {
     orientation: TabsOrientation,
