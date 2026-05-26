@@ -87,6 +87,14 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S
         });
     }
 
+    pub fn set_runtime_if_changed(&self, cx: &mut App, set: impl FnOnce(&mut R) -> bool) {
+        self.runtime.update(cx, |runtime, cx| {
+            if set(runtime) {
+                cx.notify();
+            }
+        });
+    }
+
     pub fn get_runtime<Output>(&self, cx: &App, get: impl FnOnce(&R) -> Output) -> Output {
         get(self.runtime.read(cx))
     }
