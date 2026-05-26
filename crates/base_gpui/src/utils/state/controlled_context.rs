@@ -1,19 +1,17 @@
-use gpui::{App, ElementId, Entity, Window};
+use std::sync::Arc;
+
+use gpui::{App, ElementId, Entity, SharedString, Window};
 
 use crate::api::GenericState;
 
-pub struct ControlledContext<
-    S: GenericState + 'static,
-    P: Clone + 'static,
-    R: Clone + 'static,
-> {
+pub struct ControlledContext<S: GenericState + 'static, P: Clone + 'static, R: 'static> {
     controlled: Option<Option<S::Value>>,
     entity: Entity<S>,
     props: P,
-    runtime: R,
+    runtime: Entity<R>,
 }
 
-impl<S: GenericState + 'static, P: Clone + 'static, R: Clone + 'static> Clone
+impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> Clone
     for ControlledContext<S, P, R>
 {
     fn clone(&self) -> Self {
@@ -26,9 +24,7 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: Clone + 'static> Clone
     }
 }
 
-impl<S: GenericState + 'static, P: Clone + 'static, R: Clone + 'static>
-    ControlledContext<S, P, R>
-{
+impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> ControlledContext<S, P, R> {
     pub fn new(
         id: impl Into<ElementId>,
         cx: &mut App,
@@ -38,7 +34,13 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: Clone + 'static>
         props: P,
         runtime: R,
     ) -> Self {
-        let entity = window.use_keyed_state(id, cx, |_, _| S::new(default));
+        let id = id.into();
+        let entity = window.use_keyed_state(id.clone(), cx, |_, _| S::new(default));
+        let runtime = window.use_keyed_state(
+            ElementId::NamedChild(Arc::new(id), SharedString::from("runtime")),
+            cx,
+            |_, _| runtime,
+        );
 
         Self {
             controlled,
@@ -49,9 +51,10 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: Clone + 'static>
     }
 
     pub fn get_state(&self, cx: &App) -> Option<S::Value> {
-        self.controlled
-            .clone()
-            .unwrap_or_else(|| self.entity.read(cx).get_value().cloned())
+        match &self.controlled {
+            Some(value) => value.clone(),
+            None => self.entity.read(cx).get_value().cloned(),
+        }
     }
 
     pub fn set_state(
@@ -74,15 +77,22 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: Clone + 'static>
         }
     }
 
+    pub fn set_runtime(&self, cx: &mut App, set: impl FnOnce(&mut R, &mut App)) {
+        self.runtime.update(cx, |runtime, cx| {
+            set(runtime, cx);
+            cx.notify();
+        });
+    }
+
+    pub fn get_runtime<Output>(&self, cx: &App, get: impl FnOnce(&R) -> Output) -> Output {
+        get(self.runtime.read(cx))
+    }
+
     pub fn is_controlled(&self) -> bool {
         self.controlled.is_some()
     }
 
     pub fn props(&self) -> &P {
         &self.props
-    }
-
-    pub fn runtime(&self) -> &R {
-        &self.runtime
     }
 }

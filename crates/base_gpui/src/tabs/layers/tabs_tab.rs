@@ -18,6 +18,7 @@ pub struct TabsTab<T: Clone + Eq + 'static> {
     context: Option<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>,
     value: Option<T>,
     disabled: bool,
+    index: Option<usize>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsTab<T> {
@@ -29,6 +30,7 @@ impl<T: Clone + Eq + 'static> Default for TabsTab<T> {
             context: None,
             value: None,
             disabled: false,
+            index: None,
         }
     }
 }
@@ -47,32 +49,49 @@ impl<T: Clone + Eq + 'static> Styled for TabsTab<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let context = self.context;
-        let value = self.value;
-        let disabled = self.disabled;
-        let active = match (context.as_ref(), value.as_ref()) {
-            (Some(context), Some(value)) => context.selected_value(cx).as_ref() == Some(value),
+        let Self {
+            id,
+            base,
+            children,
+            context,
+            value,
+            disabled,
+            index,
+        } = self;
+
+        let selected_value = context.as_ref().and_then(|context| context.selected_value(cx));
+        let active = match (value.as_ref(), selected_value.as_ref()) {
+            (Some(value), Some(selected_value)) => value == selected_value,
             _ => false,
         };
         let _orientation = context.as_ref().map(|context| context.props().orientation());
 
-        self.base
-            .id(self.id)
-            .children(self.children)
-            .when(!disabled && !active, |this| {
-                this.when_some(context.zip(value), |this, (context, value)| {
-                    this.on_click(move |event, window, cx| {
-                        context.select_value(Some(value.clone()), event, window, cx);
-                    })
+        if let (Some(context), Some(value), Some(index)) = (context.as_ref(), value.as_ref(), index) {
+            context.set_runtime(cx, |runtime, _| {
+                runtime.register_tab(value.clone(), disabled, index);
+            });
+        }
+
+        let selectable = match !disabled && !active {
+            true => context.zip(value),
+            false => None,
+        };
+
+        base.id(id)
+            .children(children)
+            .when_some(selectable, |this, (context, value)| {
+                this.on_click(move |event, window, cx| {
+                    context.select_value(Some(value.clone()), event, window, cx);
                 })
             })
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>
-    for TabsTab<T>
-{
-    fn add_state_context(mut self, context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>) -> Self {
+impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsTab<T> {
+    fn add_state_context(
+        mut self,
+        context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>,
+    ) -> Self {
         self.context = Some(context);
         self
     }
@@ -95,6 +114,11 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn index(mut self, index: usize) -> Self {
+        self.index = Some(index);
         self
     }
 }

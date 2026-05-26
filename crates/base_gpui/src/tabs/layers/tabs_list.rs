@@ -38,21 +38,40 @@ impl<T: Clone + Eq + 'static> Styled for TabsList<T> {
 }
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let context = self.context;
-        self.base.children(self.children.into_iter().map(|tab| {
-            match context.clone() {
-                Some(context) => tab.add_state_context(context).into_any_element(),
-                None => tab.into_any_element(),
-            }
-        }))
+
+        if let Some(context) = context.as_ref() {
+            context.set_runtime(cx, |runtime, _| {
+                runtime.clear_tabs();
+            });
+        }
+
+        self.base
+            .children(
+                self.children
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, tab)| {
+                        match context.clone() {
+                            Some(context) => tab
+                                .index(index)
+                                .add_state_context(context)
+                                .into_any_element(),
+                            None => tab
+                                .index(index)
+                                .into_any_element(),
+                        }
+                    })
+            )
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>
-    for TabsList<T>
-{
-    fn add_state_context(mut self, context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>) -> Self {
+impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsList<T> {
+    fn add_state_context(
+        mut self,
+        context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>,
+    ) -> Self {
         self.context = Some(context);
         self
     }
