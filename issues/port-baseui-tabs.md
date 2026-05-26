@@ -112,8 +112,8 @@ Out of scope / drop from Base UI:
 - [x] Track current selected value as `Option<T>`.
 - [x] Track whether the root is controlled or uncontrolled.
 - [x] Track orientation as a typed enum instead of free-form string.
-- [ ] Track registered tabs in order.
-- [ ] Track tab metadata: value, disabled state, index, and optional measured bounds.
+- [x] Track registered tabs in order.
+- [x] Track tab metadata: value, disabled state, and index; measured bounds still pending.
 - [ ] Track registered panels in order.
 - [ ] Track highlighted/focused tab index separately from selected value.
 - [ ] Track tab activation direction: `Left`, `Right`, `Up`, `Down`, `None`.
