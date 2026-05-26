@@ -1,4 +1,4 @@
-use base_gpui::tabs::{TabsList, TabsPanel, TabsRoot, TabsTab};
+use base_gpui::tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab};
 use gpui::{
     App, Bounds, Context, IntoElement, Render, Window, WindowBounds, WindowOptions, div, prelude::*,
     px, rgb, size,
@@ -89,6 +89,18 @@ impl Render for TabsTest {
                                             })
                                             .child("Account"),
                                     ),
+                            )
+                            .child(
+                                TabsIndicator::new()
+                                    .h(px(2.0))
+                                    .rounded_full()
+                                    .style_with_state(|state, indicator| {
+                                        if state.selected {
+                                            indicator.bg(rgb(0x111827))
+                                        } else {
+                                            indicator
+                                        }
+                                    }),
                             )
                             .child(
                                 TabsPanel::new()

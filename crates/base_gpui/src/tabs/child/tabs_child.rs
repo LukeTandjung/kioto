@@ -8,7 +8,7 @@ use crate::{
 pub enum TabsChild<T: Clone + Eq + 'static> {
     List(TabsList<T>),
     Panel(TabsPanel<T>),
-    Indicator(TabsIndicator),
+    Indicator(TabsIndicator<T>),
 }
 
 impl<T: Clone + Eq + 'static> IntoElement for TabsChild<T> {
@@ -33,7 +33,7 @@ impl<T: Clone + Eq + 'static>
         match self {
             Self::List(list) => Self::List(list.add_state_context(context)),
             Self::Panel(panel) => Self::Panel(panel.add_state_context(context)),
-            Self::Indicator(indicator) => Self::Indicator(indicator),
+            Self::Indicator(indicator) => Self::Indicator(indicator.add_state_context(context)),
         }
     }
 }
@@ -75,8 +75,8 @@ impl<T: Clone + Eq + 'static> From<TabsPanel<T>> for TabsChild<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> From<TabsIndicator> for TabsChild<T> {
-    fn from(value: TabsIndicator) -> Self {
+impl<T: Clone + Eq + 'static> From<TabsIndicator<T>> for TabsChild<T> {
+    fn from(value: TabsIndicator<T>) -> Self {
         Self::Indicator(value)
     }
 }

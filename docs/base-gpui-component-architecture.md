@@ -165,7 +165,7 @@ For Tabs:
 pub enum TabsChild<T: Clone + Eq + 'static> {
     List(TabsList<T>),
     Panel(TabsPanel<T>),
-    Indicator(TabsIndicator),
+    Indicator(TabsIndicator<T>),
 }
 ```
 
@@ -211,7 +211,7 @@ For Tabs:
 - `TabsList<T>` renders the tab list and owns Tabs keyboard dispatch handlers.
 - `TabsTab<T>` renders an interactive tab and knows its own tab metadata.
 - `TabsPanel<T>` renders panel content and knows its own panel metadata.
-- `TabsIndicator` is a renderable visual layer.
+- `TabsIndicator<T>` is a renderable visual layer that receives `TabsContext<T>`.
 
 Renderable layers may know their own metadata, but they should route runtime insertion through the component context.
 
