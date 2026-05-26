@@ -11,6 +11,7 @@ use crate::{
     utils::ControlledContext,
 };
 
+#[derive(IntoElement)]
 pub struct TabsRoot<T: Clone + Eq + 'static> {
     id: ElementId,
     base: Div,
