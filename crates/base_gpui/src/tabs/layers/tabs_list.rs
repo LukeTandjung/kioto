@@ -1,10 +1,15 @@
 use gpui::{
-    App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window, div,
+    App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
 };
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsContext, TabsRuntime},
+    tabs::{
+        TabsActivateHighlighted, TabsContext, TabsOrientation, TabsSelectDown, TabsSelectFirst,
+        TabsSelectLast, TabsSelectLeft, TabsSelectRight, TabsSelectUp,
+        TABS_LIST_KEY_CONTEXT,
+    },
 };
 
 use super::TabsTab;
@@ -39,8 +44,109 @@ impl<T: Clone + Eq + 'static> Styled for TabsList<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let context = self.context;
+        let select_left_context = context.clone();
+        let select_right_context = context.clone();
+        let select_up_context = context.clone();
+        let select_down_context = context.clone();
+        let select_first_context = context.clone();
+        let select_last_context = context.clone();
+        let activate_context = context.clone();
+        let activate_on_focus = self.activate_on_focus;
+        let loop_focus = self.loop_focus;
 
         self.base
+            .id("tabs-list")
+            .key_context(TABS_LIST_KEY_CONTEXT)
+            .focusable()
+            .on_action(move |_: &TabsSelectLeft, window, cx| {
+                let Some(context) = select_left_context.as_ref() else {
+                    return;
+                };
+
+                if context.props().orientation() != TabsOrientation::Horizontal {
+                    return;
+                }
+
+                context.highlight_previous_tab(loop_focus, cx);
+
+                if activate_on_focus {
+                    context.select_highlighted_tab(window, cx);
+                }
+            })
+            .on_action(move |_: &TabsSelectRight, window, cx| {
+                let Some(context) = select_right_context.as_ref() else {
+                    return;
+                };
+
+                if context.props().orientation() != TabsOrientation::Horizontal {
+                    return;
+                }
+
+                context.highlight_next_tab(loop_focus, cx);
+
+                if activate_on_focus {
+                    context.select_highlighted_tab(window, cx);
+                }
+            })
+            .on_action(move |_: &TabsSelectUp, window, cx| {
+                let Some(context) = select_up_context.as_ref() else {
+                    return;
+                };
+
+                if context.props().orientation() != TabsOrientation::Vertical {
+                    return;
+                }
+
+                context.highlight_previous_tab(loop_focus, cx);
+
+                if activate_on_focus {
+                    context.select_highlighted_tab(window, cx);
+                }
+            })
+            .on_action(move |_: &TabsSelectDown, window, cx| {
+                let Some(context) = select_down_context.as_ref() else {
+                    return;
+                };
+
+                if context.props().orientation() != TabsOrientation::Vertical {
+                    return;
+                }
+
+                context.highlight_next_tab(loop_focus, cx);
+
+                if activate_on_focus {
+                    context.select_highlighted_tab(window, cx);
+                }
+            })
+            .on_action(move |_: &TabsSelectFirst, window, cx| {
+                let Some(context) = select_first_context.as_ref() else {
+                    return;
+                };
+
+                context.highlight_first_tab(cx);
+
+                if activate_on_focus {
+                    context.select_highlighted_tab(window, cx);
+                }
+            })
+            .on_action(move |_: &TabsSelectLast, window, cx| {
+                let Some(context) = select_last_context.as_ref() else {
+                    return;
+                };
+
+                context.highlight_last_tab(cx);
+
+                if activate_on_focus {
+                    context.select_highlighted_tab(window, cx);
+                }
+            })
+            .on_action(move |_: &TabsActivateHighlighted, window, cx| {
+                let Some(context) = activate_context.as_ref() else {
+                    return;
+                };
+
+                context.select_highlighted_tab(window, cx);
+            })
             .children(
                 self.children
                     .into_iter()
@@ -97,9 +203,9 @@ impl<T: Clone + Eq + 'static> TabsList<T> {
         self
     }
 
-    pub fn register_runtime(&self, runtime: &mut TabsRuntime<T>) {
+    pub fn register_runtime(&self, context: &TabsContext<T>, cx: &mut App) {
         for (index, tab) in self.children.iter().enumerate() {
-            tab.register_runtime(index, runtime);
+            tab.register_runtime(index, context, cx);
         }
     }
 }

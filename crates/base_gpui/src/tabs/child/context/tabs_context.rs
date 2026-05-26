@@ -1,4 +1,4 @@
-use gpui::{App, ClickEvent, ElementId, Window};
+use gpui::{App, ElementId, Window};
 
 use crate::{
     api::GenericContext,
@@ -25,10 +25,17 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         controlled: Option<Option<T>>,
         default: Option<T>,
         props: TabsProps<T>,
-        runtime: TabsRuntime<T>,
     ) -> Self {
         Self {
-            inner: GenericContext::new(id, cx, window, controlled, default, props, runtime),
+            inner: GenericContext::new(
+                id,
+                cx,
+                window,
+                controlled,
+                default,
+                props,
+                TabsRuntime::new(),
+            ),
         }
     }
 
@@ -39,15 +46,75 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
     pub fn select_value(
         &self,
         value: Option<T>,
-        event: &ClickEvent,
         window: &mut Window,
         cx: &mut App,
     ) {
         self.inner.set_state(value, cx, |props, next, cx| {
             props.on_value_change().map(|on_value_change| {
-                on_value_change(next, event, window, cx);
+                on_value_change(next, window, cx);
             });
         });
+    }
+
+    pub fn select_highlighted_tab(&self, window: &mut Window, cx: &mut App) {
+        let value = self.inner.get_runtime(cx, |runtime| {
+            runtime
+                .highlighted_tab_index()
+                .and_then(|index| runtime.enabled_value_at_index(index).cloned())
+        });
+
+        self.select_value(value, window, cx);
+    }
+
+    pub fn clear_registered_metadata(&self, cx: &mut App) {
+        self.inner.set_runtime(cx, |runtime, _| {
+            runtime.clear_tabs();
+            runtime.clear_panels();
+        });
+    }
+
+    pub fn register_tab(&self, value: T, disabled: bool, index: usize, cx: &mut App) {
+        self.inner.set_runtime(cx, |runtime, _| {
+            runtime.register_tab(value, disabled, index);
+        });
+    }
+
+    pub fn register_panel(&self, value: T, index: usize, cx: &mut App) {
+        self.inner.set_runtime(cx, |runtime, _| {
+            runtime.register_panel(value, index);
+        });
+    }
+
+    pub fn highlight_first_tab(&self, cx: &mut App) {
+        let index = self.inner.get_runtime(cx, TabsRuntime::first_enabled_index);
+
+        self.highlight_tab(index, cx);
+    }
+
+    pub fn highlight_last_tab(&self, cx: &mut App) {
+        let index = self.inner.get_runtime(cx, TabsRuntime::last_enabled_index);
+
+        self.highlight_tab(index, cx);
+    }
+
+    pub fn highlight_next_tab(&self, loop_focus: bool, cx: &mut App) {
+        let index = self.inner.get_runtime(cx, |runtime| {
+            runtime.next_enabled_index(runtime.highlighted_tab_index(), loop_focus)
+        });
+
+        if index.is_some() {
+            self.highlight_tab(index, cx);
+        }
+    }
+
+    pub fn highlight_previous_tab(&self, loop_focus: bool, cx: &mut App) {
+        let index = self.inner.get_runtime(cx, |runtime| {
+            runtime.previous_enabled_index(runtime.highlighted_tab_index(), loop_focus)
+        });
+
+        if index.is_some() {
+            self.highlight_tab(index, cx);
+        }
     }
 
     pub fn apply_automatic_fallback(&self, cx: &mut App) {
@@ -78,29 +145,27 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         });
     }
 
+    pub fn is_tab_highlighted(&self, index: Option<usize>, cx: &App) -> bool {
+        self.inner
+            .get_runtime(cx, |runtime| runtime.highlighted_tab_index() == index)
+    }
+
     pub fn sync_highlighted_tab_with_selected_value(&self, cx: &mut App) {
         let selected = self.selected_value(cx);
 
         self.inner.set_runtime(cx, |runtime, _| {
+            if runtime.last_synced_selected_value() == Some(&selected) {
+                return;
+            }
+
             let highlighted = selected
                 .as_ref()
                 .and_then(|value| runtime.index_of_enabled_value(value))
                 .or_else(|| runtime.first_enabled_index());
 
             runtime.set_highlighted_tab_index(highlighted);
+            runtime.set_last_synced_selected_value(selected);
         });
-    }
-
-    pub fn set_runtime(&self, cx: &mut App, set: impl FnOnce(&mut TabsRuntime<T>, &mut App)) {
-        self.inner.set_runtime(cx, set);
-    }
-
-    pub fn get_runtime<Output>(
-        &self,
-        cx: &App,
-        get: impl FnOnce(&TabsRuntime<T>) -> Output,
-    ) -> Output {
-        self.inner.get_runtime(cx, get)
     }
 
     pub fn props(&self) -> &TabsProps<T> {

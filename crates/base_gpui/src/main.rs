@@ -101,6 +101,8 @@ impl Render for TabsTest {
 
 fn main() {
     application().run(|cx: &mut App| {
+        base_gpui::init(cx);
+
         let bounds = Bounds::centered(None, size(px(500.0), px(360.0)), cx);
 
         cx.open_window(

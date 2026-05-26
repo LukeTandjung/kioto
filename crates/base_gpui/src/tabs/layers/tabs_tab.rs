@@ -6,7 +6,7 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsContext, TabsRuntime},
+    tabs::TabsContext,
 };
 
 #[derive(IntoElement)]
@@ -64,9 +64,9 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             _ => false,
         };
         let _orientation = context.as_ref().map(|context| context.props().orientation());
-        let _highlighted = context.as_ref().is_some_and(|context| {
-            context.get_runtime(cx, |runtime| runtime.highlighted_tab_index() == index)
-        });
+        let highlighted = context
+            .as_ref()
+            .is_some_and(|context| context.is_tab_highlighted(index, cx));
 
         let selectable = match !disabled && !active {
             true => context.zip(value).zip(index),
@@ -74,11 +74,12 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
         };
 
         base.id(id)
+            .tab_index(if highlighted { 0 } else { -1 })
             .children(children)
             .when_some(selectable, |this, ((context, value), index)| {
-                this.on_click(move |event, window, cx| {
+                this.on_click(move |_event, window, cx| {
                     context.highlight_tab(Some(index), cx);
-                    context.select_value(Some(value.clone()), event, window, cx);
+                    context.select_value(Some(value.clone()), window, cx);
                 })
             })
     }
@@ -121,9 +122,9 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
         self
     }
 
-    pub fn register_runtime(&self, index: usize, runtime: &mut TabsRuntime<T>) {
+    pub fn register_runtime(&self, index: usize, context: &TabsContext<T>, cx: &mut App) {
         if let Some(value) = self.value.as_ref() {
-            runtime.register_tab(value.clone(), self.disabled, index);
+            context.register_tab(value.clone(), self.disabled, index, cx);
         }
     }
 }

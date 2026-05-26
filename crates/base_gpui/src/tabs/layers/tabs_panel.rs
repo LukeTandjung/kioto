@@ -5,7 +5,7 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsContext, TabsRuntime},
+    tabs::TabsContext,
 };
 
 #[derive(IntoElement)]
@@ -104,9 +104,9 @@ impl<T: Clone + Eq + 'static> TabsPanel<T> {
         self
     }
 
-    pub fn register_runtime(&self, index: usize, runtime: &mut TabsRuntime<T>) {
+    pub fn register_runtime(&self, index: usize, context: &TabsContext<T>, cx: &mut App) {
         if let Some(value) = self.value.as_ref() {
-            runtime.register_panel(value.clone(), index);
+            context.register_panel(value.clone(), index, cx);
         }
     }
 }

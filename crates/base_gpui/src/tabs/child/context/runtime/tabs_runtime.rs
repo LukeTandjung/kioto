@@ -5,6 +5,7 @@ pub struct TabsRuntime<T: Clone + Eq + 'static> {
     tabs: Vec<TabsTabMetadata<T>>,
     panels: Vec<TabsPanelMetadata<T>>,
     highlighted_tab_index: Option<usize>,
+    last_synced_selected_value: Option<Option<T>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
@@ -13,6 +14,7 @@ impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
             tabs: Vec::new(),
             panels: Vec::new(),
             highlighted_tab_index: None,
+            last_synced_selected_value: None,
         }
     }
 }
@@ -68,11 +70,55 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         self.highlighted_tab_index = index;
     }
 
+    pub fn last_synced_selected_value(&self) -> Option<&Option<T>> {
+        self.last_synced_selected_value.as_ref()
+    }
+
+    pub fn set_last_synced_selected_value(&mut self, value: Option<T>) {
+        self.last_synced_selected_value = Some(value);
+    }
+
     pub fn first_enabled_index(&self) -> Option<usize> {
         self.tabs
             .iter()
             .find(|tab| !tab.disabled())
             .map(TabsTabMetadata::index)
+    }
+
+    pub fn last_enabled_index(&self) -> Option<usize> {
+        self.tabs
+            .iter()
+            .rev()
+            .find(|tab| !tab.disabled())
+            .map(TabsTabMetadata::index)
+    }
+
+    pub fn next_enabled_index(&self, current: Option<usize>, loop_focus: bool) -> Option<usize> {
+        let current = current.or_else(|| self.first_enabled_index())?;
+
+        self.tabs
+            .iter()
+            .find(|tab| !tab.disabled() && tab.index() > current)
+            .map(TabsTabMetadata::index)
+            .or_else(|| loop_focus.then(|| self.first_enabled_index()).flatten())
+    }
+
+    pub fn previous_enabled_index(&self, current: Option<usize>, loop_focus: bool) -> Option<usize> {
+        let current = current.or_else(|| self.first_enabled_index())?;
+
+        self.tabs
+            .iter()
+            .rev()
+            .find(|tab| !tab.disabled() && tab.index() < current)
+            .map(TabsTabMetadata::index)
+            .or_else(|| loop_focus.then(|| self.last_enabled_index()).flatten())
+    }
+
+    pub fn enabled_value_at_index(&self, index: usize) -> Option<&T> {
+        self.tabs
+            .iter()
+            .find(|tab| !tab.disabled() && tab.index() == index)
+            .map(TabsTabMetadata::value)
     }
 
     pub fn index_of_enabled_value(&self, value: &T) -> Option<usize> {

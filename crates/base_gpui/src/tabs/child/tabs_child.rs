@@ -1,8 +1,8 @@
-use gpui::{AnyElement, IntoElement};
+use gpui::{AnyElement, App, IntoElement};
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsContext, TabsIndicator, TabsList, TabsPanel, TabsRuntime},
+    tabs::{TabsContext, TabsIndicator, TabsList, TabsPanel},
 };
 
 pub enum TabsChild<T: Clone + Eq + 'static> {
@@ -46,11 +46,16 @@ impl<T: Clone + Eq + 'static> TabsChild<T> {
         }
     }
 
-    pub fn register_runtime(&self, panel_index: &mut usize, runtime: &mut TabsRuntime<T>) {
+    pub fn register_runtime(
+        &self,
+        panel_index: &mut usize,
+        context: &TabsContext<T>,
+        cx: &mut App,
+    ) {
         match self {
-            Self::List(list) => list.register_runtime(runtime),
+            Self::List(list) => list.register_runtime(context, cx),
             Self::Panel(panel) => {
-                panel.register_runtime(*panel_index, runtime);
+                panel.register_runtime(*panel_index, context, cx);
                 *panel_index += 1;
             }
             Self::Indicator(_) => {}

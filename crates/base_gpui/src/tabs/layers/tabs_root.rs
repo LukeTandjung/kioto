@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, ClickEvent, Div, ElementId, IntoElement, ParentElement, RenderOnce, StyleRefinement,
-    Styled, Window, div,
+    App, Div, ElementId, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    div,
 };
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsChild, TabsContext, TabsOrientation, TabsProps, TabsRuntime},
+    tabs::{TabsChild, TabsContext, TabsOrientation, TabsProps},
 };
 
 #[derive(IntoElement)]
@@ -17,7 +17,7 @@ pub struct TabsRoot<T: Clone + Eq + 'static> {
     children: Vec<TabsChild<T>>,
     default_value: Option<T>,
     value: Option<Option<T>>,
-    on_value_change: Option<Rc<dyn Fn(Option<&T>, &ClickEvent, &mut Window, &mut App) + 'static>>,
+    on_value_change: Option<Rc<dyn Fn(Option<&T>, &mut Window, &mut App) + 'static>>,
     orientation: TabsOrientation,
 }
 
@@ -50,19 +50,15 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
             self.value,
             self.default_value,
             TabsProps::new(self.orientation, self.on_value_change),
-            TabsRuntime::new(),
         );
 
-        context.set_runtime(cx, |runtime, _| {
-            runtime.clear_tabs();
-            runtime.clear_panels();
+        context.clear_registered_metadata(cx);
 
-            let mut panel_index = 0;
+        let mut registered_panel_index = 0;
 
-            for child in &self.children {
-                child.register_runtime(&mut panel_index, runtime);
-            }
-        });
+        for child in &self.children {
+            child.register_runtime(&mut registered_panel_index, &context, cx);
+        }
 
         context.apply_automatic_fallback(cx);
         context.sync_highlighted_tab_with_selected_value(cx);
@@ -117,7 +113,7 @@ impl<T: Clone + Eq + 'static> TabsRoot<T> {
 
     pub fn on_value_change(
         mut self,
-        on_value_change: impl Fn(Option<&T>, &ClickEvent, &mut Window, &mut App) + 'static,
+        on_value_change: impl Fn(Option<&T>, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_value_change = Some(Rc::new(on_value_change));
         self
