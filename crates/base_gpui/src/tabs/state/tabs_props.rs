@@ -60,4 +60,26 @@ impl<T: Clone + Eq + 'static> ControlledContext<TabsState<T>, TabsProps<T>, Tabs
             });
         });
     }
+
+    pub fn apply_automatic_fallback(&self, cx: &mut App) {
+        if self.is_controlled() {
+            return;
+        }
+
+        let current = self.get_state(cx);
+        let fallback = self.get_runtime(cx, |runtime| {
+            if runtime.tabs().is_empty() {
+                return current.clone();
+            }
+
+            match current.as_ref() {
+                Some(value) if runtime.contains_enabled_value(value) => current.clone(),
+                _ => runtime.first_enabled_value(),
+            }
+        });
+
+        if fallback != current {
+            self.set_state_silent(fallback, cx);
+        }
+    }
 }

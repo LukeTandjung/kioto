@@ -53,6 +53,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
             TabsRuntime::new(),
         );
 
+        context.apply_automatic_fallback(cx);
+
         self.base.children(
             self.children
                 .into_iter()

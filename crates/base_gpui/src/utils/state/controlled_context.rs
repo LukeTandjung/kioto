@@ -68,7 +68,10 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> ControlledContex
         }
 
         notify(&self.props, next.as_ref(), cx);
+        self.set_state_silent(next, cx);
+    }
 
+    pub fn set_state_silent(&self, next: Option<S::Value>, cx: &mut App) {
         if self.controlled.is_none() {
             self.entity.update(cx, |state, cx| {
                 state.set_value(next);
