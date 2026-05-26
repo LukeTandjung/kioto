@@ -85,7 +85,7 @@ Out of scope / drop from Base UI:
 - [x] `crates/base_gpui` passes `cargo check -p base_gpui`.
 - [x] `TabsPanel<T>::default()` initializes `keep_mounted`, not a nonexistent `disabled` field.
 - [x] React-style `utils/use_controlled.rs` is replaced with a small Rust helper for selecting controlled vs internal values.
-- [ ] Dead fields are either used by behavior or intentionally documented.
+- [x] Dead fields are either used by behavior or intentionally documented.
 - [x] Add a small example/demo using the Tabs components.
 
 ### Architecture / internal primitives
@@ -112,7 +112,6 @@ Out of scope / drop from Base UI:
 - [x] In controlled mode, automatic fallback does not override the caller-provided value.
 - [x] Decide implementation style: `window.use_keyed_state(...)`, explicit `Entity<TabsState<T>>`, or both.
 - [x] If using `window.use_keyed_state(...)`, require stable `ElementId` on `TabsRoot<T>`.
-- [ ] If using explicit `Entity<TabsState<T>>`, provide ergonomic wrapper constructors around it.
 - [ ] Document usage examples for both controlled and uncontrolled Tabs.
 
 ### Shared state model
@@ -122,7 +121,7 @@ Out of scope / drop from Base UI:
 - [x] Track whether the root is controlled or uncontrolled.
 - [x] Track orientation as a typed enum instead of free-form string.
 - [x] Track registered tabs in order.
-- [x] Track tab metadata: value, disabled state, and index; measured bounds still pending.
+- [x] Track tab metadata: value, disabled state, index, and measured bounds.
 - [x] Pre-register tab runtime metadata before fallback so uncontrolled fallback uses the current child tree.
 - [x] Track registered panels in order.
 - [x] Track panel metadata: value and index.
@@ -163,9 +162,8 @@ Out of scope / drop from Base UI:
 - [x] `Enter` activates the highlighted tab when `activate_on_focus = false`.
 - [x] `Space` activates the highlighted tab when `activate_on_focus = false`.
 - [x] Keyboard navigation moves GPUI focus to the highlighted tab like Base UI's roving focus.
-- [ ] Disabled tabs can be highlighted/focused if matching Base UI behavior is desired.
 - [x] Disabled tabs are never activated by keyboard or pointer interaction.
-- [ ] Highlighted tab stays synchronized with externally controlled value when appropriate.
+- [x] Highlighted tab stays synchronized with externally controlled value when appropriate.
 
 ### Panel behavior
 

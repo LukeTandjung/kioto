@@ -4,9 +4,11 @@ use gpui::{App, Window};
 
 use super::TabsOrientation;
 
+pub type TabsValueChangeHandler<T> = Rc<dyn Fn(Option<&T>, &mut Window, &mut App) + 'static>;
+
 pub struct TabsProps<T: Clone + Eq + 'static> {
     orientation: TabsOrientation,
-    on_value_change: Option<Rc<dyn Fn(Option<&T>, &mut Window, &mut App) + 'static>>,
+    on_value_change: Option<TabsValueChangeHandler<T>>,
 }
 
 impl<T: Clone + Eq + 'static> Clone for TabsProps<T> {
@@ -21,7 +23,7 @@ impl<T: Clone + Eq + 'static> Clone for TabsProps<T> {
 impl<T: Clone + Eq + 'static> TabsProps<T> {
     pub fn new(
         orientation: TabsOrientation,
-        on_value_change: Option<Rc<dyn Fn(Option<&T>, &mut Window, &mut App) + 'static>>,
+        on_value_change: Option<TabsValueChangeHandler<T>>,
     ) -> Self {
         Self {
             orientation,
@@ -33,9 +35,7 @@ impl<T: Clone + Eq + 'static> TabsProps<T> {
         self.orientation
     }
 
-    pub fn on_value_change(
-        &self,
-    ) -> Option<&Rc<dyn Fn(Option<&T>, &mut Window, &mut App) + 'static>> {
+    pub fn on_value_change(&self) -> Option<&TabsValueChangeHandler<T>> {
         self.on_value_change.as_ref()
     }
 }

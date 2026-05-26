@@ -4,7 +4,7 @@ pub mod state;
 
 mod tabs_context;
 
-pub use props::{TabsOrientation, TabsProps};
+pub use props::{TabsOrientation, TabsProps, TabsValueChangeHandler};
 pub use runtime::{
     TabsActivationDirection, TabsPanelMetadata, TabsRuntime, TabsTabMetadata, TabsTabPosition,
     TabsTabSize,

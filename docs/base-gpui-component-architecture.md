@@ -206,7 +206,12 @@ For Tabs, `TabsRuntime<T>` owns:
 - registered tab metadata,
 - registered panel metadata,
 - highlighted tab index,
-- selected-value sync bookkeeping.
+- selected-value sync bookkeeping,
+- activation direction bookkeeping,
+- measured tab bounds for indicator state,
+- tab focus handles for roving focus.
+
+Registered panel metadata is intentionally retained even though panel visibility currently derives directly from selected value during rendering. It preserves the same runtime registration shape as tabs and gives future panel-specific behavior a component-owned place to live.
 
 Runtime shape is component-specific. Do not force a generic runtime registration abstraction until multiple components prove the same shape.
 

@@ -11,7 +11,7 @@ pub use child::{
         TabsActivationDirection, TabsContext, TabsIndicatorRenderState, TabsListRenderState,
         TabsOrientation, TabsPanelMetadata, TabsPanelRenderState, TabsProps,
         TabsRootRenderState, TabsRuntime, TabsState, TabsTabMetadata, TabsTabPosition,
-        TabsTabRenderState, TabsTabSize,
+        TabsTabRenderState, TabsTabSize, TabsValueChangeHandler,
     },
     TabsChild, TabsListChild,
 };

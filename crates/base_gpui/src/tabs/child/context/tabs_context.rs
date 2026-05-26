@@ -62,9 +62,9 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         });
 
         self.inner.set_state(value, cx, |props, next, cx| {
-            props.on_value_change().map(|on_value_change| {
+            if let Some(on_value_change) = props.on_value_change() {
                 on_value_change(next, window, cx);
-            });
+            }
         });
     }
 

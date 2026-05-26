@@ -7,7 +7,10 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsChild, TabsContext, TabsOrientation, TabsProps, TabsRootRenderState},
+    tabs::{
+        TabsChild, TabsContext, TabsOrientation, TabsProps, TabsRootRenderState,
+        TabsValueChangeHandler,
+    },
 };
 
 #[derive(IntoElement)]
@@ -17,7 +20,7 @@ pub struct TabsRoot<T: Clone + Eq + 'static> {
     children: Vec<TabsChild<T>>,
     default_value: Option<T>,
     value: Option<Option<T>>,
-    on_value_change: Option<Rc<dyn Fn(Option<&T>, &mut Window, &mut App) + 'static>>,
+    on_value_change: Option<TabsValueChangeHandler<T>>,
     orientation: TabsOrientation,
     style_with_state: Option<Rc<dyn Fn(TabsRootRenderState, Div) -> Div + 'static>>,
 }
