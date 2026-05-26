@@ -52,7 +52,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
             context,
             value,
             keep_mounted,
-            index,
+            index: _index,
         } = self;
 
         let selected = context.as_ref().and_then(|context| context.selected_value(cx));
@@ -62,14 +62,6 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
         };
         let hidden = !active;
         let _orientation = context.as_ref().map(|context| context.props().orientation());
-
-        if let (Some(context), Some(value), Some(index)) =
-            (context.as_ref(), value.as_ref(), index)
-        {
-            context.set_runtime(cx, |runtime, _| {
-                runtime.register_panel(value.clone(), index);
-            });
-        }
 
         if active || keep_mounted {
             base.children(children)
@@ -81,10 +73,13 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>
-    for TabsPanel<T>
+impl<T: Clone + Eq + 'static>
+    GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsPanel<T>
 {
-    fn add_state_context(mut self, context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>) -> Self {
+    fn add_state_context(
+        mut self,
+        context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>,
+    ) -> Self {
         self.context = Some(context);
         self
     }
@@ -108,5 +103,11 @@ impl<T: Clone + Eq + 'static> TabsPanel<T> {
     pub fn index(mut self, index: usize) -> Self {
         self.index = Some(index);
         self
+    }
+
+    pub fn register_runtime(&self, index: usize, runtime: &mut TabsRuntime<T>) {
+        if let Some(value) = self.value.as_ref() {
+            runtime.register_panel(value.clone(), index);
+        }
     }
 }

@@ -54,10 +54,18 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
             TabsRuntime::new(),
         );
 
-        context.apply_automatic_fallback(cx);
         context.set_runtime(cx, |runtime, _| {
+            runtime.clear_tabs();
             runtime.clear_panels();
+
+            let mut panel_index = 0;
+
+            for child in &self.children {
+                child.register_runtime(&mut panel_index, runtime);
+            }
         });
+
+        context.apply_automatic_fallback(cx);
 
         let mut panel_index = 0;
 
@@ -65,11 +73,13 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
             self.children
                 .into_iter()
                 .map(|child| {
-                    let child = child.panel_index(panel_index);
-                    if matches!(&child, TabsChild::Panel(_)) {
-                        panel_index += 1;
-                    }
-                    child.add_state_context(context.clone())
+                    child
+                        .map_panel(|panel| {
+                            let panel = panel.index(panel_index);
+                            panel_index += 1;
+                            panel
+                        })
+                        .add_state_context(context.clone())
                 }),
         )
     }

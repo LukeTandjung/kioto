@@ -56,7 +56,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             context,
             value,
             disabled,
-            index,
+            index: _index,
         } = self;
 
         let selected_value = context.as_ref().and_then(|context| context.selected_value(cx));
@@ -65,12 +65,6 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             _ => false,
         };
         let _orientation = context.as_ref().map(|context| context.props().orientation());
-
-        if let (Some(context), Some(value), Some(index)) = (context.as_ref(), value.as_ref(), index) {
-            context.set_runtime(cx, |runtime, _| {
-                runtime.register_tab(value.clone(), disabled, index);
-            });
-        }
 
         let selectable = match !disabled && !active {
             true => context.zip(value),
@@ -87,7 +81,9 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsTab<T> {
+impl<T: Clone + Eq + 'static>
+    GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsTab<T>
+{
     fn add_state_context(
         mut self,
         context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>,
@@ -120,5 +116,11 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
     pub fn index(mut self, index: usize) -> Self {
         self.index = Some(index);
         self
+    }
+
+    pub fn register_runtime(&self, index: usize, runtime: &mut TabsRuntime<T>) {
+        if let Some(value) = self.value.as_ref() {
+            runtime.register_tab(value.clone(), self.disabled, index);
+        }
     }
 }

@@ -38,14 +38,8 @@ impl<T: Clone + Eq + 'static> Styled for TabsList<T> {
 }
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let context = self.context;
-
-        if let Some(context) = context.as_ref() {
-            context.set_runtime(cx, |runtime, _| {
-                runtime.clear_tabs();
-            });
-        }
 
         self.base
             .children(
@@ -67,7 +61,9 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsList<T> {
+impl<T: Clone + Eq + 'static>
+    GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsList<T>
+{
     fn add_state_context(
         mut self,
         context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>,
@@ -100,5 +96,11 @@ impl<T: Clone + Eq + 'static> TabsList<T> {
     pub fn loop_focus(mut self, loop_focus: bool) -> Self {
         self.loop_focus = loop_focus;
         self
+    }
+
+    pub fn register_runtime(&self, runtime: &mut TabsRuntime<T>) {
+        for (index, tab) in self.children.iter().enumerate() {
+            tab.register_runtime(index, runtime);
+        }
     }
 }

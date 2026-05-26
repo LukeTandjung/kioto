@@ -1,5 +1,5 @@
 use gpui::IntoElement;
 
-pub trait GenericChild<S>: IntoElement {
-    fn add_state_context(self, state: S) -> Self;
+pub trait GenericChild<C>: IntoElement {
+    fn add_state_context(self, context: C) -> Self;
 }

@@ -24,10 +24,13 @@ impl<T: Clone + Eq + 'static> IntoElement for TabsChild<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>
-    for TabsChild<T>
+impl<T: Clone + Eq + 'static>
+    GenericChild<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>> for TabsChild<T>
 {
-    fn add_state_context(self, context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>) -> Self {
+    fn add_state_context(
+        self,
+        context: ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>,
+    ) -> Self {
         match self {
             Self::List(list) => Self::List(list.add_state_context(context)),
             Self::Panel(panel) => Self::Panel(panel.add_state_context(context)),
@@ -37,10 +40,21 @@ impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsP
 }
 
 impl<T: Clone + Eq + 'static> TabsChild<T> {
-    pub fn panel_index(self, index: usize) -> Self {
+    pub fn map_panel(self, map: impl FnOnce(TabsPanel<T>) -> TabsPanel<T>) -> Self {
         match self {
-            Self::Panel(panel) => Self::Panel(panel.index(index)),
+            Self::Panel(panel) => Self::Panel(map(panel)),
             child => child,
+        }
+    }
+
+    pub fn register_runtime(&self, panel_index: &mut usize, runtime: &mut TabsRuntime<T>) {
+        match self {
+            Self::List(list) => list.register_runtime(runtime),
+            Self::Panel(panel) => {
+                panel.register_runtime(*panel_index, runtime);
+                *panel_index += 1;
+            }
+            Self::Indicator(_) => {}
         }
     }
 }
