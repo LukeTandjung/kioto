@@ -10,4 +10,5 @@ path = "src/main.rs"
 
 [dependencies]
 gpui.workspace = true
+gpui_platform.workspace = true
 gpui-hooks.workspace = true
