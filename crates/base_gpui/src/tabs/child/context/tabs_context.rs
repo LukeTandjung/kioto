@@ -2,7 +2,11 @@ use gpui::{App, ElementId, Window};
 
 use crate::{
     api::GenericContext,
-    tabs::{TabsActivationDirection, TabsOrientation, TabsProps, TabsRuntime, TabsState},
+    tabs::{
+        TabsActivationDirection, TabsIndicatorRenderState, TabsListRenderState, TabsOrientation,
+        TabsPanelRenderState, TabsProps, TabsRootRenderState, TabsRuntime, TabsState,
+        TabsTabRenderState,
+    },
 };
 
 pub struct TabsContext<T: Clone + Eq + 'static> {
@@ -165,6 +169,53 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
     pub fn activation_direction(&self, cx: &App) -> TabsActivationDirection {
         self.inner
             .get_runtime(cx, TabsRuntime::activation_direction)
+    }
+
+    pub fn root_render_state(&self, cx: &App) -> TabsRootRenderState {
+        TabsRootRenderState::new(self.props().orientation(), self.activation_direction(cx))
+    }
+
+    pub fn list_render_state(&self, cx: &App) -> TabsListRenderState {
+        TabsListRenderState::new(self.props().orientation(), self.activation_direction(cx))
+    }
+
+    pub fn tab_render_state(
+        &self,
+        value: Option<&T>,
+        disabled: bool,
+        index: Option<usize>,
+        cx: &App,
+    ) -> TabsTabRenderState {
+        let selected = self.selected_value(cx);
+        let active = match (value, selected.as_ref()) {
+            (Some(value), Some(selected)) => value == selected,
+            _ => false,
+        };
+
+        TabsTabRenderState::new(
+            active,
+            disabled,
+            self.is_tab_highlighted(index, cx),
+            self.props().orientation(),
+        )
+    }
+
+    pub fn panel_render_state(&self, value: Option<&T>, cx: &App) -> TabsPanelRenderState {
+        let selected = self.selected_value(cx);
+        let active = match (value, selected.as_ref()) {
+            (Some(value), Some(selected)) => value == selected,
+            _ => false,
+        };
+
+        TabsPanelRenderState::new(!active, self.props().orientation(), self.activation_direction(cx))
+    }
+
+    pub fn indicator_render_state(&self, cx: &App) -> TabsIndicatorRenderState {
+        TabsIndicatorRenderState::new(
+            self.selected_value(cx).is_some(),
+            self.props().orientation(),
+            self.activation_direction(cx),
+        )
     }
 
     pub fn sync_activation_direction_with_selected_value(&self, cx: &mut App) {
