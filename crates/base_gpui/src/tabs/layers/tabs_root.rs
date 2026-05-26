@@ -55,11 +55,22 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
         );
 
         context.apply_automatic_fallback(cx);
+        context.set_runtime(cx, |runtime, _| {
+            runtime.clear_panels();
+        });
+
+        let mut panel_index = 0;
 
         self.base.children(
             self.children
                 .into_iter()
-                .map(|child| child.add_state_context(context.clone())),
+                .map(|child| {
+                    let child = child.panel_index(panel_index);
+                    if matches!(&child, TabsChild::Panel(_)) {
+                        panel_index += 1;
+                    }
+                    child.add_state_context(context.clone())
+                }),
         )
     }
 }

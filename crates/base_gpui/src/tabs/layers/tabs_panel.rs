@@ -16,6 +16,7 @@ pub struct TabsPanel<T: Clone + Eq + 'static> {
     context: Option<ControlledContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>>,
     value: Option<T>,
     keep_mounted: bool,
+    index: Option<usize>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsPanel<T> {
@@ -26,6 +27,7 @@ impl<T: Clone + Eq + 'static> Default for TabsPanel<T> {
             context: None,
             value: None,
             keep_mounted: false,
+            index: None,
         }
     }
 }
@@ -44,23 +46,33 @@ impl<T: Clone + Eq + 'static> Styled for TabsPanel<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let selected = self
-            .context
-            .as_ref()
-            .and_then(|context| context.selected_value(cx));
-        let active = match (self.value.as_ref(), selected.as_ref()) {
+        let Self {
+            base,
+            children,
+            context,
+            value,
+            keep_mounted,
+            index,
+        } = self;
+
+        let selected = context.as_ref().and_then(|context| context.selected_value(cx));
+        let active = match (value.as_ref(), selected.as_ref()) {
             (Some(value), Some(selected)) => value == selected,
             _ => false,
         };
         let hidden = !active;
-        let _orientation = self
-            .context
-            .as_ref()
-            .map(|context| context.props().orientation());
+        let _orientation = context.as_ref().map(|context| context.props().orientation());
 
-        if active || self.keep_mounted {
-            self.base
-                .children(self.children)
+        if let (Some(context), Some(value), Some(index)) =
+            (context.as_ref(), value.as_ref(), index)
+        {
+            context.set_runtime(cx, |runtime, _| {
+                runtime.register_panel(value.clone(), index);
+            });
+        }
+
+        if active || keep_mounted {
+            base.children(children)
                 .when(hidden, |this| this.invisible())
                 .into_any_element()
         } else {
@@ -90,6 +102,11 @@ impl<T: Clone + Eq + 'static> TabsPanel<T> {
 
     pub fn keep_mounted(mut self, keep_mounted: bool) -> Self {
         self.keep_mounted = keep_mounted;
+        self
+    }
+
+    pub fn index(mut self, index: usize) -> Self {
+        self.index = Some(index);
         self
     }
 }

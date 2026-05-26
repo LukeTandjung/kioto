@@ -36,6 +36,15 @@ impl<T: Clone + Eq + 'static> GenericChild<ControlledContext<TabsState<T>, TabsP
     }
 }
 
+impl<T: Clone + Eq + 'static> TabsChild<T> {
+    pub fn panel_index(self, index: usize) -> Self {
+        match self {
+            Self::Panel(panel) => Self::Panel(panel.index(index)),
+            child => child,
+        }
+    }
+}
+
 impl<T: Clone + Eq + 'static> From<TabsList<T>> for TabsChild<T> {
     fn from(value: TabsList<T>) -> Self {
         Self::List(value)

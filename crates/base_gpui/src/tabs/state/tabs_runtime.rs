@@ -1,13 +1,17 @@
-use super::TabsTabMetadata;
+use super::{TabsPanelMetadata, TabsTabMetadata};
 
 #[derive(Clone)]
 pub struct TabsRuntime<T: Clone + Eq + 'static> {
     tabs: Vec<TabsTabMetadata<T>>,
+    panels: Vec<TabsPanelMetadata<T>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
     fn default() -> Self {
-        Self { tabs: Vec::new() }
+        Self {
+            tabs: Vec::new(),
+            panels: Vec::new(),
+        }
     }
 }
 
@@ -18,6 +22,10 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
 
     pub fn clear_tabs(&mut self) {
         self.tabs.clear();
+    }
+
+    pub fn clear_panels(&mut self) {
+        self.panels.clear();
     }
 
     pub fn register_tab(&mut self, value: T, disabled: bool, index: usize) {
@@ -31,8 +39,23 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         self.tabs.sort_by_key(TabsTabMetadata::index);
     }
 
+    pub fn register_panel(&mut self, value: T, index: usize) {
+        let metadata = TabsPanelMetadata::new(value, index);
+
+        match self.panels.iter().position(|panel| panel.index() == index) {
+            Some(existing_index) => self.panels[existing_index] = metadata,
+            None => self.panels.push(metadata),
+        }
+
+        self.panels.sort_by_key(TabsPanelMetadata::index);
+    }
+
     pub fn tabs(&self) -> &[TabsTabMetadata<T>] {
         &self.tabs
+    }
+
+    pub fn panels(&self) -> &[TabsPanelMetadata<T>] {
+        &self.panels
     }
 
     pub fn first_enabled_value(&self) -> Option<T> {
