@@ -94,7 +94,12 @@ Out of scope / drop from Base UI:
 - [x] Add reusable `GenericState` trait for component state containers.
 - [x] Add reusable `GenericChild` trait for state-context propagation through child layers.
 - [x] Add reusable `GenericContext<S, P, R>` helper for controlled/uncontrolled state resolution backed by GPUI keyed entity state plus injected component props and runtime state.
+- [x] Keep `GenericContext<S, P, R>` limited to generic storage/state/runtime mutation mechanics.
+- [x] Keep tabs-specific behavior and runtime metadata registration APIs on `TabsContext<T>`.
+- [x] Let `TabsContext<T>` construct and own the initial `TabsRuntime<T>` instead of leaking runtime construction to `TabsRoot<T>`.
+- [x] Keep tab/panel metadata extraction on `TabsTab<T>` / `TabsPanel<T>` and route metadata insertion through `TabsContext<T>`.
 - [x] Reorganize `base_gpui` architecture into `api` and component-specific `child/context/{props,runtime,state}` plus `layers` folders.
+- [x] Document the `base_gpui` component architecture and responsibility boundaries in `docs/base-gpui-component-architecture.md`.
 
 ### Stateful/stateless behavior
 
@@ -145,18 +150,20 @@ Out of scope / drop from Base UI:
 
 ### Keyboard/focus behavior
 
-- [ ] Arrow key navigation works for horizontal tabs: previous/next via left/right.
-- [ ] Arrow key navigation works for vertical tabs: previous/next via up/down.
-- [ ] `Home` moves highlight/focus to the first tab.
-- [ ] `End` moves highlight/focus to the last tab.
-- [ ] `loop_focus = true` wraps arrow navigation at the ends.
-- [ ] `loop_focus = false` clamps arrow navigation at the ends.
-- [ ] `activate_on_focus = true` activates the highlighted/focused enabled tab.
-- [ ] `activate_on_focus = false` only moves highlight/focus with arrows.
-- [ ] `Enter` activates the highlighted/focused tab when `activate_on_focus = false`.
-- [ ] `Space` activates the highlighted/focused tab when `activate_on_focus = false`.
+- [x] Tabs use GPUI key dispatch actions and a `TabsList` key context instead of raw key-down handlers.
+- [x] Arrow key navigation updates highlight for horizontal tabs: previous/next via left/right.
+- [x] Arrow key navigation updates highlight for vertical tabs: previous/next via up/down.
+- [x] `Home` moves highlight to the first tab.
+- [x] `End` moves highlight to the last tab.
+- [x] `loop_focus = true` wraps arrow navigation at the ends.
+- [x] `loop_focus = false` clamps arrow navigation at the ends.
+- [x] `activate_on_focus = true` activates the highlighted enabled tab.
+- [x] `activate_on_focus = false` only moves highlight with arrows.
+- [x] `Enter` activates the highlighted tab when `activate_on_focus = false`.
+- [x] `Space` activates the highlighted tab when `activate_on_focus = false`.
+- [ ] Keyboard navigation moves GPUI focus to the highlighted tab like Base UI's roving focus.
 - [ ] Disabled tabs can be highlighted/focused if matching Base UI behavior is desired.
-- [ ] Disabled tabs are never activated by keyboard or pointer interaction.
+- [x] Disabled tabs are never activated by keyboard or pointer interaction.
 - [ ] Highlighted tab stays synchronized with externally controlled value when appropriate.
 
 ### Panel behavior
