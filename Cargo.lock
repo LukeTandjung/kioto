@@ -517,7 +517,6 @@ name = "base_gpui"
 version = "0.1.0"
 dependencies = [
  "gpui",
- "gpui-hooks",
  "gpui_platform",
 ]
 
@@ -2269,26 +2268,6 @@ dependencies = [
 name = "gpui-component-macros"
 version = "0.5.1"
 source = "git+https://github.com/longbridge/gpui-component#ccc1e7689203d09bfc88a0aae29473d1c289fa0c"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "gpui-hooks"
-version = "0.1.3"
-source = "git+https://github.com/leset0ng/gpui-hooks#1ccb44af6672563917b6c9ef451fd825b7d901ee"
-dependencies = [
- "gpui",
- "gpui-hooks-macros",
-]
-
-[[package]]
-name = "gpui-hooks-macros"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b822e80b8fd64b867ea2f34f3bcf61e6847f0b43a50f4690e70b1ba95d95ab3"
 dependencies = [
  "proc-macro2",
  "quote",
