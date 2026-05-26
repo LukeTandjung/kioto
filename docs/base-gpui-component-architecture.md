@@ -235,6 +235,51 @@ runtime.register_tab(...)
 
 from arbitrary render layers. `TabsContext<T>` should know how metadata enters `TabsRuntime<T>`.
 
+## State-aware styling
+
+Normal GPUI builder styling remains the default for static styles:
+
+```rust
+TabsTab::new()
+    .px_3()
+    .py_2()
+    .rounded_md()
+```
+
+For styles that depend on component state, expose a `style_with_state` builder on the relevant renderable layer.
+
+For Tabs:
+
+```rust
+TabsTab::new()
+    .style_with_state(|state, tab| {
+        if state.active {
+            tab.bg(/* active color */)
+        } else if state.highlighted {
+            tab.bg(/* highlighted color */)
+        } else {
+            tab
+        }
+    })
+```
+
+Render-state structs are component-specific public API. They should model the same information that Base UI exposes through state-aware `className`, `style`, and `render` callbacks, adapted to GPUI.
+
+Current Tabs render states include:
+
+- `TabsRootRenderState`: orientation and activation direction.
+- `TabsListRenderState`: orientation and activation direction.
+- `TabsTabRenderState`: active, disabled, highlighted, and orientation.
+- `TabsPanelRenderState`: hidden, orientation, and activation direction.
+- `TabsIndicatorRenderState`: selected, orientation, and activation direction placeholder state; active tab bounds are pending.
+
+Render layers should not independently recompute shared component state when the component context can compute it. Prefer context helpers such as:
+
+```rust
+context.tab_render_state(...)
+context.panel_render_state(...)
+```
+
 ## Keyboard dispatch
 
 Use GPUI key dispatch for keyboard behavior instead of raw `on_key_down` when implementing component commands.

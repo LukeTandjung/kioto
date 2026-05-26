@@ -173,7 +173,7 @@ Out of scope / drop from Base UI:
 - [x] `TabsPanel<T>` is hidden or omitted when its value does not equal selected value.
 - [x] `keep_mounted = false` means inactive panels are not rendered.
 - [x] `keep_mounted = true` means inactive panels remain mounted but hidden.
-- [ ] Panels receive/access state needed for styling: hidden, orientation, activation direction.
+- [x] Panels receive/access state needed for styling: hidden, orientation, activation direction.
 
 ### Indicator behavior
 
@@ -187,10 +187,10 @@ Out of scope / drop from Base UI:
 
 ### Styling/state exposure
 
-- [ ] Root exposes orientation and activation direction to styling logic.
-- [ ] List exposes orientation and activation direction to styling logic.
-- [ ] Tab computes active, disabled, and orientation state; expose it to styling logic.
-- [ ] Panel computes hidden and orientation state; expose it plus activation direction to styling logic.
+- [x] Root exposes orientation and activation direction to styling logic.
+- [x] List exposes orientation and activation direction to styling logic.
+- [x] Tab computes active, disabled, highlighted, and orientation state; expose it to styling logic.
+- [x] Panel computes hidden and orientation state; expose it plus activation direction to styling logic.
 - [ ] Indicator exposes active tab position/size, orientation, and activation direction state.
 
 ### Tests / verification
