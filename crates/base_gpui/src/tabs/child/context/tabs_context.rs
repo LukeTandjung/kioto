@@ -2,7 +2,7 @@ use gpui::{App, ElementId, Window};
 
 use crate::{
     api::GenericContext,
-    tabs::{TabsProps, TabsRuntime, TabsState},
+    tabs::{TabsActivationDirection, TabsOrientation, TabsProps, TabsRuntime, TabsState},
 };
 
 pub struct TabsContext<T: Clone + Eq + 'static> {
@@ -43,12 +43,20 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         self.inner.get_state(cx)
     }
 
-    pub fn select_value(
-        &self,
-        value: Option<T>,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
+    pub fn select_value(&self, value: Option<T>, window: &mut Window, cx: &mut App) {
+        let previous = self.selected_value(cx);
+        let direction = self.compute_activation_direction(previous.as_ref(), value.as_ref(), cx);
+        let is_controlled = self.inner.is_controlled();
+        let next_activation_previous_value = match is_controlled {
+            true => previous,
+            false => value.clone(),
+        };
+
+        self.inner.set_runtime(cx, |runtime, _| {
+            runtime.set_activation_direction(direction);
+            runtime.set_activation_previous_value(next_activation_previous_value);
+        });
+
         self.inner.set_state(value, cx, |props, next, cx| {
             props.on_value_change().map(|on_value_change| {
                 on_value_change(next, window, cx);
@@ -135,6 +143,10 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         });
 
         if fallback != current {
+            self.inner.set_runtime(cx, |runtime, _| {
+                runtime.set_activation_direction(TabsActivationDirection::None);
+                runtime.set_activation_previous_value(fallback.clone());
+            });
             self.inner.set_state_silent(fallback, cx);
         }
     }
@@ -148,6 +160,37 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
     pub fn is_tab_highlighted(&self, index: Option<usize>, cx: &App) -> bool {
         self.inner
             .get_runtime(cx, |runtime| runtime.highlighted_tab_index() == index)
+    }
+
+    pub fn activation_direction(&self, cx: &App) -> TabsActivationDirection {
+        self.inner
+            .get_runtime(cx, TabsRuntime::activation_direction)
+    }
+
+    pub fn sync_activation_direction_with_selected_value(&self, cx: &mut App) {
+        let selected = self.selected_value(cx);
+
+        self.inner.set_runtime(cx, |runtime, _| {
+            let Some(previous) = runtime.activation_previous_value().cloned() else {
+                runtime.set_activation_direction(TabsActivationDirection::None);
+                runtime.set_activation_previous_value(selected);
+                return;
+            };
+
+            if previous == selected {
+                return;
+            }
+
+            let direction = Self::compute_activation_direction_from_runtime(
+                previous.as_ref(),
+                selected.as_ref(),
+                self.props().orientation(),
+                runtime,
+            );
+
+            runtime.set_activation_direction(direction);
+            runtime.set_activation_previous_value(selected);
+        });
     }
 
     pub fn sync_highlighted_tab_with_selected_value(&self, cx: &mut App) {
@@ -170,5 +213,54 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
 
     pub fn props(&self) -> &TabsProps<T> {
         self.inner.props()
+    }
+
+    fn compute_activation_direction(
+        &self,
+        previous: Option<&T>,
+        next: Option<&T>,
+        cx: &App,
+    ) -> TabsActivationDirection {
+        self.inner.get_runtime(cx, |runtime| {
+            Self::compute_activation_direction_from_runtime(
+                previous,
+                next,
+                self.props().orientation(),
+                runtime,
+            )
+        })
+    }
+
+    fn compute_activation_direction_from_runtime(
+        previous: Option<&T>,
+        next: Option<&T>,
+        orientation: TabsOrientation,
+        runtime: &TabsRuntime<T>,
+    ) -> TabsActivationDirection {
+        let Some(previous) = previous else {
+            return TabsActivationDirection::None;
+        };
+        let Some(next) = next else {
+            return TabsActivationDirection::None;
+        };
+
+        let Some(previous_index) = runtime.index_of_value(previous) else {
+            return TabsActivationDirection::None;
+        };
+        let Some(next_index) = runtime.index_of_value(next) else {
+            return TabsActivationDirection::None;
+        };
+
+        match previous_index.cmp(&next_index) {
+            std::cmp::Ordering::Less => match orientation {
+                TabsOrientation::Horizontal => TabsActivationDirection::Right,
+                TabsOrientation::Vertical => TabsActivationDirection::Down,
+            },
+            std::cmp::Ordering::Greater => match orientation {
+                TabsOrientation::Horizontal => TabsActivationDirection::Left,
+                TabsOrientation::Vertical => TabsActivationDirection::Up,
+            },
+            std::cmp::Ordering::Equal => TabsActivationDirection::None,
+        }
     }
 }

@@ -61,6 +61,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
         }
 
         context.apply_automatic_fallback(cx);
+        context.sync_activation_direction_with_selected_value(cx);
         context.sync_highlighted_tab_with_selected_value(cx);
 
         let mut panel_index = 0;

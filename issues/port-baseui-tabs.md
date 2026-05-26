@@ -128,7 +128,7 @@ Out of scope / drop from Base UI:
 - [x] Track panel metadata: value and index.
 - [x] Pre-register panel runtime metadata before fallback/render.
 - [x] Track highlighted/focused tab index separately from selected value.
-- [ ] Track tab activation direction: `Left`, `Right`, `Up`, `Down`, `None`.
+- [x] Track tab activation direction: `Left`, `Right`, `Up`, `Down`, `None`.
 - [x] Support dynamic registration/unregistration of tabs and panels.
 
 ### Selection behavior
@@ -145,8 +145,9 @@ Out of scope / drop from Base UI:
 - [x] If selected tab becomes disabled in uncontrolled mode, fall back to first enabled tab or `None`.
 - [x] If selected tab is removed in uncontrolled mode, fall back to first enabled tab or `None`.
 - [x] Controlled mode preserves the externally supplied value even if disabled or missing.
-- [ ] Automatic fallback changes have activation direction `None`.
-- [ ] User-initiated changes compute activation direction from tab order/bounds.
+- [x] Automatic fallback changes have activation direction `None`.
+- [x] User-initiated changes compute activation direction from registered tab order.
+- [ ] User-initiated changes compute activation direction from measured tab bounds.
 
 ### Keyboard/focus behavior
 

@@ -8,8 +8,8 @@ pub use actions::{
 };
 pub use child::{
     context::{
-        TabsContext, TabsOrientation, TabsPanelMetadata, TabsProps, TabsRuntime, TabsState,
-        TabsTabMetadata,
+        TabsActivationDirection, TabsContext, TabsOrientation, TabsPanelMetadata, TabsProps,
+        TabsRuntime, TabsState, TabsTabMetadata,
     },
     TabsChild,
 };

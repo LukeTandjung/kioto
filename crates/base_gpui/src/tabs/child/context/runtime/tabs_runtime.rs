@@ -1,4 +1,4 @@
-use super::{TabsPanelMetadata, TabsTabMetadata};
+use super::{TabsActivationDirection, TabsPanelMetadata, TabsTabMetadata};
 
 #[derive(Clone)]
 pub struct TabsRuntime<T: Clone + Eq + 'static> {
@@ -6,6 +6,8 @@ pub struct TabsRuntime<T: Clone + Eq + 'static> {
     panels: Vec<TabsPanelMetadata<T>>,
     highlighted_tab_index: Option<usize>,
     last_synced_selected_value: Option<Option<T>>,
+    activation_direction: TabsActivationDirection,
+    activation_previous_value: Option<Option<T>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
@@ -15,6 +17,8 @@ impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
             panels: Vec::new(),
             highlighted_tab_index: None,
             last_synced_selected_value: None,
+            activation_direction: TabsActivationDirection::None,
+            activation_previous_value: None,
         }
     }
 }
@@ -78,6 +82,22 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         self.last_synced_selected_value = Some(value);
     }
 
+    pub fn activation_direction(&self) -> TabsActivationDirection {
+        self.activation_direction
+    }
+
+    pub fn set_activation_direction(&mut self, direction: TabsActivationDirection) {
+        self.activation_direction = direction;
+    }
+
+    pub fn activation_previous_value(&self) -> Option<&Option<T>> {
+        self.activation_previous_value.as_ref()
+    }
+
+    pub fn set_activation_previous_value(&mut self, value: Option<T>) {
+        self.activation_previous_value = Some(value);
+    }
+
     pub fn first_enabled_index(&self) -> Option<usize> {
         self.tabs
             .iter()
@@ -119,6 +139,13 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
             .iter()
             .find(|tab| !tab.disabled() && tab.index() == index)
             .map(TabsTabMetadata::value)
+    }
+
+    pub fn index_of_value(&self, value: &T) -> Option<usize> {
+        self.tabs
+            .iter()
+            .find(|tab| tab.value() == value)
+            .map(TabsTabMetadata::index)
     }
 
     pub fn index_of_enabled_value(&self, value: &T) -> Option<usize> {
