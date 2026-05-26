@@ -1,8 +1,8 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    prelude::FluentBuilder as _, AnyElement, App, Div, ElementId, Entity, FocusHandle,
-    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, SharedString,
+    prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, Entity,
+    FocusHandle, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, SharedString,
     StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
 };
 
@@ -70,11 +70,14 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
         );
         let focus_handle = focus_handle_entity.read(cx).clone();
 
+        let focused = focus_handle.is_focused(window);
         let state = context
             .as_ref()
-            .map(|context| context.tab_render_state(value.as_ref(), disabled, index, cx))
+            .map(|context| {
+                context.tab_render_state(value.as_ref(), disabled, index, focused, cx)
+            })
             .unwrap_or_else(|| {
-                TabsTabRenderState::new(false, disabled, false, TabsOrientation::Horizontal)
+                TabsTabRenderState::new(false, disabled, false, focused, TabsOrientation::Horizontal)
             });
         let active = state.active;
         let highlighted = state.highlighted;
@@ -97,7 +100,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             )
             .children(children)
             .when_some(selectable, |this, ((context, value), index)| {
-                this.on_click(move |_event, window, cx| {
+                this.on_click(move |event, window, cx| {
+                    if !matches!(event, ClickEvent::Mouse(_)) {
+                        return;
+                    }
+
                     context.highlight_tab(Some(index), cx);
                     context.select_value(Some(value.clone()), window, cx);
                 })

@@ -106,7 +106,6 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 }
 
                 context.highlight_previous_tab(loop_focus, cx);
-                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -122,7 +121,6 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 }
 
                 context.highlight_next_tab(loop_focus, cx);
-                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -138,7 +136,6 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 }
 
                 context.highlight_previous_tab(loop_focus, cx);
-                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -154,7 +151,6 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 }
 
                 context.highlight_next_tab(loop_focus, cx);
-                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -166,7 +162,6 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 };
 
                 context.highlight_first_tab(cx);
-                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -178,7 +173,6 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 };
 
                 context.highlight_last_tab(cx);
-                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);

@@ -187,7 +187,7 @@ Out of scope / drop from Base UI:
 
 - [x] Root exposes orientation and activation direction to styling logic.
 - [x] List exposes orientation and activation direction to styling logic.
-- [x] Tab computes active, disabled, highlighted, and orientation state; expose it to styling logic.
+- [x] Tab computes active, disabled, highlighted, focused, and orientation state; expose it to styling logic.
 - [x] Panel computes hidden and orientation state; expose it plus activation direction to styling logic.
 - [x] Indicator exposes active tab position/size state.
 - [x] Indicator exposes selected, orientation, and activation direction state.

@@ -283,7 +283,7 @@ Current Tabs render states include:
 
 - `TabsRootRenderState`: orientation and activation direction.
 - `TabsListRenderState`: orientation and activation direction.
-- `TabsTabRenderState`: active, disabled, highlighted, and orientation.
+- `TabsTabRenderState`: active, disabled, highlighted, focused, and orientation.
 - `TabsPanelRenderState`: hidden, orientation, and activation direction.
 - `TabsIndicatorRenderState`: selected state, active tab position/size, orientation, and activation direction.
 
