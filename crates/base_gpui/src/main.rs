@@ -42,7 +42,15 @@ impl Render for TabsTest {
                                             .px_3()
                                             .py_2()
                                             .rounded_md()
-                                            .bg(rgb(0xe5e7eb))
+                                            .style_with_state(|state, tab| {
+                                                if state.active {
+                                                    tab.bg(rgb(0xe5e7eb))
+                                                } else if state.highlighted {
+                                                    tab.bg(rgb(0xf3f4f6))
+                                                } else {
+                                                    tab
+                                                }
+                                            })
                                             .child("Overview"),
                                     )
                                     .child(
@@ -52,6 +60,15 @@ impl Render for TabsTest {
                                             .px_3()
                                             .py_2()
                                             .rounded_md()
+                                            .style_with_state(|state, tab| {
+                                                if state.active {
+                                                    tab.bg(rgb(0xe5e7eb))
+                                                } else if state.highlighted {
+                                                    tab.bg(rgb(0xf3f4f6))
+                                                } else {
+                                                    tab
+                                                }
+                                            })
                                             .child("Projects"),
                                     )
                                     .child(
@@ -61,6 +78,15 @@ impl Render for TabsTest {
                                             .px_3()
                                             .py_2()
                                             .rounded_md()
+                                            .style_with_state(|state, tab| {
+                                                if state.active {
+                                                    tab.bg(rgb(0xe5e7eb))
+                                                } else if state.highlighted {
+                                                    tab.bg(rgb(0xf3f4f6))
+                                                } else {
+                                                    tab
+                                                }
+                                            })
                                             .child("Account"),
                                     ),
                             )

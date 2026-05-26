@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use gpui::{
     prelude::FluentBuilder as _, AnyElement, App, Div, ElementId, InteractiveElement as _,
     IntoElement, ParentElement, RenderOnce, StatefulInteractiveElement as _, StyleRefinement,
@@ -6,7 +8,7 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::TabsContext,
+    tabs::{TabsContext, TabsOrientation, TabsTabRenderState},
 };
 
 #[derive(IntoElement)]
@@ -18,6 +20,7 @@ pub struct TabsTab<T: Clone + Eq + 'static> {
     value: Option<T>,
     disabled: bool,
     index: Option<usize>,
+    style_with_state: Option<Rc<dyn Fn(TabsTabRenderState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsTab<T> {
@@ -30,6 +33,7 @@ impl<T: Clone + Eq + 'static> Default for TabsTab<T> {
             value: None,
             disabled: false,
             index: None,
+            style_with_state: None,
         }
     }
 }
@@ -56,21 +60,26 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             value,
             disabled,
             index,
+            style_with_state,
         } = self;
 
-        let selected_value = context.as_ref().and_then(|context| context.selected_value(cx));
-        let active = match (value.as_ref(), selected_value.as_ref()) {
-            (Some(value), Some(selected_value)) => value == selected_value,
-            _ => false,
-        };
-        let _orientation = context.as_ref().map(|context| context.props().orientation());
-        let highlighted = context
+        let state = context
             .as_ref()
-            .is_some_and(|context| context.is_tab_highlighted(index, cx));
+            .map(|context| context.tab_render_state(value.as_ref(), disabled, index, cx))
+            .unwrap_or_else(|| {
+                TabsTabRenderState::new(false, disabled, false, TabsOrientation::Horizontal)
+            });
+        let active = state.active;
+        let highlighted = state.highlighted;
 
         let selectable = match !disabled && !active {
             true => context.zip(value).zip(index),
             false => None,
+        };
+
+        let base = match style_with_state {
+            Some(style_with_state) => style_with_state(state, base),
+            None => base,
         };
 
         base.id(id)
@@ -119,6 +128,14 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
 
     pub fn index(mut self, index: usize) -> Self {
         self.index = Some(index);
+        self
+    }
+
+    pub fn style_with_state(
+        mut self,
+        style: impl Fn(TabsTabRenderState, Div) -> Div + 'static,
+    ) -> Self {
+        self.style_with_state = Some(Rc::new(style));
         self
     }
 

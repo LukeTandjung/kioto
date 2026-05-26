@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use gpui::{
     prelude::FluentBuilder as _, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce,
     StyleRefinement, Styled, Window, div,
@@ -5,7 +7,7 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::TabsContext,
+    tabs::{TabsContext, TabsOrientation, TabsPanelRenderState},
 };
 
 #[derive(IntoElement)]
@@ -16,6 +18,7 @@ pub struct TabsPanel<T: Clone + Eq + 'static> {
     value: Option<T>,
     keep_mounted: bool,
     index: Option<usize>,
+    style_with_state: Option<Rc<dyn Fn(TabsPanelRenderState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsPanel<T> {
@@ -27,6 +30,7 @@ impl<T: Clone + Eq + 'static> Default for TabsPanel<T> {
             value: None,
             keep_mounted: false,
             index: None,
+            style_with_state: None,
         }
     }
 }
@@ -52,15 +56,21 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
             value,
             keep_mounted,
             index: _index,
+            style_with_state,
         } = self;
 
-        let selected = context.as_ref().and_then(|context| context.selected_value(cx));
-        let active = match (value.as_ref(), selected.as_ref()) {
-            (Some(value), Some(selected)) => value == selected,
-            _ => false,
+        let state = context
+            .as_ref()
+            .map(|context| context.panel_render_state(value.as_ref(), cx))
+            .unwrap_or_else(|| {
+                TabsPanelRenderState::new(true, TabsOrientation::Horizontal, Default::default())
+            });
+        let active = !state.hidden;
+        let hidden = state.hidden;
+        let base = match style_with_state {
+            Some(style_with_state) => style_with_state(state, base),
+            None => base,
         };
-        let hidden = !active;
-        let _orientation = context.as_ref().map(|context| context.props().orientation());
 
         if active || keep_mounted {
             base.children(children)
@@ -101,6 +111,14 @@ impl<T: Clone + Eq + 'static> TabsPanel<T> {
 
     pub fn index(mut self, index: usize) -> Self {
         self.index = Some(index);
+        self
+    }
+
+    pub fn style_with_state(
+        mut self,
+        style: impl Fn(TabsPanelRenderState, Div) -> Div + 'static,
+    ) -> Self {
+        self.style_with_state = Some(Rc::new(style));
         self
     }
 

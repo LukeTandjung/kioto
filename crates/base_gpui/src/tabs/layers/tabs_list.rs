@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use gpui::{
     App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
     StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
@@ -6,8 +8,8 @@ use gpui::{
 use crate::{
     api::GenericChild,
     tabs::{
-        TabsActivateHighlighted, TabsContext, TabsOrientation, TabsSelectDown, TabsSelectFirst,
-        TabsSelectLast, TabsSelectLeft, TabsSelectRight, TabsSelectUp,
+        TabsActivateHighlighted, TabsContext, TabsListRenderState, TabsOrientation,
+        TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft, TabsSelectRight, TabsSelectUp,
         TABS_LIST_KEY_CONTEXT,
     },
 };
@@ -21,6 +23,7 @@ pub struct TabsList<T: Clone + Eq + 'static> {
     context: Option<TabsContext<T>>,
     activate_on_focus: bool,
     loop_focus: bool,
+    style_with_state: Option<Rc<dyn Fn(TabsListRenderState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsList<T> {
@@ -31,6 +34,7 @@ impl<T: Clone + Eq + 'static> Default for TabsList<T> {
             context: None,
             activate_on_focus: false,
             loop_focus: true,
+            style_with_state: None,
         }
     }
 }
@@ -44,6 +48,9 @@ impl<T: Clone + Eq + 'static> Styled for TabsList<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let context = self.context;
+        let render_state = context
+            .as_ref()
+            .map(|context| context.list_render_state(_cx));
         let select_left_context = context.clone();
         let select_right_context = context.clone();
         let select_up_context = context.clone();
@@ -54,7 +61,12 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
         let activate_on_focus = self.activate_on_focus;
         let loop_focus = self.loop_focus;
 
-        self.base
+        let base = match (self.style_with_state, render_state) {
+            (Some(style_with_state), Some(render_state)) => style_with_state(render_state, self.base),
+            _ => self.base,
+        };
+
+        base
             .id("tabs-list")
             .key_context(TABS_LIST_KEY_CONTEXT)
             .focusable()
@@ -200,6 +212,14 @@ impl<T: Clone + Eq + 'static> TabsList<T> {
 
     pub fn loop_focus(mut self, loop_focus: bool) -> Self {
         self.loop_focus = loop_focus;
+        self
+    }
+
+    pub fn style_with_state(
+        mut self,
+        style: impl Fn(TabsListRenderState, Div) -> Div + 'static,
+    ) -> Self {
+        self.style_with_state = Some(Rc::new(style));
         self
     }
 

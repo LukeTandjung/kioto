@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::{
     api::GenericChild,
-    tabs::{TabsChild, TabsContext, TabsOrientation, TabsProps},
+    tabs::{TabsChild, TabsContext, TabsOrientation, TabsProps, TabsRootRenderState},
 };
 
 #[derive(IntoElement)]
@@ -19,6 +19,7 @@ pub struct TabsRoot<T: Clone + Eq + 'static> {
     value: Option<Option<T>>,
     on_value_change: Option<Rc<dyn Fn(Option<&T>, &mut Window, &mut App) + 'static>>,
     orientation: TabsOrientation,
+    style_with_state: Option<Rc<dyn Fn(TabsRootRenderState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRoot<T> {
@@ -31,6 +32,7 @@ impl<T: Clone + Eq + 'static> Default for TabsRoot<T> {
             value: None,
             on_value_change: None,
             orientation: TabsOrientation::Horizontal,
+            style_with_state: None,
         }
     }
 }
@@ -64,9 +66,14 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
         context.sync_activation_direction_with_selected_value(cx);
         context.sync_highlighted_tab_with_selected_value(cx);
 
+        let render_state = context.root_render_state(cx);
+        let base = match self.style_with_state {
+            Some(style_with_state) => style_with_state(render_state, self.base),
+            None => self.base,
+        };
         let mut panel_index = 0;
 
-        self.base.children(
+        base.children(
             self.children
                 .into_iter()
                 .map(|child| {
@@ -122,6 +129,14 @@ impl<T: Clone + Eq + 'static> TabsRoot<T> {
 
     pub fn orientation(mut self, orientation: TabsOrientation) -> Self {
         self.orientation = orientation;
+        self
+    }
+
+    pub fn style_with_state(
+        mut self,
+        style: impl Fn(TabsRootRenderState, Div) -> Div + 'static,
+    ) -> Self {
+        self.style_with_state = Some(Rc::new(style));
         self
     }
 }
