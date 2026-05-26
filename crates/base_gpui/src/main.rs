@@ -46,7 +46,7 @@ impl Render for TabsTest {
                                             .style_with_state(|state, tab| {
                                                 if state.active {
                                                     tab.bg(rgb(0xe5e7eb))
-                                                } else if state.focused {
+                                                } else if state.highlighted {
                                                     tab.bg(rgb(0xf3f4f6))
                                                 } else {
                                                     tab
@@ -64,7 +64,7 @@ impl Render for TabsTest {
                                             .style_with_state(|state, tab| {
                                                 if state.active {
                                                     tab.bg(rgb(0xe5e7eb))
-                                                } else if state.focused {
+                                                } else if state.highlighted {
                                                     tab.bg(rgb(0xf3f4f6))
                                                 } else {
                                                     tab
@@ -82,7 +82,7 @@ impl Render for TabsTest {
                                             .style_with_state(|state, tab| {
                                                 if state.active {
                                                     tab.bg(rgb(0xe5e7eb))
-                                                } else if state.focused {
+                                                } else if state.highlighted {
                                                     tab.bg(rgb(0xf3f4f6))
                                                 } else {
                                                     tab

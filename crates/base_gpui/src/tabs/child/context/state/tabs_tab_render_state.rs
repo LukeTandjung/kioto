@@ -5,7 +5,6 @@ pub struct TabsTabRenderState {
     pub active: bool,
     pub disabled: bool,
     pub highlighted: bool,
-    pub focused: bool,
     pub orientation: TabsOrientation,
 }
 
@@ -14,14 +13,12 @@ impl TabsTabRenderState {
         active: bool,
         disabled: bool,
         highlighted: bool,
-        focused: bool,
         orientation: TabsOrientation,
     ) -> Self {
         Self {
             active,
             disabled,
             highlighted,
-            focused,
             orientation,
         }
     }

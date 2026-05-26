@@ -212,7 +212,6 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         value: Option<&T>,
         disabled: bool,
         index: Option<usize>,
-        focused: bool,
         cx: &App,
     ) -> TabsTabRenderState {
         let selected = self.selected_value(cx);
@@ -225,7 +224,6 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
             active,
             disabled,
             self.is_tab_highlighted(index, cx),
-            focused,
             self.props().orientation(),
         )
     }

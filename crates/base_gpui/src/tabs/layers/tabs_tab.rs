@@ -70,14 +70,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
         );
         let focus_handle = focus_handle_entity.read(cx).clone();
 
-        let focused = focus_handle.is_focused(window);
         let state = context
             .as_ref()
-            .map(|context| {
-                context.tab_render_state(value.as_ref(), disabled, index, focused, cx)
-            })
+            .map(|context| context.tab_render_state(value.as_ref(), disabled, index, cx))
             .unwrap_or_else(|| {
-                TabsTabRenderState::new(false, disabled, false, focused, TabsOrientation::Horizontal)
+                TabsTabRenderState::new(false, disabled, false, TabsOrientation::Horizontal)
             });
         let active = state.active;
         let highlighted = state.highlighted;
