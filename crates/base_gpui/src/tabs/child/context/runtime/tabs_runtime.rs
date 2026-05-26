@@ -1,4 +1,4 @@
-use gpui::{Bounds, Pixels};
+use gpui::{Bounds, FocusHandle, Pixels};
 
 use super::{
     TabsActivationDirection, TabsPanelMetadata, TabsTabMetadata, TabsTabPosition, TabsTabSize,
@@ -13,6 +13,7 @@ pub struct TabsRuntime<T: Clone + Eq + 'static> {
     activation_direction: TabsActivationDirection,
     activation_previous_value: Option<Option<T>>,
     tab_bounds: Vec<(usize, Bounds<Pixels>)>,
+    tab_focus_handles: Vec<(usize, FocusHandle)>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
@@ -25,6 +26,7 @@ impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
             activation_direction: TabsActivationDirection::None,
             activation_previous_value: None,
             tab_bounds: Vec::new(),
+            tab_focus_handles: Vec::new(),
         }
     }
 }
@@ -79,6 +81,32 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
 
         self.tab_bounds = bounds;
         true
+    }
+
+    pub fn register_tab_focus_handle(&mut self, index: usize, focus_handle: FocusHandle) -> bool {
+        match self
+            .tab_focus_handles
+            .iter()
+            .position(|(tab_index, _)| *tab_index == index)
+        {
+            Some(existing_index) if self.tab_focus_handles[existing_index].1 == focus_handle => false,
+            Some(existing_index) => {
+                self.tab_focus_handles[existing_index] = (index, focus_handle);
+                true
+            }
+            None => {
+                self.tab_focus_handles.push((index, focus_handle));
+                self.tab_focus_handles.sort_by_key(|(index, _)| *index);
+                true
+            }
+        }
+    }
+
+    pub fn focus_handle_at_index(&self, index: usize) -> Option<FocusHandle> {
+        self.tab_focus_handles
+            .iter()
+            .find(|(tab_index, _)| *tab_index == index)
+            .map(|(_, focus_handle)| focus_handle.clone())
     }
 
     pub fn active_tab_position(&self, selected: Option<&T>) -> Option<TabsTabPosition> {

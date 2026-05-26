@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, IntoElement};
+use gpui::{AnyElement, App, IntoElement, Window};
 
 use crate::{
     api::GenericChild,
@@ -50,10 +50,11 @@ impl<T: Clone + Eq + 'static> TabsChild<T> {
         &self,
         panel_index: &mut usize,
         context: &TabsContext<T>,
+        window: &mut Window,
         cx: &mut App,
     ) {
         match self {
-            Self::List(list) => list.register_runtime(context, cx),
+            Self::List(list) => list.register_runtime(context, window, cx),
             Self::Panel(panel) => {
                 panel.register_runtime(*panel_index, context, cx);
                 *panel_index += 1;

@@ -106,6 +106,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 }
 
                 context.highlight_previous_tab(loop_focus, cx);
+                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -121,6 +122,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 }
 
                 context.highlight_next_tab(loop_focus, cx);
+                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -136,6 +138,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 }
 
                 context.highlight_previous_tab(loop_focus, cx);
+                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -151,6 +154,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 }
 
                 context.highlight_next_tab(loop_focus, cx);
+                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -162,6 +166,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 };
 
                 context.highlight_first_tab(cx);
+                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -173,6 +178,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 };
 
                 context.highlight_last_tab(cx);
+                context.focus_highlighted_tab(window, cx);
 
                 if activate_on_focus {
                     context.select_highlighted_tab(window, cx);
@@ -255,12 +261,12 @@ impl<T: Clone + Eq + 'static> TabsList<T> {
         self
     }
 
-    pub fn register_runtime(&self, context: &TabsContext<T>, cx: &mut App) {
+    pub fn register_runtime(&self, context: &TabsContext<T>, window: &mut Window, cx: &mut App) {
         let mut tab_index = 0;
 
         for child in &self.children {
             if child.is_tab() {
-                child.register_runtime(tab_index, context, cx);
+                child.register_runtime(tab_index, context, window, cx);
                 tab_index += 1;
             }
         }

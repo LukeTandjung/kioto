@@ -59,7 +59,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
         let mut registered_panel_index = 0;
 
         for child in &self.children {
-            child.register_runtime(&mut registered_panel_index, &context, cx);
+            child.register_runtime(&mut registered_panel_index, &context, window, cx);
         }
 
         context.apply_automatic_fallback(cx);

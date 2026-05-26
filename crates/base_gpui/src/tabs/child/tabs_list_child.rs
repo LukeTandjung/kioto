@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, IntoElement};
+use gpui::{AnyElement, App, IntoElement, Window};
 
 use crate::{
     api::GenericChild,
@@ -15,9 +15,15 @@ impl<T: Clone + Eq + 'static> TabsListChild<T> {
         matches!(self, Self::Tab(_))
     }
 
-    pub fn register_runtime(&self, index: usize, context: &TabsContext<T>, cx: &mut App) {
+    pub fn register_runtime(
+        &self,
+        index: usize,
+        context: &TabsContext<T>,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
         match self {
-            Self::Tab(tab) => tab.register_runtime(index, context, cx),
+            Self::Tab(tab) => tab.register_runtime(index, context, window, cx),
             Self::Indicator(_) => {}
         }
     }

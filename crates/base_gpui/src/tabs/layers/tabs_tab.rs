@@ -1,9 +1,9 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    prelude::FluentBuilder as _, AnyElement, App, Div, ElementId, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, StatefulInteractiveElement as _, StyleRefinement,
-    Styled, Window, div,
+    prelude::FluentBuilder as _, AnyElement, App, Div, ElementId, Entity, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
 };
 
 use crate::{
@@ -51,7 +51,7 @@ impl<T: Clone + Eq + 'static> Styled for TabsTab<T> {
 }
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let Self {
             id,
             base,
@@ -62,6 +62,13 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             index,
             style_with_state,
         } = self;
+
+        let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
+            ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("focus")),
+            cx,
+            |_, cx| cx.focus_handle(),
+        );
+        let focus_handle = focus_handle_entity.read(cx).clone();
 
         let state = context
             .as_ref()
@@ -83,7 +90,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
         };
 
         base.id(id)
-            .tab_index(if highlighted { 0 } else { -1 })
+            .track_focus(
+                &focus_handle
+                    .tab_stop(highlighted && !disabled)
+                    .tab_index(if highlighted { 0 } else { -1 }),
+            )
             .children(children)
             .when_some(selectable, |this, ((context, value), index)| {
                 this.on_click(move |_event, window, cx| {
@@ -139,9 +150,24 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
         self
     }
 
-    pub fn register_runtime(&self, index: usize, context: &TabsContext<T>, cx: &mut App) {
+    pub fn register_runtime(
+        &self,
+        index: usize,
+        context: &TabsContext<T>,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
         if let Some(value) = self.value.as_ref() {
             context.register_tab(value.clone(), self.disabled, index, cx);
         }
+
+        let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
+            ElementId::NamedChild(Arc::new(self.id.clone()), SharedString::from("focus")),
+            cx,
+            |_, cx| cx.focus_handle(),
+        );
+        let focus_handle = focus_handle_entity.read(cx).clone();
+
+        context.register_tab_focus_handle(index, focus_handle, cx);
     }
 }

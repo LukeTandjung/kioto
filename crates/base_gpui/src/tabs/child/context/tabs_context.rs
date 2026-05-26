@@ -1,4 +1,4 @@
-use gpui::{App, Bounds, ElementId, Pixels, Window};
+use gpui::{App, Bounds, ElementId, FocusHandle, Pixels, Window};
 
 use crate::{
     api::GenericContext,
@@ -100,6 +100,29 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
     pub fn register_tab_bounds(&self, bounds: Vec<(usize, Bounds<Pixels>)>, cx: &mut App) {
         self.inner
             .set_runtime_if_changed(cx, |runtime| runtime.set_tab_bounds(bounds));
+    }
+
+    pub fn register_tab_focus_handle(
+        &self,
+        index: usize,
+        focus_handle: FocusHandle,
+        cx: &mut App,
+    ) {
+        self.inner.set_runtime_if_changed(cx, |runtime| {
+            runtime.register_tab_focus_handle(index, focus_handle)
+        });
+    }
+
+    pub fn focus_highlighted_tab(&self, window: &mut Window, cx: &mut App) {
+        let focus_handle = self.inner.get_runtime(cx, |runtime| {
+            runtime
+                .highlighted_tab_index()
+                .and_then(|index| runtime.focus_handle_at_index(index))
+        });
+
+        if let Some(focus_handle) = focus_handle {
+            focus_handle.focus(window, cx);
+        }
     }
 
     pub fn highlight_first_tab(&self, cx: &mut App) {
