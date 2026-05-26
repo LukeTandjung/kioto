@@ -55,7 +55,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             context,
             value,
             disabled,
-            index: _index,
+            index,
         } = self;
 
         let selected_value = context.as_ref().and_then(|context| context.selected_value(cx));
@@ -64,16 +64,20 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             _ => false,
         };
         let _orientation = context.as_ref().map(|context| context.props().orientation());
+        let _highlighted = context.as_ref().is_some_and(|context| {
+            context.get_runtime(cx, |runtime| runtime.highlighted_tab_index() == index)
+        });
 
         let selectable = match !disabled && !active {
-            true => context.zip(value),
+            true => context.zip(value).zip(index),
             false => None,
         };
 
         base.id(id)
             .children(children)
-            .when_some(selectable, |this, (context, value)| {
+            .when_some(selectable, |this, ((context, value), index)| {
                 this.on_click(move |event, window, cx| {
+                    context.highlight_tab(Some(index), cx);
                     context.select_value(Some(value.clone()), event, window, cx);
                 })
             })

@@ -72,6 +72,25 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         }
     }
 
+    pub fn highlight_tab(&self, index: Option<usize>, cx: &mut App) {
+        self.inner.set_runtime(cx, |runtime, _| {
+            runtime.set_highlighted_tab_index(index);
+        });
+    }
+
+    pub fn sync_highlighted_tab_with_selected_value(&self, cx: &mut App) {
+        let selected = self.selected_value(cx);
+
+        self.inner.set_runtime(cx, |runtime, _| {
+            let highlighted = selected
+                .as_ref()
+                .and_then(|value| runtime.index_of_enabled_value(value))
+                .or_else(|| runtime.first_enabled_index());
+
+            runtime.set_highlighted_tab_index(highlighted);
+        });
+    }
+
     pub fn set_runtime(&self, cx: &mut App, set: impl FnOnce(&mut TabsRuntime<T>, &mut App)) {
         self.inner.set_runtime(cx, set);
     }

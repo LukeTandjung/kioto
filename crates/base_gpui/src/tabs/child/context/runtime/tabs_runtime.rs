@@ -4,6 +4,7 @@ use super::{TabsPanelMetadata, TabsTabMetadata};
 pub struct TabsRuntime<T: Clone + Eq + 'static> {
     tabs: Vec<TabsTabMetadata<T>>,
     panels: Vec<TabsPanelMetadata<T>>,
+    highlighted_tab_index: Option<usize>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
@@ -11,6 +12,7 @@ impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
         Self {
             tabs: Vec::new(),
             panels: Vec::new(),
+            highlighted_tab_index: None,
         }
     }
 }
@@ -56,6 +58,28 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
 
     pub fn panels(&self) -> &[TabsPanelMetadata<T>] {
         &self.panels
+    }
+
+    pub fn highlighted_tab_index(&self) -> Option<usize> {
+        self.highlighted_tab_index
+    }
+
+    pub fn set_highlighted_tab_index(&mut self, index: Option<usize>) {
+        self.highlighted_tab_index = index;
+    }
+
+    pub fn first_enabled_index(&self) -> Option<usize> {
+        self.tabs
+            .iter()
+            .find(|tab| !tab.disabled())
+            .map(TabsTabMetadata::index)
+    }
+
+    pub fn index_of_enabled_value(&self, value: &T) -> Option<usize> {
+        self.tabs
+            .iter()
+            .find(|tab| !tab.disabled() && tab.value() == value)
+            .map(TabsTabMetadata::index)
     }
 
     pub fn first_enabled_value(&self) -> Option<T> {
