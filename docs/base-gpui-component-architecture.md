@@ -284,6 +284,8 @@ Current Tabs render states include:
 
 Tabs uses `Div::on_children_prepainted` on `TabsList<T>` to capture GPUI child bounds after layout. `TabsList<T>` filters those child bounds through `TabsListChild<T>` so only tab bounds enter runtime. Those bounds are routed through `TabsContext<T>` into `TabsRuntime<T>`, and `TabsIndicator<T>` reads the active tab position/size through `TabsIndicatorRenderState`.
 
+Tabs also stores stable GPUI `FocusHandle`s for each tab in `TabsRuntime<T>`. `TabsTab<T>` owns the focus handle keyed by its element id, while `TabsContext<T>` knows how to register and focus the highlighted tab. Keyboard navigation updates the highlighted index and then calls into `TabsContext<T>` to move actual GPUI focus.
+
 Render layers should not independently recompute shared component state when the component context can compute it. Prefer context helpers such as:
 
 ```rust

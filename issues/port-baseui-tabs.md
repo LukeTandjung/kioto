@@ -162,7 +162,7 @@ Out of scope / drop from Base UI:
 - [x] `activate_on_focus = false` only moves highlight with arrows.
 - [x] `Enter` activates the highlighted tab when `activate_on_focus = false`.
 - [x] `Space` activates the highlighted tab when `activate_on_focus = false`.
-- [ ] Keyboard navigation moves GPUI focus to the highlighted tab like Base UI's roving focus.
+- [x] Keyboard navigation moves GPUI focus to the highlighted tab like Base UI's roving focus.
 - [ ] Disabled tabs can be highlighted/focused if matching Base UI behavior is desired.
 - [x] Disabled tabs are never activated by keyboard or pointer interaction.
 - [ ] Highlighted tab stays synchronized with externally controlled value when appropriate.
