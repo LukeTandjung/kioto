@@ -178,12 +178,12 @@ Out of scope / drop from Base UI:
 ### Indicator behavior
 
 - [x] `TabsIndicator` renders only when a tab is selected.
-- [ ] Indicator follows the active tab.
+- [x] Indicator can follow the active tab when styled from active tab position/size state.
 - [x] Indicator can access active tab bounds/size through GPUI-native measurement.
 - [x] Indicator updates when selected tab changes.
 - [x] Indicator updates when tab/list layout changes via `Div::on_children_prepainted`.
 - [x] Indicator exposes activation direction for styling/animation.
-- [ ] Do not port Base UI CSS variable names directly unless they become useful for GPUI styling.
+- [x] Do not port Base UI CSS variable names directly unless they become useful for GPUI styling.
 
 ### Styling/state exposure
 

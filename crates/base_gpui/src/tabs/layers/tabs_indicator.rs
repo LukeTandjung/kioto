@@ -66,7 +66,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsIndicator<T> {
                 )
             });
 
-        if !state.selected {
+        if !state.selected || state.active_tab_position.is_none() || state.active_tab_size.is_none() {
             return div().into_any_element();
         }
 

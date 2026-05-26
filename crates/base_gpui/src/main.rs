@@ -33,6 +33,7 @@ impl Render for TabsTest {
                             .gap_3()
                             .child(
                                 TabsList::new()
+                                    .relative()
                                     .flex()
                                     .gap_2()
                                     .child(
@@ -88,24 +89,31 @@ impl Render for TabsTest {
                                                 }
                                             })
                                             .child("Account"),
-                                    ),
-                            )
-                            .child(
-                                TabsIndicator::new()
-                                    .h(px(2.0))
-                                    .rounded_full()
-                                    .style_with_state(|state, indicator| {
-                                        let indicator = match state.active_tab_size {
-                                            Some(size) => indicator.w(size.width),
-                                            None => indicator,
-                                        };
+                                    )
+                                    .child(
+                                        TabsIndicator::new()
+                                            .absolute()
+                                            .h(px(2.0))
+                                            .rounded_full()
+                                            .style_with_state(|state, indicator| {
+                                                let indicator = match state.active_tab_position {
+                                                    Some(position) => indicator
+                                                        .left(position.left)
+                                                        .top(position.bottom - px(2.0)),
+                                                    None => indicator,
+                                                };
+                                                let indicator = match state.active_tab_size {
+                                                    Some(size) => indicator.w(size.width),
+                                                    None => indicator,
+                                                };
 
-                                        if state.selected {
-                                            indicator.bg(rgb(0x111827))
-                                        } else {
-                                            indicator
-                                        }
-                                    }),
+                                                if state.selected {
+                                                    indicator.bg(rgb(0x111827))
+                                                } else {
+                                                    indicator
+                                                }
+                                            }),
+                                    ),
                             )
                             .child(
                                 TabsPanel::new()

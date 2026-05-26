@@ -8,18 +8,16 @@ use gpui::{
 use crate::{
     api::GenericChild,
     tabs::{
-        TabsActivateHighlighted, TabsContext, TabsListRenderState, TabsOrientation,
-        TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft, TabsSelectRight, TabsSelectUp,
-        TABS_LIST_KEY_CONTEXT,
+        TabsActivateHighlighted, TabsContext, TabsListChild, TabsListRenderState, TabsOrientation,
+        TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft, TabsSelectRight,
+        TabsSelectUp, TABS_LIST_KEY_CONTEXT,
     },
 };
-
-use super::TabsTab;
 
 #[derive(IntoElement)]
 pub struct TabsList<T: Clone + Eq + 'static> {
     base: Div,
-    children: Vec<TabsTab<T>>,
+    children: Vec<TabsListChild<T>>,
     context: Option<TabsContext<T>>,
     activate_on_focus: bool,
     loop_focus: bool,
@@ -51,6 +49,22 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
         let render_state = context
             .as_ref()
             .map(|context| context.list_render_state(_cx));
+        let child_tab_indices = {
+            let mut tab_index = 0;
+
+            self.children
+                .iter()
+                .map(|child| {
+                    if child.is_tab() {
+                        let index = Some(tab_index);
+                        tab_index += 1;
+                        index
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        };
         let bounds_context = context.clone();
         let select_left_context = context.clone();
         let select_right_context = context.clone();
@@ -70,7 +84,13 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
         base
             .on_children_prepainted(move |bounds, _window, cx| {
                 if let Some(context) = bounds_context.as_ref() {
-                    context.register_tab_bounds(bounds, cx);
+                    let tab_bounds = bounds
+                        .into_iter()
+                        .zip(child_tab_indices.iter().copied())
+                        .filter_map(|(bounds, index)| index.map(|index| (index, bounds)))
+                        .collect();
+
+                    context.register_tab_bounds(tab_bounds, cx);
                 }
             })
             .id("tabs-list")
@@ -165,22 +185,25 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
 
                 context.select_highlighted_tab(window, cx);
             })
-            .children(
+            .children({
+                let mut tab_index = 0;
+
                 self.children
                     .into_iter()
-                    .enumerate()
-                    .map(|(index, tab)| {
-                        match context.clone() {
-                            Some(context) => tab
-                                .index(index)
-                                .add_state_context(context)
-                                .into_any_element(),
-                            None => tab
-                                .index(index)
-                                .into_any_element(),
-                        }
+                    .map(|child| {
+                        let index = match child.is_tab() {
+                            true => {
+                                let index = Some(tab_index);
+                                tab_index += 1;
+                                index
+                            }
+                            false => None,
+                        };
+
+                        child.into_any_element_with_context(index, context.clone())
                     })
-            )
+                    .collect::<Vec<_>>()
+            })
     }
 }
 
@@ -201,13 +224,16 @@ impl<T: Clone + Eq + 'static> TabsList<T> {
         Self::default()
     }
 
-    pub fn child(mut self, tab: TabsTab<T>) -> Self {
-        self.children.push(tab);
+    pub fn child(mut self, child: impl Into<TabsListChild<T>>) -> Self {
+        self.children.push(child.into());
         self
     }
 
-    pub fn children(mut self, tabs: impl IntoIterator<Item = TabsTab<T>>) -> Self {
-        self.children.extend(tabs);
+    pub fn children(
+        mut self,
+        children: impl IntoIterator<Item = impl Into<TabsListChild<T>>>,
+    ) -> Self {
+        self.children.extend(children.into_iter().map(Into::into));
         self
     }
 
@@ -230,8 +256,13 @@ impl<T: Clone + Eq + 'static> TabsList<T> {
     }
 
     pub fn register_runtime(&self, context: &TabsContext<T>, cx: &mut App) {
-        for (index, tab) in self.children.iter().enumerate() {
-            tab.register_runtime(index, context, cx);
+        let mut tab_index = 0;
+
+        for child in &self.children {
+            if child.is_tab() {
+                child.register_runtime(tab_index, context, cx);
+                tab_index += 1;
+            }
         }
     }
 }

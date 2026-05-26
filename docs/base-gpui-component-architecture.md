@@ -177,6 +177,15 @@ The child enum is responsible for routing operations across child variants, for 
 - panel indexing,
 - component-specific runtime registration traversal.
 
+Nested compound layers can define their own typed child enums under `child/` when they need a constrained child set. These enums are not renderable layers. For example, `TabsList<T>` accepts tabs and indicators while preserving tab-only runtime registration and measurement:
+
+```rust
+pub enum TabsListChild<T: Clone + Eq + 'static> {
+    Tab(TabsTab<T>),
+    Indicator(TabsIndicator<T>),
+}
+```
+
 ### Props
 
 Component props are injected into the component context and should hold stable configuration/callbacks needed by child layers.
@@ -273,7 +282,7 @@ Current Tabs render states include:
 - `TabsPanelRenderState`: hidden, orientation, and activation direction.
 - `TabsIndicatorRenderState`: selected state, active tab position/size, orientation, and activation direction.
 
-Tabs uses `Div::on_children_prepainted` on `TabsList<T>` to capture GPUI child bounds after layout. Those bounds are routed through `TabsContext<T>` into `TabsRuntime<T>`, and `TabsIndicator<T>` reads the active tab position/size through `TabsIndicatorRenderState`.
+Tabs uses `Div::on_children_prepainted` on `TabsList<T>` to capture GPUI child bounds after layout. `TabsList<T>` filters those child bounds through `TabsListChild<T>` so only tab bounds enter runtime. Those bounds are routed through `TabsContext<T>` into `TabsRuntime<T>`, and `TabsIndicator<T>` reads the active tab position/size through `TabsIndicatorRenderState`.
 
 Render layers should not independently recompute shared component state when the component context can compute it. Prefer context helpers such as:
 

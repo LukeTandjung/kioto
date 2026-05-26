@@ -13,6 +13,6 @@ pub use child::{
         TabsRootRenderState, TabsRuntime, TabsState, TabsTabMetadata, TabsTabPosition,
         TabsTabRenderState, TabsTabSize,
     },
-    TabsChild,
+    TabsChild, TabsListChild,
 };
 pub use layers::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab};

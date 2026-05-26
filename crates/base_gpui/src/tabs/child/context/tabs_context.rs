@@ -97,7 +97,7 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         });
     }
 
-    pub fn register_tab_bounds(&self, bounds: Vec<Bounds<Pixels>>, cx: &mut App) {
+    pub fn register_tab_bounds(&self, bounds: Vec<(usize, Bounds<Pixels>)>, cx: &mut App) {
         self.inner
             .set_runtime_if_changed(cx, |runtime| runtime.set_tab_bounds(bounds));
     }

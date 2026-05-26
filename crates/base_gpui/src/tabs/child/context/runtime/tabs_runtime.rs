@@ -72,25 +72,25 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         &self.panels
     }
 
-    pub fn set_tab_bounds(&mut self, bounds: Vec<Bounds<Pixels>>) -> bool {
-        let next = bounds.into_iter().enumerate().collect::<Vec<_>>();
-
-        if self.tab_bounds == next {
+    pub fn set_tab_bounds(&mut self, bounds: Vec<(usize, Bounds<Pixels>)>) -> bool {
+        if self.tab_bounds == bounds {
             return false;
         }
 
-        self.tab_bounds = next;
+        self.tab_bounds = bounds;
         true
     }
 
     pub fn active_tab_position(&self, selected: Option<&T>) -> Option<TabsTabPosition> {
         let bounds = self.active_tab_bounds(selected)?;
 
+        let origin = self.tab_bounds_origin()?;
+
         Some(TabsTabPosition::new(
-            bounds.left(),
-            bounds.right(),
-            bounds.top(),
-            bounds.bottom(),
+            bounds.left() - origin.0,
+            bounds.right() - origin.0,
+            bounds.top() - origin.1,
+            bounds.bottom() - origin.1,
         ))
     }
 
@@ -210,5 +210,17 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
             .iter()
             .find(|(tab_index, _)| *tab_index == index)
             .map(|(_, bounds)| *bounds)
+    }
+
+    fn tab_bounds_origin(&self) -> Option<(Pixels, Pixels)> {
+        let first = self.tab_bounds.first()?.1;
+
+        Some(
+            self.tab_bounds
+                .iter()
+                .fold((first.left(), first.top()), |origin, (_, bounds)| {
+                    (origin.0.min(bounds.left()), origin.1.min(bounds.top()))
+                }),
+        )
     }
 }
