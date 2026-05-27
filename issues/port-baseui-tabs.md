@@ -194,14 +194,14 @@ Out of scope / drop from Base UI:
 
 ### Tests / verification
 
-- [ ] Add tests or examples for uncontrolled initial selection.
-- [ ] Add tests or examples for controlled selection.
-- [ ] Add tests or examples for disabled tabs.
-- [ ] Add tests or examples for fallback when selected tab is disabled.
-- [ ] Add tests or examples for fallback when selected tab is removed.
-- [ ] Add tests or examples for click activation.
-- [ ] Add tests or examples for keyboard navigation.
-- [ ] Add tests or examples for `activate_on_focus`.
-- [ ] Add tests or examples for `loop_focus`.
-- [ ] Add tests or examples for panel visibility and `keep_mounted`.
-- [ ] Add tests or examples for indicator movement.
+- [x] Add tests or examples for uncontrolled initial selection.
+- [x] Add tests or examples for controlled selection.
+- [x] Add tests or examples for disabled tabs.
+- [x] Add tests or examples for fallback when selected tab is disabled.
+- [x] Add tests or examples for fallback when selected tab is removed.
+- [x] Add tests or examples for click activation.
+- [x] Add tests or examples for keyboard navigation.
+- [x] Add tests or examples for `activate_on_focus`.
+- [x] Add tests or examples for `loop_focus`.
+- [x] Add tests or examples for panel visibility and `keep_mounted`.
+- [x] Add tests or examples for indicator movement.

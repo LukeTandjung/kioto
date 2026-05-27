@@ -2,6 +2,9 @@ pub mod actions;
 pub mod child;
 pub mod layers;
 
+#[cfg(test)]
+mod tests;
+
 pub use actions::{
     init, TabsActivateHighlighted, TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft,
     TabsSelectRight, TabsSelectUp, TABS_LIST_KEY_CONTEXT,
