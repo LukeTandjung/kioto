@@ -56,6 +56,165 @@ Out of scope / drop from Base UI:
 - DOM transition attributes like `data-starting-style` / `data-ending-style`.
 - Full arbitrary JS-value semantics; use `T: Clone + Eq + 'static`.
 
+## Value change event details follow-up
+
+Current GPUI Tabs support a simple value-change callback:
+
+```rust
+.on_value_change(|next: Option<&T>, window: &mut Window, cx: &mut App| {
+    // observe next value
+})
+```
+
+Base UI exposes richer event details through `onValueChange(newValue, eventDetails)`. The current GPUI primitives are sufficient to port the important parts as a Rust-native event/details API; we should not try to port browser event objects directly.
+
+Base UI source audit:
+
+- `TabsRoot.tsx`
+  - `onValueChange` computes and attaches `activationDirection` before notifying the caller.
+  - User-initiated changes are cancelable through `eventDetails.cancel()`.
+  - Automatic fallback notifications are non-cancelable.
+  - Automatic fallback reasons are:
+    - `initial` for implicit initial selection / fallback when no usable default is present,
+    - `disabled` when the uncontrolled selected tab becomes disabled,
+    - `missing` when the uncontrolled selected tab is removed or never matches a mounted tab.
+  - User-initiated changes use reason `none`.
+- `TabsTab.tsx`
+  - Click/focus activation passes reason `none` and lets `TabsRoot` fill in `activationDirection`.
+  - Base UI includes the native DOM event in details; GPUI should omit this or replace it with a GPUI-native source enum.
+
+Proposed GPUI API shape:
+
+```rust
+pub enum TabsValueChangeReason {
+    None,
+    Initial,
+    Disabled,
+    Missing,
+}
+
+pub enum TabsValueChangeSource {
+    Pointer,
+    Keyboard,
+    Programmatic,
+    Automatic,
+}
+
+pub struct TabsValueChangeDetails {
+    pub reason: TabsValueChangeReason,
+    pub activation_direction: TabsActivationDirection,
+    pub source: TabsValueChangeSource,
+    pub cancelable: bool,
+    canceled: bool,
+}
+```
+
+Potential handler signature:
+
+```rust
+.on_value_change(|next, details, window, cx| {
+    if details.cancelable {
+        details.cancel();
+    }
+})
+```
+
+Implementation notes:
+
+- User-initiated tab click / keyboard activation should use `reason = None`, `cancelable = true`.
+- `activate_on_focus = true` keyboard focus activation should also use `reason = None`, `cancelable = true`.
+- Automatic fallback should use `reason = Initial | Disabled | Missing`, `source = Automatic`, and `cancelable = false`.
+- In uncontrolled mode, call the handler before mutating internal state; skip mutation if a cancelable details object was canceled.
+- In controlled mode, call the handler but never mutate internal state.
+- Do not expose a DOM-like event object. GPUI action handlers do not provide raw keyboard events, and pointer handlers provide GPUI-specific `ClickEvent` rather than browser events.
+- If useful, add source-specific detail later, e.g. `TabsValueChangeSource::Pointer` vs `Keyboard`; keep the initial API minimal.
+
+Implementation checklist for the follow-up:
+
+- [ ] Add `TabsValueChangeReason`.
+- [ ] Add `TabsValueChangeSource` or decide to omit source from the first version.
+- [ ] Add `TabsValueChangeDetails` with `cancel()`, `is_canceled()`, and `cancelable()` APIs.
+- [ ] Change `TabsValueChangeHandler<T>` to receive `&mut TabsValueChangeDetails`.
+- [ ] Update user-initiated click and keyboard activation to pass `reason = None` and computed activation direction.
+- [ ] Update uncontrolled initial/fallback paths to notify with `Initial`, `Disabled`, or `Missing` as appropriate.
+- [ ] Add tests for cancellation in uncontrolled user-initiated changes.
+- [ ] Add tests that automatic fallback is non-cancelable.
+- [ ] Add tests for emitted reasons and activation direction.
+
+## AccessKit accessibility follow-up
+
+GPUI commit `1d029c5ff5654fb1b1e8caf4462993c8ee13a133` adds AccessKit-backed accessibility APIs to GPUI. Once this project updates to a GPUI revision containing that commit, revisit the earlier ARIA out-of-scope decision and port the accessible semantics from Base UI into GPUI-native AccessKit calls.
+
+Relevant new GPUI API from the AccessKit commit:
+
+- `StatefulInteractiveElement::role(accesskit::Role)`
+- `StatefulInteractiveElement::aria_label(...)`
+- `StatefulInteractiveElement::aria_selected(...)`
+- `StatefulInteractiveElement::aria_orientation(accesskit::Orientation)`
+- `StatefulInteractiveElement::aria_position_in_set(...)`
+- `StatefulInteractiveElement::aria_size_of_set(...)`
+- `StatefulInteractiveElement::on_a11y_action(accesskit::Action, ...)`
+- Re-exported names include `Role`, `AccessibleAction`, and `Toggled`.
+
+Base UI source audit:
+
+- `TabsList.tsx`
+  - Sets `role="tablist"`.
+  - Sets `aria-orientation="vertical"` only for vertical orientation; horizontal omits the attribute.
+  - Accepts user-provided `aria-label` / `aria-labelledby` so tab lists can have accessible names.
+- `TabsTab.tsx`
+  - Renders a button with `role="tab"`.
+  - Sets `aria-selected={active}`.
+  - Sets `aria-controls={tabPanelId}` only when the corresponding panel is mounted and has an id.
+  - Keeps disabled tabs focusable via `focusableWhenDisabled`, while still exposing disabled behavior.
+  - Uses generated or explicit DOM `id` so panels can point back with `aria-labelledby`.
+- `TabsPanel.tsx`
+  - Sets `role="tabpanel"`.
+  - Sets `aria-labelledby={correspondingTabId}`.
+  - Sets `hidden` and `inert` when inactive.
+  - Sets `tabIndex={0}` when open and `-1` when closed.
+  - Registers mounted panels so `aria-controls` only points at panels actually in the tree, especially when `keepMounted = false`.
+- `TabsRoot.tsx`
+  - Maintains the tab metadata map and mounted panel map used for tab/panel relationships.
+  - Tests assert `aria-controls` / `aria-labelledby` cross-linking, selected state, and vertical `aria-orientation`.
+- `TabsIndicator.tsx`
+  - No user-facing semantic role; it should likely remain absent from the accessibility tree or be treated as decorative.
+
+Proposed GPUI/AccessKit mapping:
+
+- `TabsList<T>`
+  - Add `.role(Role::TabList)`.
+  - Add `.aria_orientation(accesskit::Orientation::Vertical)` only when `TabsOrientation::Vertical`.
+  - Do not set horizontal orientation unless AccessKit consumers require it; this mirrors Base UI's omission of default horizontal `aria-orientation`.
+  - Consider adding explicit builder APIs for accessible naming if GPUI cannot infer names from children:
+    - `.aria_label(...)`
+    - potentially `.aria_labelled_by(...)` only if GPUI supports relationships later.
+- `TabsTab<T>`
+  - Add `.role(Role::Tab)`.
+  - Add `.aria_selected(state.active)`.
+  - Preserve focusability for disabled tabs if the current roving-focus model is updated to match Base UI exactly; our current behavior skips disabled tabs, so decide whether parity requires disabled tabs to be focusable-but-not-activatable.
+  - If GPUI exposes a disabled accessibility state in a future AccessKit API, set it from `TabsTabRenderState.disabled`; the initial AccessKit commit does not appear to expose a dedicated `aria_disabled(...)` helper.
+  - If AccessKit/GPUI later supports relation properties, link the tab to its mounted panel equivalent to `aria-controls`.
+- `TabsPanel<T>`
+  - Add `.role(Role::TabPanel)`.
+  - Make active panels focusable / tab-stop equivalent to Base UI `tabIndex={0}` only if this is desired in GPUI keyboard navigation.
+  - Keep inactive panels omitted when `keep_mounted = false`; for `keep_mounted = true`, ensure hidden/invisible panels are not exposed as active content. The initial GPUI API does not expose an obvious `aria_hidden` or `inert` helper, so this may require GPUI support before full parity.
+  - If AccessKit/GPUI later supports labelled-by relationships, link the panel back to its tab.
+- `TabsIndicator<T>`
+  - Keep decorative. Do not assign `Role::Tab`, `Role::TabPanel`, or `Role::ProgressIndicator`.
+
+Implementation checklist for the follow-up:
+
+- [ ] Bump GPUI/Zed dependency to a revision containing `1d029c5ff5654fb1b1e8caf4462993c8ee13a133` or newer.
+- [ ] Confirm exact AccessKit API names in the checked-out GPUI version.
+- [ ] Add `Role::TabList` and vertical `aria_orientation` to `TabsList<T>`.
+- [ ] Add `Role::Tab` and `aria_selected` to `TabsTab<T>`.
+- [ ] Add `Role::TabPanel` to mounted `TabsPanel<T>` elements.
+- [ ] Decide whether Tabs should match Base UI's disabled-tab roving focus behavior: disabled tabs can receive focus but cannot be selected.
+- [ ] Decide whether to add accessible-name builder APIs for `TabsList<T>` or rely on GPUI text/name inference.
+- [ ] Track whether GPUI supports disabled, hidden/inert, controls, and labelled-by relationships; implement these when available.
+- [ ] Add accessibility tests once GPUI exposes a test helper for the AccessKit tree, or add snapshot-style assertions around AccessKit node roles/states if available.
+
 ## Acceptance Criteria
 
 ### Module/API surface

@@ -30,6 +30,20 @@ Examples:
 - CSS variables / data attributes → GPUI render-state structs and `style_with_state(...)`.
 - DOM focus APIs → GPUI `FocusHandle`, key contexts, actions, and tab stops.
 
+## Standard Base UI API translation decisions
+
+Use these decisions for all Base UI component-port issues unless Luke T explicitly overrides them:
+
+- Do **not** port React `render` props. They conflict with GPUI's builder/element composition style. Prefer typed GPUI components and builder methods.
+- Do **not** port `className`. GPUI has no CSS class system.
+- Do **not** port web `style` props. GPUI components should use normal styling builder methods. For state-dependent styling, expose `style_with_state(...)` with component-specific render-state structs.
+- Do **not** port `nativeButton` / native DOM element switches. GPUI does not currently expose a built-in Button element under `crates/gpui/src/elements`; interactive controls are typically built from `div()` plus focus/click/action/accessibility behavior.
+- Do **not** port SSR/hydration/prehydration APIs.
+- Do **not** port CSS variable APIs. Expose typed GPUI render-state values and let users style through builder methods.
+- Do **not** port arbitrary JavaScript value semantics. Use Rust type parameters and trait bounds appropriate for the component, e.g. `T: Clone + Eq + 'static`.
+- Do **not** port DOM data attributes as attributes. Map state/data attributes into typed render-state structs.
+- Revisit ARIA/accessibility only through GPUI-native AccessKit APIs when the target GPUI revision supports them; do not write DOM ARIA attributes.
+
 ## Required inputs
 
 Before creating the issue, make sure the user provides or confirms:
@@ -116,17 +130,20 @@ Port the <Component> component family from Base UI into GPUI-native components:
 
 ### Out of scope / drop from Base UI
 
-Explicitly list web-only details to drop or translate. Consider:
+Explicitly list web-only details to drop or translate. Apply the standard translation decisions above. Consider:
 
-- ARIA roles/attributes and DOM id linking,
 - React context/hooks implementation details,
 - render prop support,
-- native DOM element options,
+- `className`,
+- web `style` props,
+- native DOM element options such as `nativeButton`,
 - SSR/hydration/prehydration scripts,
 - CSS variable API,
+- DOM data attributes as attributes,
 - DOM `ResizeObserver`, `MutationObserver`, `getBoundingClientRect`,
 - DOM transition attributes,
-- arbitrary JS value semantics.
+- arbitrary JS value semantics,
+- ARIA roles/attributes and DOM id linking **unless** GPUI AccessKit support is available and the issue includes a GPUI-native accessibility plan.
 
 Be precise: do not mark something out of scope if GPUI has a meaningful equivalent we should implement.
 
@@ -220,7 +237,8 @@ For styling:
 
 - require component-specific render-state structs,
 - require `style_with_state(...)` APIs when state-aware styling is expected,
-- map Base UI state/data attributes into GPUI render state rather than DOM attributes.
+- map Base UI state/data attributes into GPUI render state rather than DOM attributes,
+- do not include `className`, web `style`, or CSS variable API in the GPUI public surface.
 
 ## Tests / verification checklist
 
