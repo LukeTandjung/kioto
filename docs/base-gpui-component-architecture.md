@@ -1,6 +1,6 @@
 # `base_gpui` Component Architecture
 
-This document describes the current architecture for compound GPUI components in `crates/base_gpui` and how to follow it when implementing a new component.
+This document describes the generic architecture for compound GPUI components in `crates/base_gpui`.
 
 The main design goal is to separate:
 
@@ -8,7 +8,7 @@ The main design goal is to separate:
 2. component-specific behavior/state/runtime,
 3. renderable GPUI layers.
 
-Tabs is the reference implementation.
+Component-specific details belong near the component, for example in `crates/base_gpui/src/<component>/AGENTS.md`.
 
 ## Directory shape
 
@@ -27,6 +27,7 @@ A component owns its own folder:
 
 ```text
 crates/base_gpui/src/<component>/
+  AGENTS.md                  # component-specific implementation notes
   actions.rs                 # optional GPUI key dispatch actions/bindings
   child/
     <component>_child.rs      # typed compound child enum
@@ -35,24 +36,7 @@ crates/base_gpui/src/<component>/
       props/                  # public/injected props
       runtime/                # runtime metadata and derived runtime state
       state/                  # selected/open/etc. state container
-  layers/                     # renderable GPUI elements
-```
-
-For Tabs:
-
-```text
-crates/base_gpui/src/tabs/
-  actions.rs
-  child/tabs_child.rs
-  child/context/tabs_context.rs
-  child/context/props/tabs_props.rs
-  child/context/runtime/tabs_runtime.rs
-  child/context/state/tabs_state.rs
-  layers/tabs_root.rs
-  layers/tabs_list.rs
-  layers/tabs_tab.rs
-  layers/tabs_panel.rs
-  layers/tabs_indicator.rs
+  layers/                     # renderable GPUI elements only
 ```
 
 ## Layer responsibilities
@@ -94,41 +78,42 @@ is_controlled
 props
 ```
 
-It should not expose methods like:
+It should not expose component-specific operations like:
 
 ```rust
-select_tab
-register_tab
-highlight_tab
-apply_tabs_fallback
+select_item
+register_item
+highlight_item
+apply_component_fallback
 ```
 
-Those are component-specific and belong on the component context wrapper.
+Those belong on the component context wrapper.
 
 ### Component context wrapper
 
-Each component should define a wrapper around `GenericContext`.
-
-For Tabs:
+Each component should define a wrapper around `GenericContext`:
 
 ```rust
-pub struct TabsContext<T: Clone + Eq + 'static> {
-    inner: GenericContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>,
+pub struct ComponentContext<T: Clone + Eq + 'static> {
+    inner: GenericContext<ComponentState<T>, ComponentProps<T>, ComponentRuntime<T>>,
 }
 ```
 
 This wrapper is where component-specific behavior belongs.
 
-For Tabs, this includes:
+Typical responsibilities include:
 
-- selecting a tab,
+- interpreting selected/open/active values,
 - applying uncontrolled fallback semantics,
-- syncing highlighted index with selected value,
-- registering tab/panel metadata,
-- navigating highlighted tabs,
-- exposing tabs-specific runtime queries.
+- syncing derived runtime state with controlled props,
+- registering component-specific metadata,
+- navigating highlighted/focused items,
+- exposing component-specific render-state helpers,
+- hiding direct generic runtime mutation behind component vocabulary.
 
-The component context is allowed to call `inner.get_runtime(...)` and `inner.set_runtime(...)`, but callers outside the context should prefer tabs-specific methods instead of mutating runtime directly.
+The component context may call `inner.get_runtime(...)` and `inner.set_runtime(...)`, but callers outside the context should prefer component-specific methods instead of mutating runtime directly.
+
+Do not add component-specific inherent impls to `GenericContext<SpecificState, SpecificProps, SpecificRuntime>`. Such impls are globally visible and blur generic vs component responsibility.
 
 ### `GenericChild<C>`
 
@@ -142,76 +127,86 @@ pub trait GenericChild<C>: IntoElement {
 
 It is intentionally unbounded. Do not require `C` to expose or contain `GenericContext`.
 
-Reason: child context injection should not leak how a context is implemented internally. A component child should receive the component wrapper context, for example:
+Reason: child context injection should not leak how a context is implemented internally. A component child should receive the component wrapper context, not the raw generic context.
+
+Good shape:
 
 ```rust
-impl<T: Clone + Eq + 'static> GenericChild<TabsContext<T>> for TabsTab<T> {
-    fn add_state_context(mut self, context: TabsContext<T>) -> Self {
+impl<T: Clone + Eq + 'static> GenericChild<ComponentContext<T>> for ComponentPart<T> {
+    fn add_state_context(mut self, context: ComponentContext<T>) -> Self {
         self.context = Some(context);
         self
     }
 }
 ```
 
-Do not inject `GenericContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>` directly into component children.
+Avoid injecting `GenericContext<ComponentState<T>, ComponentProps<T>, ComponentRuntime<T>>` directly into component children.
 
-### Typed compound child enum
+`GenericChild` should not grow runtime registration APIs. Registration shapes are component-specific and should remain on component-owned types/context methods until multiple components prove a common abstraction.
+
+### Typed compound child enums
 
 Compound roots should keep typed children before GPUI erases elements to `AnyElement`.
 
-For Tabs:
+Generic shape:
 
 ```rust
-pub enum TabsChild<T: Clone + Eq + 'static> {
-    List(TabsList<T>),
-    Panel(TabsPanel<T>),
-    Indicator(TabsIndicator<T>),
+pub enum ComponentChild<T: Clone + Eq + 'static> {
+    PartA(ComponentPartA<T>),
+    PartB(ComponentPartB<T>),
 }
 ```
 
-This allows `TabsRoot<T>` to pre-register metadata and inject context before rendering.
+This allows the root to pre-register metadata and inject context before rendering.
 
-The child enum is responsible for routing operations across child variants, for example:
+Child enums are responsible for routing operations across variants, for example:
 
 - context injection,
-- panel indexing,
-- component-specific runtime registration traversal.
+- child indexing,
+- component-specific runtime registration traversal,
+- constrained child sets for nested compound layers.
 
-Nested compound layers can define their own typed child enums under `child/` when they need a constrained child set. These enums are not renderable layers. For example, `TabsList<T>` accepts tabs and indicators while preserving tab-only runtime registration and measurement:
+Nested compound layers can define their own typed child enums under `child/` when they need a constrained child set.
 
-```rust
-pub enum TabsListChild<T: Clone + Eq + 'static> {
-    Tab(TabsTab<T>),
-    Indicator(TabsIndicator<T>),
-}
-```
+Typed child-routing enums are not renderable layers. Keep them under `child/`, not `layers/`.
 
 ### Props
 
 Component props are injected into the component context and should hold stable configuration/callbacks needed by child layers.
 
-For Tabs, `TabsProps<T>` currently owns:
+Props may include:
 
-- orientation,
-- `on_value_change`.
+- orientation/configuration,
+- controlled callback handlers,
+- behavior flags,
+- stable public configuration needed across children.
 
 Props should not own runtime metadata. Runtime metadata belongs in runtime.
+
+### State
+
+Component state is the primary selected/open/active value that participates in controlled/uncontrolled semantics.
+
+State should be small and generic enough to satisfy `GenericState`:
+
+- `new(default)`
+- `get_value()`
+- `set_value(...)`
+
+Derived state and registered metadata belong in runtime, not primary state.
 
 ### Runtime
 
 Runtime stores component-specific metadata and derived runtime state that is not the primary selected/open value.
 
-For Tabs, `TabsRuntime<T>` owns:
+Runtime may own:
 
-- registered tab metadata,
-- registered panel metadata,
-- highlighted tab index,
-- selected-value sync bookkeeping,
+- registered child metadata,
+- child ordering,
+- highlighted/focused indices,
 - activation direction bookkeeping,
-- measured tab bounds for indicator state,
-- tab focus handles for roving focus.
-
-Registered panel metadata is intentionally retained even though panel visibility currently derives directly from selected value during rendering. It preserves the same runtime registration shape as tabs and gives future panel-specific behavior a component-owned place to live.
+- measurement/cache data,
+- GPUI handles needed by component behavior.
 
 Runtime shape is component-specific. Do not force a generic runtime registration abstraction until multiple components prove the same shape.
 
@@ -219,84 +214,73 @@ Runtime shape is component-specific. Do not force a generic runtime registration
 
 Files under `layers/` are GPUI renderable pieces.
 
-For Tabs:
+Typical responsibilities:
 
-- `TabsRoot<T>` creates `TabsContext<T>`, pre-registers metadata, applies fallback, and injects context.
-- `TabsList<T>` renders the tab list and owns Tabs keyboard dispatch handlers.
-- `TabsTab<T>` renders an interactive tab and knows its own tab metadata.
-- `TabsPanel<T>` renders panel content and knows its own panel metadata.
-- `TabsIndicator<T>` is a renderable visual layer that receives `TabsContext<T>`.
+- Root creates the component context, pre-registers metadata, applies fallback, and injects context.
+- Composite containers render child groups and own relevant key contexts/actions.
+- Leaf parts render interactive or visual elements and know their own metadata.
+- Visual helpers render purely visual layers while reading component render state.
 
-Renderable layers may know their own metadata, but they should route runtime insertion through the component context.
+Renderable layers may know their own metadata, but should route runtime insertion through the component context.
 
-Good:
+Good shape:
 
 ```rust
-impl<T: Clone + Eq + 'static> TabsTab<T> {
-    pub fn register_runtime(&self, index: usize, context: &TabsContext<T>, cx: &mut App) {
+impl<T: Clone + Eq + 'static> ComponentPart<T> {
+    pub fn register_runtime(&self, index: usize, context: &ComponentContext<T>, cx: &mut App) {
         if let Some(value) = self.value.as_ref() {
-            context.register_tab(value.clone(), self.disabled, index, cx);
+            context.register_part(value.clone(), index, cx);
         }
     }
 }
 ```
 
-Avoid:
-
-```rust
-runtime.register_tab(...)
-```
-
-from arbitrary render layers. `TabsContext<T>` should know how metadata enters `TabsRuntime<T>`.
+Avoid mutating runtime directly from arbitrary render layers. The component context should know how metadata enters component runtime.
 
 ## State-aware styling
 
 Normal GPUI builder styling remains the default for static styles:
 
 ```rust
-TabsTab::new()
+ComponentPart::new()
     .px_3()
     .py_2()
     .rounded_md()
 ```
 
-For styles that depend on component state, expose a `style_with_state` builder on the relevant renderable layer.
-
-For Tabs:
+For styles that depend on component state, expose a `style_with_state` builder on the relevant renderable layer:
 
 ```rust
-TabsTab::new()
-    .style_with_state(|state, tab| {
+ComponentPart::new()
+    .style_with_state(|state, part| {
         if state.active {
-            tab.bg(/* active color */)
-        } else if state.highlighted {
-            tab.bg(/* highlighted color */)
+            part.bg(/* active color */)
         } else {
-            tab
+            part
         }
     })
 ```
 
 Render-state structs are component-specific public API. They should model the same information that Base UI exposes through state-aware `className`, `style`, and `render` callbacks, adapted to GPUI.
 
-Current Tabs render states include:
-
-- `TabsRootRenderState`: orientation and activation direction.
-- `TabsListRenderState`: orientation and activation direction.
-- `TabsTabRenderState`: active, disabled, highlighted, and orientation.
-- `TabsPanelRenderState`: hidden, orientation, and activation direction.
-- `TabsIndicatorRenderState`: selected state, active tab position/size, orientation, and activation direction.
-
-Tabs uses `Div::on_children_prepainted` on `TabsList<T>` to capture GPUI child bounds after layout. `TabsList<T>` filters those child bounds through `TabsListChild<T>` so only tab bounds enter runtime. Those bounds are routed through `TabsContext<T>` into `TabsRuntime<T>`, and `TabsIndicator<T>` reads the active tab position/size through `TabsIndicatorRenderState`.
-
-Tabs also stores stable GPUI `FocusHandle`s for each tab in `TabsRuntime<T>`. `TabsTab<T>` owns the focus handle keyed by its element id, while `TabsContext<T>` knows how to register and focus the highlighted tab. Keyboard navigation updates the highlighted index and then calls into `TabsContext<T>` to move actual GPUI focus.
+Use GPUI render-state structs instead of porting DOM data attributes or CSS variable APIs directly.
 
 Render layers should not independently recompute shared component state when the component context can compute it. Prefer context helpers such as:
 
 ```rust
-context.tab_render_state(...)
-context.panel_render_state(...)
+context.part_render_state(...)
 ```
+
+## Measurement and layout-derived state
+
+When a Base UI component relies on DOM measurement APIs, translate the behavior into GPUI-native layout/prepaint mechanisms.
+
+Guidelines:
+
+- Use GPUI measurement hooks such as `Div::on_children_prepainted(...)` when appropriate.
+- Store measured facts in component runtime.
+- Expose measured facts through render-state structs when styling or visual layers need them.
+- Do not port Base UI CSS variable names unless they become useful GPUI API.
 
 ## Keyboard dispatch
 
@@ -309,31 +293,27 @@ A component with keyboard behavior should usually have:
 3. a `key_context(...)` on the relevant rendered layer,
 4. `on_action(...)` handlers.
 
-For Tabs:
+Generic shape:
 
 ```rust
-pub const TABS_LIST_KEY_CONTEXT: &str = "TabsList";
+pub const COMPONENT_KEY_CONTEXT: &str = "Component";
 
-actions!(base_gpui_tabs, [
-    TabsSelectLeft,
-    TabsSelectRight,
-    TabsSelectUp,
-    TabsSelectDown,
-    TabsSelectFirst,
-    TabsSelectLast,
-    TabsActivateHighlighted,
+actions!(base_gpui_component, [
+    ComponentMovePrevious,
+    ComponentMoveNext,
+    ComponentActivate,
 ]);
 ```
 
-Keys are bound in `tabs::init(cx)` and registered from `base_gpui::init(cx)`.
+Keys are bound in the component `init(cx)` and registered from `base_gpui::init(cx)`.
 
-The layer then handles actions:
+The relevant layer handles actions through component context methods:
 
 ```rust
 div()
-    .key_context(TABS_LIST_KEY_CONTEXT)
-    .on_action(move |_: &TabsSelectLeft, window, cx| {
-        // component-specific behavior via TabsContext
+    .key_context(COMPONENT_KEY_CONTEXT)
+    .on_action(move |_: &ComponentMoveNext, window, cx| {
+        // component-specific behavior via ComponentContext
     })
 ```
 
@@ -367,12 +347,16 @@ When adding a new compound component:
    - Route context injection.
    - Route component-specific metadata registration traversal if needed.
 
-7. Add `actions.rs` if the component has keyboard behavior.
+7. Add nested child enums under `<component>/child/` when nested layers need constrained child sets.
+
+8. Add `actions.rs` if the component has keyboard behavior.
    - Define actions.
    - Bind keys in component `init`.
    - Add a key context and `on_action` handlers to the relevant layer.
 
-8. Re-export from module `mod.rs` files.
+9. Add component-specific `AGENTS.md` if implementation notes would otherwise clutter generic docs.
+
+10. Re-export from module `mod.rs` files.
 
 ## Rules of thumb
 
