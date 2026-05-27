@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{rc::Rc, sync::Arc};
 
 use gpui::{App, ElementId, Entity, SharedString, Window};
 
 use crate::api::GenericState;
 
 pub struct GenericContext<S: GenericState + 'static, P: Clone + 'static, R: 'static> {
-    controlled: Option<Option<S::Value>>,
+    controlled: Rc<Option<Option<S::Value>>>,
     entity: Entity<S>,
     props: P,
     runtime: Entity<R>,
@@ -16,7 +16,7 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> Clone
 {
     fn clone(&self) -> Self {
         Self {
-            controlled: self.controlled.clone(),
+            controlled: Rc::clone(&self.controlled),
             entity: self.entity.clone(),
             props: self.props.clone(),
             runtime: self.runtime.clone(),
@@ -43,7 +43,7 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S
         );
 
         Self {
-            controlled,
+            controlled: Rc::new(controlled),
             entity,
             props,
             runtime,
@@ -51,9 +51,17 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S
     }
 
     pub fn get_state(&self, cx: &App) -> Option<S::Value> {
-        match &self.controlled {
-            Some(value) => value.clone(),
-            None => self.entity.read(cx).get_value().cloned(),
+        self.read_state(cx, |value| value.cloned())
+    }
+
+    pub fn read_state<Output>(
+        &self,
+        cx: &App,
+        read: impl FnOnce(Option<&S::Value>) -> Output,
+    ) -> Output {
+        match self.controlled.as_ref() {
+            Some(value) => read(value.as_ref()),
+            None => read(self.entity.read(cx).get_value()),
         }
     }
 
@@ -72,7 +80,7 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S
     }
 
     pub fn set_state_silent(&self, next: Option<S::Value>, cx: &mut App) {
-        if self.controlled.is_none() {
+        if self.controlled.as_ref().is_none() {
             self.entity.update(cx, |state, cx| {
                 state.set_value(next);
                 cx.notify();
@@ -100,7 +108,7 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S
     }
 
     pub fn is_controlled(&self) -> bool {
-        self.controlled.is_some()
+        self.controlled.as_ref().is_some()
     }
 
     pub fn props(&self) -> &P {

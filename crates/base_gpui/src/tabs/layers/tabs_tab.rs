@@ -63,12 +63,18 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             style_with_state,
         } = self;
 
-        let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
-            ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("focus")),
-            cx,
-            |_, cx| cx.focus_handle(),
-        );
-        let focus_handle = focus_handle_entity.read(cx).clone();
+        let focus_handle = context
+            .as_ref()
+            .and_then(|context| index.and_then(|index| context.tab_focus_handle(index, cx)))
+            .unwrap_or_else(|| {
+                let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
+                    ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("focus")),
+                    cx,
+                    |_, cx| cx.focus_handle(),
+                );
+
+                focus_handle_entity.read(cx).clone()
+            });
 
         let state = context
             .as_ref()

@@ -113,6 +113,11 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         });
     }
 
+    pub fn tab_focus_handle(&self, index: usize, cx: &App) -> Option<FocusHandle> {
+        self.inner
+            .get_runtime(cx, |runtime| runtime.focus_handle_at_index(index))
+    }
+
     pub fn focus_highlighted_tab(&self, window: &mut Window, cx: &mut App) {
         let focus_handle = self.inner.get_runtime(cx, |runtime| {
             runtime
@@ -123,6 +128,21 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         if let Some(focus_handle) = focus_handle {
             focus_handle.focus(window, cx);
         }
+    }
+
+    pub fn focus_highlighted_tab_once(&self, window: &mut Window, cx: &mut App) {
+        let should_seed_focus = self
+            .inner
+            .get_runtime(cx, |runtime| !runtime.has_seeded_initial_focus());
+
+        if !should_seed_focus {
+            return;
+        }
+
+        self.focus_highlighted_tab(window, cx);
+        self.inner.set_runtime(cx, |runtime, _| {
+            runtime.set_has_seeded_initial_focus(true);
+        });
     }
 
     pub fn highlight_first_tab(&self, cx: &mut App) {
@@ -165,22 +185,23 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         let current = self.inner.get_state(cx);
         let fallback = self.inner.get_runtime(cx, |runtime| {
             if runtime.tabs().is_empty() {
-                return current.clone();
+                return None;
             }
 
             match current.as_ref() {
-                Some(value) if runtime.contains_enabled_value(value) => current.clone(),
-                _ => runtime.first_enabled_value(),
+                Some(value) if runtime.contains_enabled_value(value) => None,
+                _ => Some(runtime.first_enabled_value()),
             }
         });
+        let Some(fallback) = fallback else {
+            return;
+        };
 
-        if fallback != current {
-            self.inner.set_runtime(cx, |runtime, _| {
-                runtime.set_activation_direction(TabsActivationDirection::None);
-                runtime.set_activation_previous_value(fallback.clone());
-            });
-            self.inner.set_state_silent(fallback, cx);
-        }
+        self.inner.set_runtime(cx, |runtime, _| {
+            runtime.set_activation_direction(TabsActivationDirection::None);
+            runtime.set_activation_previous_value(fallback.clone());
+        });
+        self.inner.set_state_silent(fallback, cx);
     }
 
     pub fn highlight_tab(&self, index: Option<usize>, cx: &mut App) {
@@ -214,11 +235,10 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         index: Option<usize>,
         cx: &App,
     ) -> TabsTabRenderState {
-        let selected = self.selected_value(cx);
-        let active = match (value, selected.as_ref()) {
+        let active = self.inner.read_state(cx, |selected| match (value, selected) {
             (Some(value), Some(selected)) => value == selected,
             _ => false,
-        };
+        });
 
         TabsTabRenderState::new(
             active,
@@ -229,26 +249,25 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
     }
 
     pub fn panel_render_state(&self, value: Option<&T>, cx: &App) -> TabsPanelRenderState {
-        let selected = self.selected_value(cx);
-        let active = match (value, selected.as_ref()) {
+        let active = self.inner.read_state(cx, |selected| match (value, selected) {
             (Some(value), Some(selected)) => value == selected,
             _ => false,
-        };
+        });
 
         TabsPanelRenderState::new(!active, self.props().orientation(), self.activation_direction(cx))
     }
 
     pub fn indicator_render_state(&self, cx: &App) -> TabsIndicatorRenderState {
-        let selected = self.selected_value(cx);
-
-        self.inner.get_runtime(cx, |runtime| {
-            TabsIndicatorRenderState::new(
-                selected.is_some(),
-                runtime.active_tab_position(selected.as_ref()),
-                runtime.active_tab_size(selected.as_ref()),
-                self.props().orientation(),
-                runtime.activation_direction(),
-            )
+        self.inner.read_state(cx, |selected| {
+            self.inner.get_runtime(cx, |runtime| {
+                TabsIndicatorRenderState::new(
+                    selected.is_some(),
+                    runtime.active_tab_position(selected),
+                    runtime.active_tab_size(selected),
+                    self.props().orientation(),
+                    runtime.activation_direction(),
+                )
+            })
         })
     }
 
@@ -256,13 +275,13 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         let selected = self.selected_value(cx);
 
         self.inner.set_runtime(cx, |runtime, _| {
-            let Some(previous) = runtime.activation_previous_value().cloned() else {
+            let Some(previous) = runtime.activation_previous_value() else {
                 runtime.set_activation_direction(TabsActivationDirection::None);
                 runtime.set_activation_previous_value(selected);
                 return;
             };
 
-            if previous == selected {
+            if previous == &selected {
                 return;
             }
 

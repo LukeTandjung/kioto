@@ -14,6 +14,7 @@ pub struct TabsRuntime<T: Clone + Eq + 'static> {
     activation_previous_value: Option<Option<T>>,
     tab_bounds: Vec<(usize, Bounds<Pixels>)>,
     tab_focus_handles: Vec<(usize, FocusHandle)>,
+    has_seeded_initial_focus: bool,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
@@ -27,6 +28,7 @@ impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
             activation_previous_value: None,
             tab_bounds: Vec::new(),
             tab_focus_handles: Vec::new(),
+            has_seeded_initial_focus: false,
         }
     }
 }
@@ -107,6 +109,14 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
             .iter()
             .find(|(tab_index, _)| *tab_index == index)
             .map(|(_, focus_handle)| focus_handle.clone())
+    }
+
+    pub fn has_seeded_initial_focus(&self) -> bool {
+        self.has_seeded_initial_focus
+    }
+
+    pub fn set_has_seeded_initial_focus(&mut self, has_seeded_initial_focus: bool) {
+        self.has_seeded_initial_focus = has_seeded_initial_focus;
     }
 
     pub fn active_tab_position(&self, selected: Option<&T>) -> Option<TabsTabPosition> {

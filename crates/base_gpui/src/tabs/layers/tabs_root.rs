@@ -49,7 +49,7 @@ impl<T: Clone + Eq + 'static> Styled for TabsRoot<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let context = TabsContext::new(
-            self.id.clone(),
+            self.id,
             cx,
             window,
             self.value,
@@ -68,6 +68,10 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
         context.apply_automatic_fallback(cx);
         context.sync_activation_direction_with_selected_value(cx);
         context.sync_highlighted_tab_with_selected_value(cx);
+
+        // Scoped tab key bindings only dispatch once focus is inside the tabs list.
+        // Seed focus once from the synced highlighted tab so initial keyboard use works.
+        context.focus_highlighted_tab_once(window, cx);
 
         let render_state = context.root_render_state(cx);
         let base = match self.style_with_state {
