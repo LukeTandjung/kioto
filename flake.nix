@@ -27,25 +27,29 @@
             fontconfig
             freetype
             libxkbcommon
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
             wayland
-            xorg.libxcb
-            xorg.libX11
+            libxcb
+            libx11
             vulkan-loader
             mesa
             libglvnd
           ];
 
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
-            fontconfig
-            freetype
-            libxkbcommon
-            wayland
-            xorg.libxcb
-            xorg.libX11
-            vulkan-loader
-            mesa
-            libglvnd
-          ]);
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (
+            (with pkgs; [
+              fontconfig
+              freetype
+              libxkbcommon
+            ]) ++ pkgs.lib.optionals pkgs.stdenv.isLinux (with pkgs; [
+              wayland
+              libxcb
+              libx11
+              vulkan-loader
+              mesa
+              libglvnd
+            ])
+          );
 
           packages = with pkgs; [
             rustc
