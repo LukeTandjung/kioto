@@ -23,32 +23,39 @@
             pkg-config
           ];
 
-          buildInputs = with pkgs; [
-            fontconfig
-            freetype
-            libxkbcommon
-          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
-            wayland
-            libxcb
-            libx11
-            vulkan-loader
-            mesa
-            libglvnd
-          ];
-
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (
-            (with pkgs; [
+          buildInputs =
+            with pkgs;
+            [
               fontconfig
               freetype
               libxkbcommon
-            ]) ++ pkgs.lib.optionals pkgs.stdenv.isLinux (with pkgs; [
+            ]
+            ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
               wayland
               libxcb
               libx11
               vulkan-loader
               mesa
               libglvnd
+            ];
+
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (
+            (with pkgs; [
+              fontconfig
+              freetype
+              libxkbcommon
             ])
+            ++ pkgs.lib.optionals pkgs.stdenv.isLinux (
+              with pkgs;
+              [
+                wayland
+                libxcb
+                libx11
+                vulkan-loader
+                mesa
+                libglvnd
+              ]
+            )
           );
 
           packages = with pkgs; [
@@ -56,7 +63,7 @@
             clippy
             rust-analyzer
             yazi
-
+            rustfmt
           ];
 
           RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
