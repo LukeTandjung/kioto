@@ -1,7 +1,7 @@
 use base_gpui::tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab};
 use gpui::{
-    App, Bounds, Context, IntoElement, Render, Window, WindowBounds, WindowOptions, div, prelude::*,
-    px, rgb, size,
+    div, prelude::*, px, rgb, size, App, Bounds, Context, IntoElement, Render, Window,
+    WindowBounds, WindowOptions,
 };
 use gpui_platform::application;
 

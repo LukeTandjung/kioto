@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, Div, ElementId, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
-    div,
+    div, App, Div, ElementId, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled,
+    Window,
 };
 
 use crate::{
@@ -80,19 +80,15 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
         };
         let mut panel_index = 0;
 
-        base.children(
-            self.children
-                .into_iter()
-                .map(|child| {
-                    child
-                        .map_panel(|panel| {
-                            let panel = panel.index(panel_index);
-                            panel_index += 1;
-                            panel
-                        })
-                        .add_state_context(context.clone())
-                }),
-        )
+        base.children(self.children.into_iter().map(|child| {
+            child
+                .map_panel(|panel| {
+                    let panel = panel.index(panel_index);
+                    panel_index += 1;
+                    panel
+                })
+                .add_state_context(context.clone())
+        }))
     }
 }
 

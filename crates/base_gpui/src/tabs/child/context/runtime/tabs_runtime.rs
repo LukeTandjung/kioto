@@ -91,7 +91,9 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
             .iter()
             .position(|(tab_index, _)| *tab_index == index)
         {
-            Some(existing_index) if self.tab_focus_handles[existing_index].1 == focus_handle => false,
+            Some(existing_index) if self.tab_focus_handles[existing_index].1 == focus_handle => {
+                false
+            }
             Some(existing_index) => {
                 self.tab_focus_handles[existing_index] = (index, focus_handle);
                 true
@@ -195,7 +197,11 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
             .or_else(|| loop_focus.then(|| self.first_enabled_index()).flatten())
     }
 
-    pub fn previous_enabled_index(&self, current: Option<usize>, loop_focus: bool) -> Option<usize> {
+    pub fn previous_enabled_index(
+        &self,
+        current: Option<usize>,
+        loop_focus: bool,
+    ) -> Option<usize> {
         let current = current.or_else(|| self.first_enabled_index())?;
 
         self.tabs

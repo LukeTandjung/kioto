@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, Entity,
+    div, prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, Entity,
     FocusHandle, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -115,13 +115,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static>
-    GenericChild<TabsContext<T>> for TabsTab<T>
-{
-    fn add_state_context(
-        mut self,
-        context: TabsContext<T>,
-    ) -> Self {
+impl<T: Clone + Eq + 'static> GenericChild<TabsContext<T>> for TabsTab<T> {
+    fn add_state_context(mut self, context: TabsContext<T>) -> Self {
         self.context = Some(context);
         self
     }

@@ -1,7 +1,7 @@
 use gpui::TestAppContext;
 
 use super::support::{
-    ACCOUNT, PROJECTS, TabsTestConfig, open_tabs, read_observations, simulate_keys,
+    open_tabs, read_observations, simulate_keys, TabsTestConfig, ACCOUNT, PROJECTS,
 };
 
 #[gpui::test]
@@ -24,5 +24,8 @@ fn activate_on_focus_selects_tabs_during_keyboard_navigation(cx: &mut TestAppCon
 
     let observations = read_observations(cx, window);
     assert_eq!(observations.active_value(), Some(ACCOUNT));
-    assert_eq!(observations.value_changes, vec![Some(PROJECTS), Some(ACCOUNT)]);
+    assert_eq!(
+        observations.value_changes,
+        vec![Some(PROJECTS), Some(ACCOUNT)]
+    );
 }

@@ -23,13 +23,8 @@ impl<T: Clone + Eq + 'static> IntoElement for TabsChild<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static>
-    GenericChild<TabsContext<T>> for TabsChild<T>
-{
-    fn add_state_context(
-        self,
-        context: TabsContext<T>,
-    ) -> Self {
+impl<T: Clone + Eq + 'static> GenericChild<TabsContext<T>> for TabsChild<T> {
+    fn add_state_context(self, context: TabsContext<T>) -> Self {
         match self {
             Self::List(list) => Self::List(list.add_state_context(context)),
             Self::Panel(panel) => Self::Panel(panel.add_state_context(context)),

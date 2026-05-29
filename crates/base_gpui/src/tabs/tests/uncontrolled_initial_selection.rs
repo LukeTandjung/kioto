@@ -1,6 +1,6 @@
 use gpui::TestAppContext;
 
-use super::support::{OVERVIEW, TabsTestConfig, read_observations, open_tabs};
+use super::support::{open_tabs, read_observations, TabsTestConfig, OVERVIEW};
 
 #[gpui::test]
 fn uncontrolled_tabs_select_first_enabled_tab(cx: &mut TestAppContext) {

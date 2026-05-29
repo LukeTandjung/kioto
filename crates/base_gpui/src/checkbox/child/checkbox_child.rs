@@ -1,6 +1,9 @@
 use gpui::{AnyElement, IntoElement};
 
-use crate::{api::GenericChild, checkbox::{CheckboxContext, CheckboxIndicator}};
+use crate::{
+    api::GenericChild,
+    checkbox::{CheckboxContext, CheckboxIndicator},
+};
 
 pub enum CheckboxChild {
     Indicator(CheckboxIndicator),
@@ -28,9 +31,13 @@ impl GenericChild<CheckboxContext> for CheckboxChild {
 }
 
 impl From<CheckboxIndicator> for CheckboxChild {
-    fn from(value: CheckboxIndicator) -> Self { Self::Indicator(value) }
+    fn from(value: CheckboxIndicator) -> Self {
+        Self::Indicator(value)
+    }
 }
 
 impl From<AnyElement> for CheckboxChild {
-    fn from(value: AnyElement) -> Self { Self::Any(value) }
+    fn from(value: AnyElement) -> Self {
+        Self::Any(value)
+    }
 }

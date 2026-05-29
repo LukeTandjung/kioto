@@ -1,13 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
 use gpui::{
-    Bounds, Modifiers, Pixels, Render, TestAppContext, VisualTestContext, WindowHandle, div,
-    prelude::*, px, size,
+    div, prelude::*, px, size, Bounds, Modifiers, Pixels, Render, TestAppContext,
+    VisualTestContext, WindowHandle,
 };
 
 use crate::tabs::{
-    TabsIndicator, TabsIndicatorRenderState, TabsList, TabsOrientation, TabsPanel,
-    TabsPanelRenderState, TabsRoot, TabsTab, TabsTabRenderState, init,
+    init, TabsIndicator, TabsIndicatorRenderState, TabsList, TabsOrientation, TabsPanel,
+    TabsPanelRenderState, TabsRoot, TabsTab, TabsTabRenderState,
 };
 
 pub type TabValue = &'static str;
@@ -254,7 +254,12 @@ impl Render for TabsTestView {
         let mut root = root.child(list);
 
         if self.config.include_overview {
-            root = root.child(Self::panel(OVERVIEW, "Overview panel", false, &self.observations));
+            root = root.child(Self::panel(
+                OVERVIEW,
+                "Overview panel",
+                false,
+                &self.observations,
+            ));
         }
 
         if self.config.include_projects {
@@ -279,10 +284,7 @@ impl Render for TabsTestView {
     }
 }
 
-pub fn open_tabs(
-    cx: &mut TestAppContext,
-    config: TabsTestConfig,
-) -> WindowHandle<TabsTestView> {
+pub fn open_tabs(cx: &mut TestAppContext, config: TabsTestConfig) -> WindowHandle<TabsTestView> {
     cx.update(init);
 
     let window = cx.open_window(size(px(640.0), px(360.0)), move |_, _| {

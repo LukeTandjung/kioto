@@ -12,9 +12,9 @@ pub use actions::{
 pub use child::{
     context::{
         TabsActivationDirection, TabsContext, TabsIndicatorRenderState, TabsListRenderState,
-        TabsOrientation, TabsPanelMetadata, TabsPanelRenderState, TabsProps,
-        TabsRootRenderState, TabsRuntime, TabsState, TabsTabMetadata, TabsTabPosition,
-        TabsTabRenderState, TabsTabSize, TabsValueChangeHandler,
+        TabsOrientation, TabsPanelMetadata, TabsPanelRenderState, TabsProps, TabsRootRenderState,
+        TabsRuntime, TabsState, TabsTabMetadata, TabsTabPosition, TabsTabRenderState, TabsTabSize,
+        TabsValueChangeHandler,
     },
     TabsChild, TabsListChild,
 };

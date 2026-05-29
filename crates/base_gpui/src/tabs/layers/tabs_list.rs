@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
+    div, App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -77,143 +77,139 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
         let loop_focus = self.loop_focus;
 
         let base = match (self.style_with_state, render_state) {
-            (Some(style_with_state), Some(render_state)) => style_with_state(render_state, self.base),
+            (Some(style_with_state), Some(render_state)) => {
+                style_with_state(render_state, self.base)
+            }
             _ => self.base,
         };
 
-        base
-            .on_children_prepainted(move |bounds, _window, cx| {
-                if let Some(context) = bounds_context.as_ref() {
-                    let tab_bounds = bounds
-                        .into_iter()
-                        .zip(child_tab_indices.iter().copied())
-                        .filter_map(|(bounds, index)| index.map(|index| (index, bounds)))
-                        .collect();
-
-                    context.register_tab_bounds(tab_bounds, cx);
-                }
-            })
-            .id("tabs-list")
-            .key_context(TABS_LIST_KEY_CONTEXT)
-            .focusable()
-            .on_action(move |_: &TabsSelectLeft, window, cx| {
-                let Some(context) = select_left_context.as_ref() else {
-                    return;
-                };
-
-                if context.props().orientation() != TabsOrientation::Horizontal {
-                    return;
-                }
-
-                context.highlight_previous_tab(loop_focus, cx);
-
-                if activate_on_focus {
-                    context.select_highlighted_tab(window, cx);
-                }
-            })
-            .on_action(move |_: &TabsSelectRight, window, cx| {
-                let Some(context) = select_right_context.as_ref() else {
-                    return;
-                };
-
-                if context.props().orientation() != TabsOrientation::Horizontal {
-                    return;
-                }
-
-                context.highlight_next_tab(loop_focus, cx);
-
-                if activate_on_focus {
-                    context.select_highlighted_tab(window, cx);
-                }
-            })
-            .on_action(move |_: &TabsSelectUp, window, cx| {
-                let Some(context) = select_up_context.as_ref() else {
-                    return;
-                };
-
-                if context.props().orientation() != TabsOrientation::Vertical {
-                    return;
-                }
-
-                context.highlight_previous_tab(loop_focus, cx);
-
-                if activate_on_focus {
-                    context.select_highlighted_tab(window, cx);
-                }
-            })
-            .on_action(move |_: &TabsSelectDown, window, cx| {
-                let Some(context) = select_down_context.as_ref() else {
-                    return;
-                };
-
-                if context.props().orientation() != TabsOrientation::Vertical {
-                    return;
-                }
-
-                context.highlight_next_tab(loop_focus, cx);
-
-                if activate_on_focus {
-                    context.select_highlighted_tab(window, cx);
-                }
-            })
-            .on_action(move |_: &TabsSelectFirst, window, cx| {
-                let Some(context) = select_first_context.as_ref() else {
-                    return;
-                };
-
-                context.highlight_first_tab(cx);
-
-                if activate_on_focus {
-                    context.select_highlighted_tab(window, cx);
-                }
-            })
-            .on_action(move |_: &TabsSelectLast, window, cx| {
-                let Some(context) = select_last_context.as_ref() else {
-                    return;
-                };
-
-                context.highlight_last_tab(cx);
-
-                if activate_on_focus {
-                    context.select_highlighted_tab(window, cx);
-                }
-            })
-            .on_action(move |_: &TabsActivateHighlighted, window, cx| {
-                let Some(context) = activate_context.as_ref() else {
-                    return;
-                };
-
-                context.select_highlighted_tab(window, cx);
-            })
-            .children({
-                let mut tab_index = 0;
-
-                self.children
+        base.on_children_prepainted(move |bounds, _window, cx| {
+            if let Some(context) = bounds_context.as_ref() {
+                let tab_bounds = bounds
                     .into_iter()
-                    .map(|child| {
-                        let index = match child.is_tab() {
-                            true => {
-                                let index = Some(tab_index);
-                                tab_index += 1;
-                                index
-                            }
-                            false => None,
-                        };
+                    .zip(child_tab_indices.iter().copied())
+                    .filter_map(|(bounds, index)| index.map(|index| (index, bounds)))
+                    .collect();
 
-                        child.into_any_element_with_context(index, context.clone())
-                    })
-                    .collect::<Vec<_>>()
-            })
+                context.register_tab_bounds(tab_bounds, cx);
+            }
+        })
+        .id("tabs-list")
+        .key_context(TABS_LIST_KEY_CONTEXT)
+        .focusable()
+        .on_action(move |_: &TabsSelectLeft, window, cx| {
+            let Some(context) = select_left_context.as_ref() else {
+                return;
+            };
+
+            if context.props().orientation() != TabsOrientation::Horizontal {
+                return;
+            }
+
+            context.highlight_previous_tab(loop_focus, cx);
+
+            if activate_on_focus {
+                context.select_highlighted_tab(window, cx);
+            }
+        })
+        .on_action(move |_: &TabsSelectRight, window, cx| {
+            let Some(context) = select_right_context.as_ref() else {
+                return;
+            };
+
+            if context.props().orientation() != TabsOrientation::Horizontal {
+                return;
+            }
+
+            context.highlight_next_tab(loop_focus, cx);
+
+            if activate_on_focus {
+                context.select_highlighted_tab(window, cx);
+            }
+        })
+        .on_action(move |_: &TabsSelectUp, window, cx| {
+            let Some(context) = select_up_context.as_ref() else {
+                return;
+            };
+
+            if context.props().orientation() != TabsOrientation::Vertical {
+                return;
+            }
+
+            context.highlight_previous_tab(loop_focus, cx);
+
+            if activate_on_focus {
+                context.select_highlighted_tab(window, cx);
+            }
+        })
+        .on_action(move |_: &TabsSelectDown, window, cx| {
+            let Some(context) = select_down_context.as_ref() else {
+                return;
+            };
+
+            if context.props().orientation() != TabsOrientation::Vertical {
+                return;
+            }
+
+            context.highlight_next_tab(loop_focus, cx);
+
+            if activate_on_focus {
+                context.select_highlighted_tab(window, cx);
+            }
+        })
+        .on_action(move |_: &TabsSelectFirst, window, cx| {
+            let Some(context) = select_first_context.as_ref() else {
+                return;
+            };
+
+            context.highlight_first_tab(cx);
+
+            if activate_on_focus {
+                context.select_highlighted_tab(window, cx);
+            }
+        })
+        .on_action(move |_: &TabsSelectLast, window, cx| {
+            let Some(context) = select_last_context.as_ref() else {
+                return;
+            };
+
+            context.highlight_last_tab(cx);
+
+            if activate_on_focus {
+                context.select_highlighted_tab(window, cx);
+            }
+        })
+        .on_action(move |_: &TabsActivateHighlighted, window, cx| {
+            let Some(context) = activate_context.as_ref() else {
+                return;
+            };
+
+            context.select_highlighted_tab(window, cx);
+        })
+        .children({
+            let mut tab_index = 0;
+
+            self.children
+                .into_iter()
+                .map(|child| {
+                    let index = match child.is_tab() {
+                        true => {
+                            let index = Some(tab_index);
+                            tab_index += 1;
+                            index
+                        }
+                        false => None,
+                    };
+
+                    child.into_any_element_with_context(index, context.clone())
+                })
+                .collect::<Vec<_>>()
+        })
     }
 }
 
-impl<T: Clone + Eq + 'static>
-    GenericChild<TabsContext<T>> for TabsList<T>
-{
-    fn add_state_context(
-        mut self,
-        context: TabsContext<T>,
-    ) -> Self {
+impl<T: Clone + Eq + 'static> GenericChild<TabsContext<T>> for TabsList<T> {
+    fn add_state_context(mut self, context: TabsContext<T>) -> Self {
         self.context = Some(context);
         self
     }

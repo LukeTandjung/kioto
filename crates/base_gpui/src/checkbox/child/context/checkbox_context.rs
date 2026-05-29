@@ -22,7 +22,17 @@ impl CheckboxContext {
         default: Option<bool>,
         props: CheckboxProps,
     ) -> Self {
-        Self { inner: GenericContext::new(id, cx, window, controlled, default, props, CheckboxRuntime::new()) }
+        Self {
+            inner: GenericContext::new(
+                id,
+                cx,
+                window,
+                controlled,
+                default,
+                props,
+                CheckboxRuntime::new(),
+            ),
+        }
     }
 
     pub fn checked(&self, cx: &App) -> bool {
@@ -53,7 +63,11 @@ impl CheckboxContext {
         )
     }
 
-    pub fn indicator_render_state(&self, keep_mounted: bool, cx: &App) -> CheckboxIndicatorRenderState {
+    pub fn indicator_render_state(
+        &self,
+        keep_mounted: bool,
+        cx: &App,
+    ) -> CheckboxIndicatorRenderState {
         CheckboxIndicatorRenderState::new(self.root_render_state(cx), keep_mounted)
     }
 }

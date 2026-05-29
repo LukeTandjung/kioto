@@ -102,12 +102,7 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
             .set_runtime_if_changed(cx, |runtime| runtime.set_tab_bounds(bounds));
     }
 
-    pub fn register_tab_focus_handle(
-        &self,
-        index: usize,
-        focus_handle: FocusHandle,
-        cx: &mut App,
-    ) {
+    pub fn register_tab_focus_handle(&self, index: usize, focus_handle: FocusHandle, cx: &mut App) {
         self.inner.set_runtime_if_changed(cx, |runtime| {
             runtime.register_tab_focus_handle(index, focus_handle)
         });
@@ -235,10 +230,12 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         index: Option<usize>,
         cx: &App,
     ) -> TabsTabRenderState {
-        let active = self.inner.read_state(cx, |selected| match (value, selected) {
-            (Some(value), Some(selected)) => value == selected,
-            _ => false,
-        });
+        let active = self
+            .inner
+            .read_state(cx, |selected| match (value, selected) {
+                (Some(value), Some(selected)) => value == selected,
+                _ => false,
+            });
 
         TabsTabRenderState::new(
             active,
@@ -249,12 +246,18 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
     }
 
     pub fn panel_render_state(&self, value: Option<&T>, cx: &App) -> TabsPanelRenderState {
-        let active = self.inner.read_state(cx, |selected| match (value, selected) {
-            (Some(value), Some(selected)) => value == selected,
-            _ => false,
-        });
+        let active = self
+            .inner
+            .read_state(cx, |selected| match (value, selected) {
+                (Some(value), Some(selected)) => value == selected,
+                _ => false,
+            });
 
-        TabsPanelRenderState::new(!active, self.props().orientation(), self.activation_direction(cx))
+        TabsPanelRenderState::new(
+            !active,
+            self.props().orientation(),
+            self.activation_direction(cx),
+        )
     }
 
     pub fn indicator_render_state(&self, cx: &App) -> TabsIndicatorRenderState {

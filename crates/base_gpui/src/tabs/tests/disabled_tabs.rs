@@ -1,8 +1,8 @@
 use gpui::TestAppContext;
 
 use super::support::{
-    ACCOUNT, OVERVIEW, PROJECTS, TabsTestConfig, click_tab, open_tabs, read_observations,
-    simulate_keys,
+    click_tab, open_tabs, read_observations, simulate_keys, TabsTestConfig, ACCOUNT, OVERVIEW,
+    PROJECTS,
 };
 
 #[gpui::test]
@@ -19,7 +19,10 @@ fn disabled_tabs_do_not_activate_and_are_skipped_by_keyboard(cx: &mut TestAppCon
 
     let observations = read_observations(cx, window);
     assert_eq!(observations.active_value(), Some(OVERVIEW));
-    assert_eq!(observations.tab_state(PROJECTS).map(|state| state.disabled), Some(true));
+    assert_eq!(
+        observations.tab_state(PROJECTS).map(|state| state.disabled),
+        Some(true)
+    );
     assert!(observations.value_changes.is_empty());
 
     simulate_keys(cx, window, "right enter");

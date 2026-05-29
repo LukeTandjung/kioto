@@ -12,8 +12,20 @@ pub struct CheckboxRootRenderState {
 }
 
 impl CheckboxRootRenderState {
-    pub fn new(checked: bool, disabled: bool, read_only: bool, required: bool, indeterminate: bool) -> Self {
-        Self { checked, disabled, read_only, required, indeterminate }
+    pub fn new(
+        checked: bool,
+        disabled: bool,
+        read_only: bool,
+        required: bool,
+        indeterminate: bool,
+    ) -> Self {
+        Self {
+            checked,
+            disabled,
+            read_only,
+            required,
+            indeterminate,
+        }
     }
 }
 
@@ -25,6 +37,9 @@ pub struct CheckboxIndicatorRenderState {
 
 impl CheckboxIndicatorRenderState {
     pub fn new(root: CheckboxRootRenderState, keep_mounted: bool) -> Self {
-        Self { present: keep_mounted || root.checked || root.indeterminate, root }
+        Self {
+            present: keep_mounted || root.checked || root.indeterminate,
+            root,
+        }
     }
 }

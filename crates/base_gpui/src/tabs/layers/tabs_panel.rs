@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    prelude::FluentBuilder as _, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce,
-    StyleRefinement, Styled, Window, div,
+    div, prelude::FluentBuilder as _, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -82,13 +82,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static>
-    GenericChild<TabsContext<T>> for TabsPanel<T>
-{
-    fn add_state_context(
-        mut self,
-        context: TabsContext<T>,
-    ) -> Self {
+impl<T: Clone + Eq + 'static> GenericChild<TabsContext<T>> for TabsPanel<T> {
+    fn add_state_context(mut self, context: TabsContext<T>) -> Self {
         self.context = Some(context);
         self
     }

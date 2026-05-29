@@ -11,9 +11,7 @@ pub struct GenericContext<S: GenericState + 'static, P: Clone + 'static, R: 'sta
     runtime: Entity<R>,
 }
 
-impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> Clone
-    for GenericContext<S, P, R>
-{
+impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> Clone for GenericContext<S, P, R> {
     fn clone(&self) -> Self {
         Self {
             controlled: Rc::clone(&self.controlled),

@@ -1,6 +1,6 @@
 use gpui::TestAppContext;
 
-use super::support::{PROJECTS, TabsTestConfig, read_observations, open_tabs, simulate_keys};
+use super::support::{open_tabs, read_observations, simulate_keys, TabsTestConfig, PROJECTS};
 
 #[gpui::test]
 fn indicator_state_tracks_selected_tab_position_and_size(cx: &mut TestAppContext) {

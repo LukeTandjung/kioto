@@ -1,7 +1,7 @@
 use crate::api::GenericState;
 
 pub struct TabsState<T: Clone + Eq + 'static> {
-    value: Option<T>
+    value: Option<T>,
 }
 
 impl<T: Clone + Eq + 'static> GenericState for TabsState<T> {
@@ -19,5 +19,3 @@ impl<T: Clone + Eq + 'static> GenericState for TabsState<T> {
         self.value = value;
     }
 }
-
-

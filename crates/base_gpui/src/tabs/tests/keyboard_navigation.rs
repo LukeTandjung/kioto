@@ -1,7 +1,7 @@
 use gpui::TestAppContext;
 
 use super::support::{
-    ACCOUNT, OVERVIEW, PROJECTS, TabsTestConfig, open_tabs, read_observations, simulate_keys,
+    open_tabs, read_observations, simulate_keys, TabsTestConfig, ACCOUNT, OVERVIEW, PROJECTS,
 };
 
 #[gpui::test]

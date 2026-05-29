@@ -1,6 +1,6 @@
 use gpui::TestAppContext;
 
-use super::support::{PROJECTS, TabsTestConfig, click_tab, read_observations, open_tabs};
+use super::support::{click_tab, open_tabs, read_observations, TabsTestConfig, PROJECTS};
 
 #[gpui::test]
 fn clicking_enabled_inactive_tab_selects_it(cx: &mut TestAppContext) {

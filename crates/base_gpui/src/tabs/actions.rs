@@ -2,15 +2,18 @@ use gpui::{actions, App, KeyBinding};
 
 pub const TABS_LIST_KEY_CONTEXT: &str = "TabsList";
 
-actions!(base_gpui_tabs, [
-    TabsSelectLeft,
-    TabsSelectRight,
-    TabsSelectUp,
-    TabsSelectDown,
-    TabsSelectFirst,
-    TabsSelectLast,
-    TabsActivateHighlighted,
-]);
+actions!(
+    base_gpui_tabs,
+    [
+        TabsSelectLeft,
+        TabsSelectRight,
+        TabsSelectUp,
+        TabsSelectDown,
+        TabsSelectFirst,
+        TabsSelectLast,
+        TabsActivateHighlighted,
+    ]
+);
 
 pub fn init(cx: &mut App) {
     let context = Some(TABS_LIST_KEY_CONTEXT);
