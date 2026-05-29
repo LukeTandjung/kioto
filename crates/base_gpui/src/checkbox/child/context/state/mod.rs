@@ -2,13 +2,20 @@ mod checkbox_state;
 
 pub use checkbox_state::CheckboxState;
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+use gpui::SharedString;
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CheckboxRootRenderState {
     pub checked: bool,
     pub disabled: bool,
     pub read_only: bool,
     pub required: bool,
     pub indeterminate: bool,
+    pub name: Option<SharedString>,
+    pub value: Option<SharedString>,
+    pub form: Option<SharedString>,
+    pub parent: bool,
+    pub unchecked_value: Option<SharedString>,
 }
 
 impl CheckboxRootRenderState {
@@ -18,6 +25,11 @@ impl CheckboxRootRenderState {
         read_only: bool,
         required: bool,
         indeterminate: bool,
+        name: Option<SharedString>,
+        value: Option<SharedString>,
+        form: Option<SharedString>,
+        parent: bool,
+        unchecked_value: Option<SharedString>,
     ) -> Self {
         Self {
             checked,
@@ -25,11 +37,16 @@ impl CheckboxRootRenderState {
             read_only,
             required,
             indeterminate,
+            name,
+            value,
+            form,
+            parent,
+            unchecked_value,
         }
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CheckboxIndicatorRenderState {
     pub root: CheckboxRootRenderState,
     pub present: bool,

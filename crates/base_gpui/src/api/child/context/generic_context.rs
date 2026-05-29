@@ -4,25 +4,25 @@ use gpui::{App, ElementId, Entity, SharedString, Window};
 
 use crate::api::GenericState;
 
-pub struct GenericContext<S: GenericState + 'static, P: Clone + 'static, R: 'static> {
+pub struct GenericContext<S: GenericState + 'static, P: 'static, R: 'static> {
     controlled: Rc<Option<Option<S::Value>>>,
     entity: Entity<S>,
-    props: P,
+    props: Rc<P>,
     runtime: Entity<R>,
 }
 
-impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> Clone for GenericContext<S, P, R> {
+impl<S: GenericState + 'static, P: 'static, R: 'static> Clone for GenericContext<S, P, R> {
     fn clone(&self) -> Self {
         Self {
             controlled: Rc::clone(&self.controlled),
             entity: self.entity.clone(),
-            props: self.props.clone(),
+            props: Rc::clone(&self.props),
             runtime: self.runtime.clone(),
         }
     }
 }
 
-impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S, P, R> {
+impl<S: GenericState + 'static, P: 'static, R: 'static> GenericContext<S, P, R> {
     pub fn new(
         id: impl Into<ElementId>,
         cx: &mut App,
@@ -43,7 +43,7 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S
         Self {
             controlled: Rc::new(controlled),
             entity,
-            props,
+            props: Rc::new(props),
             runtime,
         }
     }
@@ -73,7 +73,7 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S
             return;
         }
 
-        notify(&self.props, next.as_ref(), cx);
+        notify(self.props.as_ref(), next.as_ref(), cx);
         self.set_state_silent(next, cx);
     }
 
@@ -110,6 +110,6 @@ impl<S: GenericState + 'static, P: Clone + 'static, R: 'static> GenericContext<S
     }
 
     pub fn props(&self) -> &P {
-        &self.props
+        self.props.as_ref()
     }
 }

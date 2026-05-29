@@ -1,11 +1,16 @@
 use std::rc::Rc;
 
-use gpui::{App, Window};
+use gpui::{App, SharedString, Window};
 
 pub type CheckboxCheckedChangeHandler = Rc<dyn Fn(bool, &mut Window, &mut App) + 'static>;
 
 #[derive(Clone, Default)]
 pub struct CheckboxProps {
+    name: Option<SharedString>,
+    value: Option<SharedString>,
+    form: Option<SharedString>,
+    parent: bool,
+    unchecked_value: Option<SharedString>,
     indeterminate: bool,
     disabled: bool,
     read_only: bool,
@@ -15,6 +20,11 @@ pub struct CheckboxProps {
 
 impl CheckboxProps {
     pub fn new(
+        name: Option<SharedString>,
+        value: Option<SharedString>,
+        form: Option<SharedString>,
+        parent: bool,
+        unchecked_value: Option<SharedString>,
         indeterminate: bool,
         disabled: bool,
         read_only: bool,
@@ -22,6 +32,11 @@ impl CheckboxProps {
         on_checked_change: Option<CheckboxCheckedChangeHandler>,
     ) -> Self {
         Self {
+            name,
+            value,
+            form,
+            parent,
+            unchecked_value,
             indeterminate,
             disabled,
             read_only,
@@ -30,6 +45,21 @@ impl CheckboxProps {
         }
     }
 
+    pub fn name(&self) -> Option<&SharedString> {
+        self.name.as_ref()
+    }
+    pub fn value(&self) -> Option<&SharedString> {
+        self.value.as_ref()
+    }
+    pub fn form(&self) -> Option<&SharedString> {
+        self.form.as_ref()
+    }
+    pub fn parent(&self) -> bool {
+        self.parent
+    }
+    pub fn unchecked_value(&self) -> Option<&SharedString> {
+        self.unchecked_value.as_ref()
+    }
     pub fn indeterminate(&self) -> bool {
         self.indeterminate
     }
