@@ -62,13 +62,6 @@ impl Styled for CheckboxRoot {
     }
 }
 
-impl ParentElement for CheckboxRoot {
-    fn extend(&mut self, elements: impl IntoIterator<Item = gpui::AnyElement>) {
-        self.children
-            .extend(elements.into_iter().map(CheckboxChild::from));
-    }
-}
-
 impl RenderOnce for CheckboxRoot {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let context = CheckboxContext::new(

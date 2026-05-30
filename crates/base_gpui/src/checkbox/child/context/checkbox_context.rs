@@ -60,11 +60,6 @@ impl CheckboxContext {
             props.read_only(),
             props.required(),
             props.indeterminate(),
-            props.name().cloned(),
-            props.value().cloned(),
-            props.form().cloned(),
-            props.parent(),
-            props.unchecked_value().cloned(),
         )
     }
 

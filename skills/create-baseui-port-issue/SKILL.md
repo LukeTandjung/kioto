@@ -185,18 +185,20 @@ crates/base_gpui/src/<component>/
       <component>_context.rs  # component-specific context wrapper
       props/
       runtime/
-      state/
+      state/                  # mod.rs only declares/exports state modules; each state struct gets its own file
   layers/                     # renderable GPUI elements only
 ```
 
 Checklist items should enforce:
 
 - typed children before `AnyElement` erasure,
+- child-routing enums should only include child layer types shown in Base UI documentation/examples; add an `AnyElement` escape hatch only when Base UI examples show arbitrary root children are expected,
 - component-specific context wrapper around `GenericContext<S, P, R>`,
 - `GenericContext` limited to generic state/props/runtime mechanics,
 - component behavior on `<Component>Context`, not inherent impls on generic context types,
 - component-specific runtime registration through context methods,
 - runtime metadata shapes kept component-specific,
+- render-state structs kept in separate files under `context/state/`, not defined inline in `state/mod.rs`,
 - `GenericChild<C>` used only for context injection,
 - renderable layers under `layers/`,
 - child-routing enums under `child/`, not `layers/`,
