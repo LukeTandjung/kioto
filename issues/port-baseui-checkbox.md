@@ -62,53 +62,53 @@ Expected GPUI implementation files:
 
 ### Module/API surface
 
-- [ ] Add `checkbox` module and export it from `crates/base_gpui/src/main.rs` or the crate's public module surface.
-- [ ] Add public `CheckboxRoot` and `CheckboxIndicator` layer types.
-- [ ] Add a typed `CheckboxChild` enum that can route `CheckboxIndicator` children before `AnyElement` erasure.
-- [ ] Support uncontrolled construction with `default_checked: bool`, defaulting to `false`.
-- [ ] Support controlled construction with `checked: Option<bool>` where controlled state takes precedence over internal state.
-- [ ] Support `indeterminate: bool`, defaulting to `false`.
-- [ ] Support `disabled: bool`, defaulting to `false`.
-- [ ] Support `read_only: bool`, defaulting to `false`.
-- [ ] Support `required: bool`, defaulting to `false`, even if validation is initially only exposed in render state.
-- [ ] Support an `on_checked_change` callback for user-requested checked changes.
-- [ ] Decide whether the first GPUI API should include Rust-native change details and cancellation, or initially use `Fn(bool)` and track richer event details as a follow-up.
+- [x] Add `checkbox` module and export it from `crates/base_gpui/src/main.rs` or the crate's public module surface.
+- [x] Add public `CheckboxRoot` and `CheckboxIndicator` layer types.
+- [x] Add a typed `CheckboxChild` enum that can route `CheckboxIndicator` children before `AnyElement` erasure.
+- [x] Support uncontrolled construction with `default_checked: bool`, defaulting to `false`.
+- [x] Support controlled construction with `checked: Option<bool>` where controlled state takes precedence over internal state.
+- [x] Support `indeterminate: bool`, defaulting to `false`.
+- [x] Support `disabled: bool`, defaulting to `false`.
+- [x] Support `read_only: bool`, defaulting to `false`.
+- [x] Support `required: bool`, defaulting to `false`, even if validation is initially only exposed in render state.
+- [x] Support an `on_checked_change` callback for user-requested checked changes.
+- [x] Decide whether the first GPUI API should include Rust-native change details and cancellation, or initially use `Fn(bool)` and track richer event details as a follow-up.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui checkbox` passes.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui checkbox` passes.
 - [ ] The component compiles without adding web/React-specific concepts to public APIs.
-- [ ] The implementation does not add component-specific inherent methods to `GenericContext`.
+- [x] The implementation does not add component-specific inherent methods to `GenericContext`.
 
 ### Architecture / internal primitives
 
-- [ ] Store primary checked state in `CheckboxState` implementing `GenericState`.
-- [ ] Store stable configuration/callbacks in `CheckboxProps`.
-- [ ] Store derived runtime metadata in `CheckboxRuntime`.
-- [ ] Implement component behavior on `CheckboxContext`, not directly on generic context types.
-- [ ] Use `GenericChild<CheckboxContext>` only for context injection.
-- [ ] Keep renderable GPUI elements under `layers/`.
-- [ ] Keep child-routing enums under `child/`.
-- [ ] Do not add a `utils/` folder for new primitives.
+- [x] Store primary checked state in `CheckboxState` implementing `GenericState`.
+- [x] Store stable configuration/callbacks in `CheckboxProps`.
+- [x] Store derived runtime metadata in `CheckboxRuntime`.
+- [x] Implement component behavior on `CheckboxContext`, not directly on generic context types.
+- [x] Use `GenericChild<CheckboxContext>` only for context injection.
+- [x] Keep renderable GPUI elements under `layers/`.
+- [x] Keep child-routing enums under `child/`.
+- [x] Do not add a `utils/` folder for new primitives.
 
 ### Stateful/stateless behavior
 
-- [ ] Uncontrolled Checkbox initializes from `default_checked`.
-- [ ] Uncontrolled Checkbox toggles internal checked state on valid user activation.
-- [ ] Controlled Checkbox reflects external `checked` value.
-- [ ] Controlled Checkbox calls `on_checked_change` on valid user activation without mutating internal checked state as the source of truth.
-- [ ] External controlled value changes update root and indicator render state.
+- [x] Uncontrolled Checkbox initializes from `default_checked`.
+- [x] Uncontrolled Checkbox toggles internal checked state on valid user activation.
+- [x] Controlled Checkbox reflects external `checked` value.
+- [x] Controlled Checkbox calls `on_checked_change` on valid user activation without mutating internal checked state as the source of truth.
+- [x] External controlled value changes update root and indicator render state.
 - [ ] `indeterminate` is visual/semantic state that takes precedence over checked in render state.
 - [ ] Activating an indeterminate Checkbox does not silently clear indeterminate unless the public API explicitly chooses that behavior.
 
 ### Pointer interaction behavior
 
-- [ ] Clicking an enabled, non-read-only root requests a checked-state toggle.
-- [ ] Clicking a disabled root does not request a checked-state toggle.
-- [ ] Clicking a read-only root does not request a checked-state toggle.
-- [ ] Pointer activation invokes `on_checked_change` exactly once per accepted toggle.
-- [ ] Pointer activation does not fire when interaction is blocked by disabled/read-only state.
+- [x] Clicking an enabled, non-read-only root requests a checked-state toggle.
+- [x] Clicking a disabled root does not request a checked-state toggle.
+- [x] Clicking a read-only root does not request a checked-state toggle.
+- [x] Pointer activation invokes `on_checked_change` exactly once per accepted toggle.
+- [x] Pointer activation does not fire when interaction is blocked by disabled/read-only state.
 
 ### Keyboard/focus behavior
 
@@ -122,20 +122,20 @@ Expected GPUI implementation files:
 
 ### Indicator behavior
 
-- [ ] `CheckboxIndicator` renders when the root is checked.
-- [ ] `CheckboxIndicator` renders when the root is indeterminate.
-- [ ] `CheckboxIndicator` does not render when unchecked and not indeterminate by default.
-- [ ] `CheckboxIndicator` supports `keep_mounted` so it remains rendered when unchecked.
-- [ ] Indicator render state includes root checkbox state.
+- [x] `CheckboxIndicator` renders when the root is checked.
+- [x] `CheckboxIndicator` renders when the root is indeterminate.
+- [x] `CheckboxIndicator` does not render when unchecked and not indeterminate by default.
+- [x] `CheckboxIndicator` supports `keep_mounted` so it remains rendered when unchecked.
+- [x] Indicator render state includes root checkbox state.
 - [ ] If transition support exists in `base_gpui`, expose a GPUI-native transition status; otherwise track transition behavior as a follow-up rather than porting DOM animation attributes.
 
 ### Styling/state exposure
 
-- [ ] Add `CheckboxRootState` render-state struct with at least `checked`, `disabled`, `read_only`, `required`, and `indeterminate`.
-- [ ] Add `CheckboxIndicatorState` render-state struct including root state and any GPUI-native transition status.
-- [ ] Expose state-aware styling through `style_with_state(...)` on root and indicator.
+- [x] Add `CheckboxRootState` render-state struct with at least `checked`, `disabled`, `read_only`, `required`, and `indeterminate`.
+- [x] Add `CheckboxIndicatorState` render-state struct including root state and any GPUI-native transition status.
+- [x] Expose state-aware styling through `style_with_state(...)` on root and indicator.
 - [ ] Map Base UI state/data attributes (`checked`, `unchecked`, `indeterminate`, `disabled`, `readonly`, `required`, field validity states) into typed render-state fields, not DOM attributes.
-- [ ] Do not expose CSS variable names as the styling API.
+- [x] Do not expose CSS variable names as the styling API.
 
 ### Accessibility follow-up
 
@@ -148,8 +148,8 @@ Expected GPUI implementation files:
 
 - [ ] Decide how Checkbox should compose with a future GPUI `Field` component.
 - [ ] Decide whether `name`, `value`, `form`, and `unchecked_value` have GPUI-native meaning or should wait for form primitives.
-- [ ] Preserve enough state (`required`, dirty/touched/focused/valid/invalid if available) to integrate cleanly with future field validation.
-- [ ] Do not implement hidden DOM input submission behavior in GPUI.
+- [x] Preserve enough state (`required`, dirty/touched/focused/valid/invalid if available) to integrate cleanly with future field validation.
+- [x] Do not implement hidden DOM input submission behavior in GPUI.
 
 ### Tests / verification
 

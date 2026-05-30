@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, Div, ElementId, IntoElement, ParentElement, RenderOnce, SharedString, StyleRefinement,
-    Styled, Window, div,
+    App, ClickEvent, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement,
+    RenderOnce, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
 };
 
 use crate::{
@@ -65,7 +65,7 @@ impl Styled for CheckboxRoot {
 impl RenderOnce for CheckboxRoot {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let context = CheckboxContext::new(
-            self.id,
+            self.id.clone(),
             cx,
             window,
             self.checked.map(Some),
@@ -90,7 +90,16 @@ impl RenderOnce for CheckboxRoot {
             None => self.base,
         };
 
-        base.children(
+        let toggle_context = context.clone();
+
+        base.id(self.id).on_click(move |event, window, cx| {
+            if !matches!(event, ClickEvent::Mouse(_)) {
+                return;
+            }
+
+            toggle_context.request_toggle(window, cx);
+        })
+        .children(
             self.children
                 .into_iter()
                 .map(|child| child.add_state_context(context.clone())),

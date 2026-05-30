@@ -1,4 +1,7 @@
-use base_gpui::tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab};
+use base_gpui::{
+    checkbox::{CheckboxIndicator, CheckboxRoot},
+    tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab},
+};
 use gpui::{
     div, prelude::*, px, rgb, size, App, Bounds, Context, IntoElement, Render, Window,
     WindowBounds, WindowOptions,
@@ -24,6 +27,9 @@ impl Render for TabsTest {
                     .bg(rgb(0xffffff))
                     .p_4()
                     .shadow_lg()
+                    .flex()
+                    .flex_col()
+                    .gap_5()
                     .child(
                         TabsRoot::<&'static str>::new()
                             .id("test-tabs")
@@ -144,6 +150,83 @@ impl Render for TabsTest {
                                     .border_color(rgb(0xe5e7eb))
                                     .p_4()
                                     .child("Profile and preferences."),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_3()
+                            .child("Checkbox")
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(
+                                        CheckboxRoot::new()
+                                            .id("example-checkbox")
+                                            .default_checked(false)
+                                            .size(px(18.0))
+                                            .rounded_sm()
+                                            .border_1()
+                                            .style_with_state(|state, root| {
+                                                let root = if state.checked {
+                                                    root.bg(rgb(0x111827)).border_color(rgb(0x111827))
+                                                } else {
+                                                    root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
+                                                };
+
+                                                if state.disabled || state.read_only {
+                                                    root.opacity(0.5)
+                                                } else {
+                                                    root
+                                                }
+                                            })
+                                            .child(
+                                                CheckboxIndicator::new()
+                                                    .size_full()
+                                                    .flex()
+                                                    .items_center()
+                                                    .justify_center()
+                                                    .text_color(rgb(0xffffff))
+                                                    .text_size(px(12.0))
+                                                    .child("✓"),
+                                            ),
+                                    )
+                                    .child("Click the square to toggle it."),
+                            )
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(
+                                        CheckboxRoot::new()
+                                            .id("checked-checkbox")
+                                            .default_checked(true)
+                                            .size(px(18.0))
+                                            .rounded_sm()
+                                            .border_1()
+                                            .style_with_state(|state, root| {
+                                                if state.checked {
+                                                    root.bg(rgb(0x2563eb)).border_color(rgb(0x2563eb))
+                                                } else {
+                                                    root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
+                                                }
+                                            })
+                                            .child(
+                                                CheckboxIndicator::new()
+                                                    .size_full()
+                                                    .flex()
+                                                    .items_center()
+                                                    .justify_center()
+                                                    .text_color(rgb(0xffffff))
+                                                    .text_size(px(12.0))
+                                                    .child("✓"),
+                                            ),
+                                    )
+                                    .child("Starts checked."),
                             ),
                     ),
             )
