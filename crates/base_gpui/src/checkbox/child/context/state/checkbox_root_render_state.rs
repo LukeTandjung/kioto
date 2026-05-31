@@ -1,6 +1,7 @@
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CheckboxRootRenderState {
     pub checked: bool,
+    pub unchecked: bool,
     pub disabled: bool,
     pub read_only: bool,
     pub required: bool,
@@ -19,11 +20,18 @@ impl CheckboxRootRenderState {
     ) -> Self {
         Self {
             checked,
+            unchecked: !checked && !indeterminate,
             disabled,
             read_only,
             required,
             indeterminate,
             focused,
         }
+    }
+}
+
+impl Default for CheckboxRootRenderState {
+    fn default() -> Self {
+        Self::new(false, false, false, false, false, false)
     }
 }

@@ -78,7 +78,7 @@ Expected GPUI implementation files:
 
 - [x] `cargo check -p base_gpui` passes.
 - [x] `cargo test -p base_gpui checkbox` passes.
-- [ ] The component compiles without adding web/React-specific concepts to public APIs.
+- [x] The component compiles without adding web/React-specific concepts to public APIs.
 - [x] The implementation does not add component-specific inherent methods to `GenericContext`.
 
 ### Architecture / internal primitives
@@ -99,8 +99,8 @@ Expected GPUI implementation files:
 - [x] Controlled Checkbox reflects external `checked` value.
 - [x] Controlled Checkbox calls `on_checked_change` on valid user activation without mutating internal checked state as the source of truth.
 - [x] External controlled value changes update root and indicator render state.
-- [ ] `indeterminate` is visual/semantic state that takes precedence over checked in render state.
-- [ ] Activating an indeterminate Checkbox does not silently clear indeterminate unless the public API explicitly chooses that behavior.
+- [x] `indeterminate` is visual/semantic state that takes precedence over checked in render state.
+- [x] Activating an indeterminate Checkbox does not silently clear indeterminate unless the public API explicitly chooses that behavior.
 
 ### Pointer interaction behavior
 
@@ -112,13 +112,13 @@ Expected GPUI implementation files:
 
 ### Keyboard/focus behavior
 
-- [ ] `CheckboxRoot` is focusable with a GPUI `FocusHandle`.
-- [ ] Space toggles an enabled, non-read-only Checkbox when focused.
-- [ ] Enter does not toggle the Checkbox.
-- [ ] Disabled Checkbox does not toggle from keyboard activation.
-- [ ] Read-only Checkbox does not toggle from keyboard activation.
-- [ ] Focused state is exposed in render state if tracked by the component.
-- [ ] Use GPUI actions/key contexts where practical instead of raw DOM-style key handlers.
+- [x] `CheckboxRoot` is focusable with a GPUI `FocusHandle`.
+- [x] Space toggles an enabled, non-read-only Checkbox when focused.
+- [x] Enter does not toggle the Checkbox.
+- [x] Disabled Checkbox does not toggle from keyboard activation.
+- [x] Read-only Checkbox does not toggle from keyboard activation.
+- [x] Focused state is exposed in render state if tracked by the component.
+- [x] Use GPUI actions/key contexts where practical instead of raw DOM-style key handlers.
 
 ### Indicator behavior
 
@@ -127,14 +127,14 @@ Expected GPUI implementation files:
 - [x] `CheckboxIndicator` does not render when unchecked and not indeterminate by default.
 - [x] `CheckboxIndicator` supports `keep_mounted` so it remains rendered when unchecked.
 - [x] Indicator render state includes root checkbox state.
-- [ ] If transition support exists in `base_gpui`, expose a GPUI-native transition status; otherwise track transition behavior as a follow-up rather than porting DOM animation attributes.
+- [x] If transition support exists in `base_gpui`, expose a GPUI-native transition status; otherwise track transition behavior as a follow-up rather than porting DOM animation attributes.
 
 ### Styling/state exposure
 
 - [x] Add `CheckboxRootState` render-state struct with at least `checked`, `disabled`, `read_only`, `required`, and `indeterminate`.
 - [x] Add `CheckboxIndicatorState` render-state struct including root state and any GPUI-native transition status.
 - [x] Expose state-aware styling through `style_with_state(...)` on root and indicator.
-- [ ] Map Base UI state/data attributes (`checked`, `unchecked`, `indeterminate`, `disabled`, `readonly`, `required`, field validity states) into typed render-state fields, not DOM attributes.
+- [x] Map Base UI state/data attributes (`checked`, `unchecked`, `indeterminate`, `disabled`, `readonly`, `required`, field validity states) into typed render-state fields, not DOM attributes.
 - [x] Do not expose CSS variable names as the styling API.
 
 ### Accessibility follow-up
@@ -146,8 +146,8 @@ Expected GPUI implementation files:
 
 ### Field/form integration follow-up
 
-- [ ] Decide how Checkbox should compose with a future GPUI `Field` component.
-- [ ] Decide whether `name`, `value`, `form`, and `unchecked_value` have GPUI-native meaning or should wait for form primitives.
+- [x] Decide how Checkbox should compose with a future GPUI `Field` component.
+- [x] Decide whether `name`, `value`, `form`, and `unchecked_value` have GPUI-native meaning or should wait for form primitives.
 - [x] Preserve enough state (`required`, dirty/touched/focused/valid/invalid if available) to integrate cleanly with future field validation.
 - [x] Do not implement hidden DOM input submission behavior in GPUI.
 
@@ -155,22 +155,22 @@ Expected GPUI implementation files:
 
 Add one behavior per file under `crates/base_gpui/src/checkbox/tests/`.
 
-- [ ] Uncontrolled initial unchecked state.
-- [ ] Uncontrolled `default_checked` initial checked state.
-- [ ] Controlled checked state reflects external state.
-- [ ] Click toggles unchecked to checked.
-- [ ] Click toggles checked to unchecked.
-- [ ] `on_checked_change` is called with the next checked value.
-- [ ] Disabled click does not toggle and does not call change handler.
-- [ ] Read-only click does not toggle and does not call change handler.
-- [ ] Space toggles when focused.
-- [ ] Enter does not toggle when focused.
-- [ ] Disabled/read-only keyboard activation does not toggle.
-- [ ] Indeterminate render state takes precedence over checked render state.
-- [ ] Indeterminate activation behavior is covered once the intended GPUI semantics are finalized.
-- [ ] Indicator is absent by default when unchecked.
-- [ ] Indicator renders when checked.
-- [ ] Indicator renders when indeterminate.
-- [ ] Indicator remains rendered with `keep_mounted`.
-- [ ] `style_with_state(...)` receives correct root state.
-- [ ] `style_with_state(...)` receives correct indicator state.
+- [x] Uncontrolled initial unchecked state.
+- [x] Uncontrolled `default_checked` initial checked state.
+- [x] Controlled checked state reflects external state.
+- [x] Click toggles unchecked to checked.
+- [x] Click toggles checked to unchecked.
+- [x] `on_checked_change` is called with the next checked value.
+- [x] Disabled click does not toggle and does not call change handler.
+- [x] Read-only click does not toggle and does not call change handler.
+- [x] Space toggles when focused.
+- [x] Enter does not toggle when focused.
+- [x] Disabled/read-only keyboard activation does not toggle.
+- [x] Indeterminate render state takes precedence over checked render state.
+- [x] Indeterminate activation behavior is covered once the intended GPUI semantics are finalized.
+- [x] Indicator is absent by default when unchecked.
+- [x] Indicator renders when checked.
+- [x] Indicator renders when indeterminate.
+- [x] Indicator remains rendered with `keep_mounted`.
+- [x] `style_with_state(...)` receives correct root state.
+- [x] `style_with_state(...)` receives correct indicator state.
