@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled,
-    Window,
+    div, AnyElement, App, Div, Empty, IntoElement, ParentElement, RenderOnce, StyleRefinement,
+    Styled, Window,
 };
 
 use crate::{
@@ -54,7 +54,7 @@ impl RenderOnce for CheckboxIndicator {
         });
 
         if !state.present {
-            return div().into_any_element();
+            return Empty.into_any_element();
         }
 
         let base = match self.style_with_state {

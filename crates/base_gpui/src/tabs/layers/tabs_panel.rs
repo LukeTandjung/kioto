@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, prelude::FluentBuilder as _, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AnyElement, App, Div, Empty, IntoElement, ParentElement,
+    RenderOnce, StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -77,7 +77,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
                 .when(hidden, |this| this.invisible())
                 .into_any_element()
         } else {
-            div().into_any_element()
+            Empty.into_any_element()
         }
     }
 }

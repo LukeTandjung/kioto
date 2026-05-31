@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, rc::Rc};
 
 use gpui::{
-    div, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled,
-    Window,
+    div, AnyElement, App, Div, Empty, IntoElement, ParentElement, RenderOnce, StyleRefinement,
+    Styled, Window,
 };
 
 use crate::{
@@ -68,7 +68,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsIndicator<T> {
 
         if !state.selected || state.active_tab_position.is_none() || state.active_tab_size.is_none()
         {
-            return div().into_any_element();
+            return Empty.into_any_element();
         }
 
         let base = match style_with_state {
