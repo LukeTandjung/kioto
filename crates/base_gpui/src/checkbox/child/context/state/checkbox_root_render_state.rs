@@ -5,6 +5,7 @@ pub struct CheckboxRootRenderState {
     pub read_only: bool,
     pub required: bool,
     pub indeterminate: bool,
+    pub focused: bool,
 }
 
 impl CheckboxRootRenderState {
@@ -14,6 +15,7 @@ impl CheckboxRootRenderState {
         read_only: bool,
         required: bool,
         indeterminate: bool,
+        focused: bool,
     ) -> Self {
         Self {
             checked,
@@ -21,6 +23,7 @@ impl CheckboxRootRenderState {
             read_only,
             required,
             indeterminate,
+            focused,
         }
     }
 }

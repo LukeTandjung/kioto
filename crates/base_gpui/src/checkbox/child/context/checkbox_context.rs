@@ -60,7 +60,19 @@ impl CheckboxContext {
             props.read_only(),
             props.required(),
             props.indeterminate(),
+            self.inner.get_runtime(cx, |runtime| runtime.focused()),
         )
+    }
+
+    pub fn sync_focused(&self, focused: bool, cx: &mut App) {
+        self.inner
+            .set_runtime_if_changed(cx, |runtime| match runtime.focused() == focused {
+                true => false,
+                false => {
+                    runtime.set_focused(focused);
+                    true
+                }
+            });
     }
 
     pub fn indicator_render_state(

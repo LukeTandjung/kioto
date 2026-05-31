@@ -1,15 +1,16 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    App, ClickEvent, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement,
-    RenderOnce, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
+    App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _, IntoElement,
+    ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _, StyleRefinement,
+    div, Styled, Window,
 };
 
 use crate::{
     api::GenericChild,
     checkbox::{
-        CheckboxCheckedChangeHandler, CheckboxChild, CheckboxContext, CheckboxProps,
-        CheckboxRootRenderState,
+        CHECKBOX_ROOT_KEY_CONTEXT, CheckboxCheckedChangeHandler, CheckboxChild, CheckboxContext,
+        CheckboxProps, CheckboxRootRenderState, CheckboxToggle,
     },
 };
 
@@ -84,26 +85,47 @@ impl RenderOnce for CheckboxRoot {
             ),
         );
 
+        let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
+            ElementId::NamedChild(Arc::new(self.id.clone()), SharedString::from("focus")),
+            cx,
+            |_, cx| cx.focus_handle(),
+        );
+        let focus_handle = focus_handle_entity.read(cx).clone();
+        context.sync_focused(focus_handle.is_focused(window), cx);
+
         let render_state = context.root_render_state(cx);
+        let disabled = render_state.disabled;
         let base = match self.style_with_state {
             Some(style) => style(render_state, self.base),
             None => self.base,
         };
 
+        let action_context = context.clone();
         let toggle_context = context.clone();
 
-        base.id(self.id).on_click(move |event, window, cx| {
-            if !matches!(event, ClickEvent::Mouse(_)) {
-                return;
-            }
+        base.id(self.id)
+            .track_focus(
+                &focus_handle
+                    .tab_stop(!disabled)
+                    .tab_index(if disabled { -1 } else { 0 }),
+            )
+            .key_context(CHECKBOX_ROOT_KEY_CONTEXT)
+            .focusable()
+            .on_action(move |_: &CheckboxToggle, window, cx| {
+                action_context.request_toggle(window, cx);
+            })
+            .on_click(move |event, window, cx| {
+                if !matches!(event, ClickEvent::Mouse(_)) {
+                    return;
+                }
 
-            toggle_context.request_toggle(window, cx);
-        })
-        .children(
-            self.children
-                .into_iter()
-                .map(|child| child.add_state_context(context.clone())),
-        )
+                toggle_context.request_toggle(window, cx);
+            })
+            .children(
+                self.children
+                    .into_iter()
+                    .map(|child| child.add_state_context(context.clone())),
+            )
     }
 }
 
