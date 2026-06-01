@@ -1,298 +1,177 @@
 # GPUI Component State Patterns
 
-## Summary
+GPUI components in this repo usually use one of three state shapes.
 
-GPUI state commonly appears in three different places:
+## 1. Stateless `RenderOnce` builders
 
-1. **Caller-owned state / controlled elements**: lightweight builder structs that implement `RenderOnce`; the parent owns the value and passes callbacks.
-2. **Entity-owned state / stateful components**: long-lived GPUI `Entity<State>` values; the app owns the state and callers keep a typed handle.
-3. **Window element state / internally stateful elements**: state created during rendering with `window.use_state(...)` or `window.use_keyed_state(...)`; the component still looks like a builder API, but GPUI preserves an internal `Entity<State>` for the element while it remains in the rendered tree.
-
-`Global` state also exists, but it is app-wide singleton state and should not be used for normal per-component state.
-
-## 1. Caller-owned state / controlled elements
-
-Stateless components are plain element builders. They store props, callbacks, style, and children, then consume themselves in `RenderOnce`.
-
-Examples:
-
-- `Button`
-- `Checkbox`
-- `Switch`
-- `Tag`
-- `Alert`
-- `Radio`
-- `Accordion`
-- `Pagination`
-- `TabBar`
-
-Representative shape:
+Use this for simple components that only store props, callbacks, styles, and children.
 
 ```rust
 #[derive(IntoElement)]
 pub struct Button {
-    id: ElementId,
-    base: Stateful<Div>,
-    label: Option<SharedString>,
-    disabled: bool,
-    selected: bool,
-    on_click: Option<Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>>,
+    base: Div,
+    children: Vec<AnyElement>,
 }
 
 impl RenderOnce for Button {
-    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        // Build GPUI element tree.
+    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+        self.base.children(self.children)
     }
 }
 ```
 
-Source reference:
+Rules:
 
-- `/home/luke/Projects/gpui-component/crates/ui/src/button/button.rs`
+- The builder is consumed during render.
+- Do not store long-lived UI state directly on the builder.
+- Use normal GPUI builder methods for styling.
 
-The meaningful state is usually supplied by the parent:
+## 2. App-owned `Entity<State>` components
+
+Use this when a component has durable state owned by the app/view, not by a single rendered element.
+
+Create an entity with `cx.new(...)`:
 
 ```rust
-Checkbox::new("accept")
-    .checked(is_checked)
-    .on_click(|new_checked, window, cx| {
-        // caller updates external state
-    })
+let input: Entity<InputState> = cx.new(|cx| InputState {
+    value: SharedString::default(),
+    focus_handle: cx.focus_handle(),
+});
 ```
 
-Source references:
-
-- `/home/luke/Projects/gpui-component/crates/ui/src/checkbox.rs`
-- `/home/luke/Projects/gpui-component/crates/ui/src/switch.rs`
-
-This is the controlled/stateless pattern: the component emits the desired next value but does not own the app-level value.
-
-Use this when:
-
-- the selected/checked/open value belongs to a parent view;
-- the component should be easy to control from outside;
-- no internal persistence is needed beyond props and callbacks.
-
-For Base UI-style controlled props, this corresponds to `value={...}` plus `onValueChange={...}`.
-
-## 2. Entity-owned state / stateful components
-
-Stateful components use a long-lived state struct stored in a GPUI `Entity<State>`. The state struct owns behavior and often implements `Render`.
-
-GPUI's core model is that `App` owns entity data. `Entity<T>` is a typed handle to state owned by the app. You can only read or update that state when you have a GPUI context, usually `&App`, `&mut App`, or `&mut Context<T>`:
+If the state itself renders, implement `Render` for it:
 
 ```rust
-let value = state.read(cx);
+pub struct InputState {
+    value: SharedString,
+    focus_handle: FocusHandle,
+}
 
-state.update(cx, |state, cx| {
-    state.value = next;
+impl Render for InputState {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div().track_focus(&self.focus_handle).child(self.value.clone())
+    }
+}
+```
+
+Read and update through the entity handle:
+
+```rust
+let value = input.read(cx).value.clone();
+
+input.update(cx, |input, cx| {
+    input.value = "next".into();
     cx.notify();
 });
 ```
 
-Source references:
+Rules:
 
-- `/home/luke/.cargo/git/checkouts/zed-a70e2ad075855582/f7ca86e/crates/gpui/docs/contexts.md`
-- `/home/luke/.cargo/git/checkouts/zed-a70e2ad075855582/f7ca86e/crates/gpui/src/_ownership_and_data_flow.rs`
+- `Entity<T>` is a handle; the data lives in GPUI's app state.
+- Use this when state should outlive one render pass or be shared by multiple UI pieces.
+- Read with `entity.read(cx)`.
+- Mutate with `entity.update(cx, |state, cx| { ... })`.
+- Call `cx.notify()` after mutations that should re-render.
 
-Example shape:
+## 3. Element-owned keyed state
+
+Use this for compound component internals that should persist while the element remains keyed in the rendered element tree.
+
+"Rendered element tree" means the GPUI elements produced by a view's `render(...)` method for a window frame. The state is tied to an element ID in that rendered tree, not to a standalone view struct.
+
+Create keyed state during `RenderOnce::render(...)` with `window.use_keyed_state(...)`:
 
 ```rust
-pub struct InputState {
-    focus_handle: FocusHandle,
-    text: Rope,
-    history: History<Change>,
-    selected_range: Selection,
-    disabled: bool,
-    masked: bool,
-}
-
-impl Render for InputState {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // Render based on owned state.
-    }
-}
+let state: Entity<CheckboxState> = window.use_keyed_state(
+    id.clone(),
+    cx,
+    |_, _| CheckboxState::new(default),
+);
 ```
 
-The parent creates and stores the entity:
+Create separate keyed state for related internals with `ElementId::NamedChild(...)`:
 
 ```rust
-struct MyView {
-    input: Entity<InputState>,
-}
+let runtime: Entity<CheckboxRuntime> = window.use_keyed_state(
+    ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("runtime")),
+    cx,
+    |_, _| CheckboxRuntime::new(),
+);
 
-impl MyView {
-    fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let input = cx.new(|cx| InputState::new(window, cx).default_value("Hello"));
-        Self { input }
-    }
-}
+let focus: Entity<FocusHandle> = window.use_keyed_state(
+    ElementId::NamedChild(Arc::new(id), SharedString::from("focus")),
+    cx,
+    |_, cx| cx.focus_handle(),
+);
 ```
 
-Then the render path either returns the entity directly or passes it into a wrapper element.
-
-Source references:
-
-- `/home/luke/Projects/gpui-component/crates/ui/src/input/state.rs`
-- `/home/luke/Projects/gpui-component/crates/ui/src/input/input.rs`
-
-`Input` itself is a `RenderOnce` wrapper around `Entity<InputState>`:
+Read/update the returned entity like any other entity:
 
 ```rust
-pub struct Input {
-    state: Entity<InputState>,
-    size: Size,
-    prefix: Option<AnyElement>,
-    disabled: bool,
-}
+let checked = state.read(cx).get_value().copied().unwrap_or(false);
 
-impl RenderOnce for Input {
-    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        self.state.update(cx, |state, _| {
-            state.disabled = self.disabled;
-            state.size = self.size;
-        });
-
-        // Render shell around the state entity.
-    }
-}
-```
-
-This gives a split between:
-
-- `InputState`: domain behavior and state.
-- `Input`: presentational/configuration wrapper.
-
-Use explicit `Entity<State>` when:
-
-- the state is substantial;
-- the parent should be able to inspect or mutate the state;
-- multiple sibling elements need to share the same state;
-- the state should clearly outlive a single render pass;
-- the component is closer to a model/view than a simple element.
-
-Other examples:
-
-- `ListState<D>` implements `Render` and owns selected index, query input, row cache, scroll handle, delegate, etc.
-- `DataTable<D>` is a `RenderOnce` wrapper around `Entity<TableState<D>>`.
-- `TableState<D>` owns table interaction state.
-
-Source references:
-
-- `/home/luke/Projects/gpui-component/crates/ui/src/list/list.rs`
-- `/home/luke/Projects/gpui-component/crates/ui/src/table/state.rs`
-- `/home/luke/Projects/gpui-component/crates/ui/src/table/data_table.rs`
-
-## 3. Window element state / internally stateful elements
-
-Some components expose a builder API but internally persist state with `window.use_state(...)` or `window.use_keyed_state(...)`.
-
-These methods create an `Entity<S>` during rendering and store it in the window's element-state map. The state is keyed by the element's global id plus the state type.
-
-```rust
-let state: Entity<MyState> = window.use_keyed_state("my-element", cx, |window, cx| {
-    MyState::new(window, cx)
+state.update(cx, |state, cx| {
+    state.set_value(Some(true));
+    cx.notify();
 });
 ```
 
-The unkeyed form uses the caller's source location as the key:
+Rules:
 
-```rust
-let state: Entity<MyState> = window.use_state(cx, |window, cx| {
-    MyState::new(window, cx)
-});
+- The `ElementId` must be stable across renders.
+- Use named child IDs for separate per-part state, e.g. `runtime`, `focus`.
+- Use this when the caller should not have to create/pass an `Entity` manually.
+- This pattern powers `GenericContext<State, Props, Runtime>`.
+
+## Controlled vs uncontrolled state
+
+For Base UI-style components, use this split:
+
+```text
+controlled value snapshot = caller-provided source of truth for this render
+state entity              = internal uncontrolled value
+props                     = current render config/callbacks
+runtime                   = derived internal metadata
 ```
 
-Prefer `use_keyed_state` when rendering lists or multiple instances, because source-location keys alone may collide or point at the wrong conceptual item after reordering.
+Behavior:
 
-Source reference:
-
-- `/home/luke/.cargo/git/checkouts/zed-a70e2ad075855582/f7ca86e/crates/gpui/src/window.rs`
-
-Example: `Popover`.
-
-```rust
-let state = window.use_keyed_state(self.id.clone(), cx, |_, cx| {
-    PopoverState::new(default_open, cx)
-});
-```
-
-`PopoverState` owns:
-
-- open/closed state
-- focus handles
-- trigger bounds
-- dismiss subscriptions
-- open-change callback
-
-Source reference:
-
-- `/home/luke/Projects/gpui-component/crates/ui/src/popover.rs`
-
-This allows usage like a stateless builder:
-
-```rust
-Popover::new("menu")
-    .trigger(...)
-    .content(...)
-```
-
-while still supporting internal state across renders.
-
-The lifecycle is important:
-
-- state persists while the same keyed element is rendered in consecutive frames;
-- state is dropped when the element disappears from the rendered tree;
-- the returned value is still an `Entity<State>`, so event handlers can update it later using `state.update(cx, ...)`;
-- GPUI observes the entity and notifies the current view when the element state changes.
-
-Use window element state when:
-
-- the public API should remain a simple builder API;
-- the state is local to one rendered element instance;
-- the caller should not need to create or store an `Entity<State>` manually;
-- the component needs uncontrolled/default behavior, animation state, measurement state, or transient UI state.
-
-Other examples of keyed state:
-
-- `HoverCard`
-- `DropdownMenuPopover`
-- `Progress`
-- `TabBar` indicator animation
-- `Switch` / `Checkbox` animation state
-
-## Choosing between the three
-
-| Pattern | Storage | Public API feel | Best for |
-| --- | --- | --- | --- |
-| Caller-owned / controlled | Parent view/state | Builder props + callbacks | Values the parent owns |
-| Entity-owned / stateful component | Explicit `Entity<State>` | Caller passes/stores entity | Complex reusable models/views |
-| Window element state | Internal `Entity<State>` from `window.use_keyed_state` | Builder API with internal persistence | Uncontrolled components, animation, local UI state |
-
-For a compound component like Tabs, the likely split is:
-
-- controlled mode: selected value comes from the public `.value(...)` prop;
-- uncontrolled mode: selected value is stored in internal window element state initialized from `.default_value(...)`;
-- tab/list/panel children receive or share the resulting `Entity<TabsState<T>>` during render.
-
-## Important distinction: `Stateful<Div>` vs stateful components
-
-`Stateful<Div>` does not mean a component owns domain state. It usually means the GPUI element has an `ElementId`, so GPUI can attach interactivity, focus tracking, events, and keyed state.
+- Controlled: read the external value, call callbacks, do not mutate internal value as source of truth.
+- Uncontrolled: read/mutate internal keyed state and call callbacks.
 
 Example:
 
 ```rust
-base: Stateful<Div>
+pub fn request_toggle(&self, window: &mut Window, cx: &mut App) {
+    if self.inner.props().disabled() || self.inner.props().read_only() {
+        return;
+    }
+
+    let next = !self.checked(cx);
+    self.inner.set_state(Some(next), cx, |props, value, cx| {
+        if let (Some(on_change), Some(value)) = (props.on_checked_change(), value) {
+            on_change(*value, window, cx);
+        }
+    });
+}
 ```
 
-This is different from:
+## State vs props vs runtime vs render state
 
-```rust
-Entity<InputState>
-```
+Keep these distinct:
 
-A useful distinction:
+| Kind | Meaning | Example |
+|---|---|---|
+| State | Primary value | checkbox `checked`, tabs selected value |
+| Props | Current render config/callbacks | `disabled`, `orientation`, `on_change` |
+| Runtime | Internal derived metadata | tab bounds, highlighted index, focus flag |
+| Render state | Public styling snapshot | `checked`, `focused`, `active`, `hidden` |
 
-- `Stateful<Div>`: keyed/interactable element.
-- `Entity<State>`: long-lived stateful component/model.
+Render state is not persistent state. It is computed for styling/render decisions.
 
+## Related docs
+
+- `docs/gpui-element-id.md`
+- `docs/gpui-focus.md`
+- `docs/gpui-keyboard-actions.md`
+- `docs/gpui-testing.md`
