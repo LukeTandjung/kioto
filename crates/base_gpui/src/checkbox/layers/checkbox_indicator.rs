@@ -45,10 +45,11 @@ impl Styled for CheckboxIndicator {
 
 impl RenderOnce for CheckboxIndicator {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let state = self
-            .context
-            .as_ref()
-            .map(|context| context.indicator_render_state(self.keep_mounted, cx));
+        let state = self.context.as_ref().map(|context| {
+            context.read(cx, |runtime, props| {
+                runtime.indicator_state(self.keep_mounted, props)
+            })
+        });
         let state = state.unwrap_or_else(|| {
             CheckboxIndicatorRenderState::new(Default::default(), self.keep_mounted)
         });

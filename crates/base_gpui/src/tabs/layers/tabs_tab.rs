@@ -65,7 +65,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
 
         let focus_handle = context
             .as_ref()
-            .and_then(|context| index.and_then(|index| context.tab_focus_handle(index, cx)))
+            .and_then(|context| {
+                index.and_then(|index| {
+                    context.read(cx, |runtime, _| runtime.focus_handle_at_index(index))
+                })
+            })
             .unwrap_or_else(|| {
                 let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
                     ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("focus")),
@@ -78,7 +82,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
 
         let state = context
             .as_ref()
-            .map(|context| context.tab_render_state(value.as_ref(), disabled, index, cx))
+            .map(|context| {
+                context.read(cx, |runtime, props| {
+                    runtime.tab_state(value.as_ref(), disabled, index, props.orientation())
+                })
+            })
             .unwrap_or_else(|| {
                 TabsTabRenderState::new(false, disabled, false, TabsOrientation::Horizontal)
             });
@@ -108,8 +116,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
                         return;
                     }
 
-                    context.highlight_tab(Some(index), cx);
-                    context.select_value(Some(value.clone()), window, cx);
+                    context.update(cx, |runtime| runtime.highlight_tab(Some(index)));
+                    context.select(Some(value.clone()), window, cx);
                 })
             })
     }
@@ -162,10 +170,8 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
         window: &mut Window,
         cx: &mut App,
     ) {
-        if let Some(value) = self.value.as_ref() {
-            context.register_tab(value.clone(), self.disabled, index, cx);
-        }
-
+        let value = self.value.clone();
+        let disabled = self.disabled;
         let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
             ElementId::NamedChild(Arc::new(self.id.clone()), SharedString::from("focus")),
             cx,
@@ -173,6 +179,12 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
         );
         let focus_handle = focus_handle_entity.read(cx).clone();
 
-        context.register_tab_focus_handle(index, focus_handle, cx);
+        context.update(cx, |runtime| {
+            if let Some(value) = value {
+                runtime.register_tab(value, disabled, index);
+            }
+
+            runtime.register_tab_focus_handle(index, focus_handle);
+        });
     }
 }

@@ -2,15 +2,9 @@ pub mod props;
 pub mod runtime;
 pub mod state;
 
-mod tabs_context;
-
 pub use props::{TabsOrientation, TabsProps, TabsValueChangeHandler};
-pub use runtime::{
-    TabsActivationDirection, TabsPanelMetadata, TabsRuntime, TabsTabMetadata, TabsTabPosition,
-    TabsTabSize,
-};
+pub use runtime::{TabsActivationDirection, TabsTabMetadata, TabsTabPosition, TabsTabSize};
 pub use state::{
     TabsIndicatorRenderState, TabsListRenderState, TabsPanelRenderState, TabsRootRenderState,
-    TabsState, TabsTabRenderState,
+    TabsTabRenderState,
 };
-pub use tabs_context::TabsContext;

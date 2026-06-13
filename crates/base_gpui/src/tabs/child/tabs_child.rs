@@ -34,27 +34,10 @@ impl<T: Clone + Eq + 'static> GenericChild<TabsContext<T>> for TabsChild<T> {
 }
 
 impl<T: Clone + Eq + 'static> TabsChild<T> {
-    pub fn map_panel(self, map: impl FnOnce(TabsPanel<T>) -> TabsPanel<T>) -> Self {
-        match self {
-            Self::Panel(panel) => Self::Panel(map(panel)),
-            child => child,
-        }
-    }
-
-    pub fn register_runtime(
-        &self,
-        panel_index: &mut usize,
-        context: &TabsContext<T>,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
+    pub fn register_runtime(&self, context: &TabsContext<T>, window: &mut Window, cx: &mut App) {
         match self {
             Self::List(list) => list.register_runtime(context, window, cx),
-            Self::Panel(panel) => {
-                panel.register_runtime(*panel_index, context, cx);
-                *panel_index += 1;
-            }
-            Self::Indicator(_) => {}
+            Self::Panel(_) | Self::Indicator(_) => {}
         }
     }
 }

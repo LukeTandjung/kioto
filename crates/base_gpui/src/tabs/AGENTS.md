@@ -1,8 +1,7 @@
 # Tabs Implementation Notes
 
 This file captures Tabs-specific implementation details for `crates/base_gpui/src/tabs`.
-
-Generic component architecture belongs in `docs/base-gpui-component-architecture.md`. Keep this file focused on Tabs behavior and local contracts.
+Generic component architecture belongs in `docs/base-gpui-component-architecture.md`; keep this file focused on Tabs behavior and local contracts.
 
 ## Component family
 
@@ -22,6 +21,23 @@ T: Clone + Eq + 'static
 
 Do not hard-code string or index values into the component model.
 
+## Public props and API surface
+
+`TabsRoot<T>` is the only part with root-level Tabs configuration:
+
+- `.value(...)`
+- `.default_value(...)`
+- `.on_value_change(...)`
+- `.orientation(...)`
+
+Do not add orientation props or setters to `TabsList`, `TabsTab`, `TabsPanel`, or `TabsIndicator`. Those parts receive orientation through injected `TabsContext<T>` / `TabsProps<T>` when deriving render state or handling keyboard behavior.
+
+Part-local props stay on their parts:
+
+- `TabsList<T>`: `activate_on_focus`, `loop_focus`
+- `TabsTab<T>`: `value`, `disabled`
+- `TabsPanel<T>`: `value`, `keep_mounted`
+
 ## Controlled value semantics
 
 `TabsRoot<T>` uses `Option<Option<T>>` for the controlled value prop:
@@ -34,32 +50,31 @@ This distinction is important. Do not collapse it.
 
 Behavior:
 
-- Controlled mode: caller passes `.value(...)`; interactions call `on_value_change(...)` but do not mutate internal selected value.
-- Uncontrolled mode: caller omits `.value(...)`; interactions call `on_value_change(...)` and mutate internal selected value.
-- `default_value(...)` initializes uncontrolled state.
+- Controlled mode: caller passes `.value(...)`; interactions call `on_value_change(...)` but do not mutate the source of truth.
+- Uncontrolled mode: caller omits `.value(...)`; interactions call `on_value_change(...)` and mutate runtime selection.
+- `default_value(...)` initializes uncontrolled selection.
 - If no uncontrolled default is provided, fallback selects the first enabled tab.
 - Controlled mode preserves externally supplied values even if disabled or missing.
 - Uncontrolled fallback uses registered tab metadata and falls back to first enabled tab or `None`.
 
 ## File layout
 
-Tabs follows the repo architecture:
+Tabs currently uses the runtime/context split from the component architecture, with some metadata/render-state files still nested until the directory-flattening step:
 
 ```text
 crates/base_gpui/src/tabs/
   actions.rs
+  context.rs          # TabsContext: entity plumbing + controlled/uncontrolled rule
+  runtime.rs          # TabsRuntime: selected value, tab metadata, transitions, queries
   child/
     tabs_child.rs
     tabs_list_child.rs
     context/
-      tabs_context.rs
       props/
         tabs_orientation.rs
         tabs_props.rs
       runtime/
         tabs_activation_direction.rs
-        tabs_panel_metadata.rs
-        tabs_runtime.rs
         tabs_tab_metadata.rs
         tabs_tab_position.rs
         tabs_tab_size.rs
@@ -68,7 +83,6 @@ crates/base_gpui/src/tabs/
         tabs_list_render_state.rs
         tabs_panel_render_state.rs
         tabs_root_render_state.rs
-        tabs_state.rs
         tabs_tab_render_state.rs
   layers/
     tabs_indicator.rs
@@ -78,34 +92,43 @@ crates/base_gpui/src/tabs/
     tabs_tab.rs
 ```
 
-## Context, props, state, runtime
+There is no `TabsState<T>` and no `GenericContext` usage in Tabs. The selected value lives in `TabsRuntime<T>`.
 
-`TabsContext<T>` wraps:
+## Context, props, runtime
+
+`TabsContext<T>` owns exactly the injection/plumbing facts:
 
 ```rust
-GenericContext<TabsState<T>, TabsProps<T>, TabsRuntime<T>>
+runtime: Entity<TabsRuntime<T>>
+props: Rc<TabsProps<T>>
+controlled: Rc<Option<Option<T>>>
 ```
 
-Tabs-specific behavior belongs on `TabsContext<T>`, not on `GenericContext`.
+It exposes three method shapes:
 
-`TabsProps<T>` owns injected stable props:
+- `read(...)`
+- `update(...)`
+- `select(...)`
+
+Do not grow Tabs vocabulary on `TabsContext<T>` (`register_tab`, `highlight_next_tab`, etc.). Tabs behavior belongs on `TabsRuntime<T>`.
+
+`TabsProps<T>` owns stable root props:
 
 - orientation,
 - `on_value_change`.
 
-`TabsState<T>` owns the primary selected value.
-
 `TabsRuntime<T>` owns Tabs-specific runtime facts:
 
+- uncontrolled selected value,
 - registered tab metadata,
-- registered panel metadata,
 - highlighted tab index,
 - selected-value sync bookkeeping,
 - activation direction bookkeeping,
 - measured tab bounds for indicator state,
-- tab focus handles for roving focus.
+- tab focus handles for roving focus,
+- initial-focus seeding.
 
-Registered panel metadata is intentionally retained even though panel visibility currently derives directly from selected value during rendering. It preserves a component-owned place for future panel-specific behavior.
+Tabs intentionally does **not** keep panel metadata. Panel visibility derives from the panel's local `value` and the runtime selected value.
 
 ## Typed child routing
 
@@ -133,15 +156,15 @@ Runtime registration is Tabs-specific and should remain explicit.
 Current registration flow:
 
 1. `TabsRoot<T>` creates `TabsContext<T>`.
-2. `TabsRoot<T>` clears registered tab/panel metadata.
-3. `TabsRoot<T>` traverses typed children and pre-registers metadata before fallback/render.
+2. `TabsRoot<T>` clears registered tab metadata.
+3. `TabsRoot<T>` traverses typed children and pre-registers tabs before fallback/render.
 4. `TabsList<T>` registers tab children only.
 5. `TabsTab<T>` registers tab metadata and its stable keyed `FocusHandle`.
-6. `TabsPanel<T>` registers panel metadata.
-7. `TabsRoot<T>` applies uncontrolled fallback after metadata registration.
+6. `TabsRoot<T>` applies uncontrolled fallback after tab metadata registration.
+
+`TabsPanel<T>` does not register runtime metadata.
 
 Do not move runtime mutation back into leaf render paths except through the established registration methods.
-
 Do not generalize runtime registration into `GenericChild`; metadata shapes differ by component.
 
 ## Selection and fallback
@@ -155,13 +178,15 @@ Selection behavior:
 - Automatic fallback has activation direction `None`.
 - Disabled or removed selected tabs trigger fallback only in uncontrolled mode.
 
-`TabsContext<T>` owns this behavior through methods such as:
+`TabsRuntime<T>` owns this behavior through methods such as:
 
-- `select_value(...)`
-- `select_highlighted_tab(...)`
-- `apply_automatic_fallback(...)`
+- `select(...)`
+- `apply_fallback(...)`
+- `move_highlight(...)`
 - `sync_activation_direction_with_selected_value(...)`
 - `sync_highlighted_tab_with_selected_value(...)`
+
+`TabsContext<T>::select(...)` is responsible for controlled/uncontrolled resolution and firing `on_value_change` after the runtime update returns its outcome.
 
 ## Keyboard and focus
 
@@ -224,7 +249,7 @@ Do not add DOM-style data attributes or CSS variables unless they become useful 
 Important details:
 
 - `TabsList<T>` filters bounds through `TabsListChild<T>` so only tab child bounds enter runtime.
-- Bounds are registered through `TabsContext<T>`.
+- Bounds are registered through `TabsRuntime<T>` via `TabsContext<T>::update(...)`.
 - `TabsRuntime<T>` derives active tab position and size.
 - `TabsIndicator<T>` exposes those values through `TabsIndicatorRenderState`.
 
@@ -238,6 +263,7 @@ Panel behavior:
 - `keep_mounted = false`: inactive panels are omitted.
 - `keep_mounted = true`: inactive panels remain mounted but hidden.
 - Panels receive hidden/orientation/activation direction via `TabsPanelRenderState`.
+- Panels do not register metadata in runtime.
 
 ## Base UI differences / intentionally dropped web details
 

@@ -1,8 +1,6 @@
 use gpui::TestAppContext;
 
-use super::support::{
-    debug_bounds, open_checkbox, read_observations, CheckboxTestConfig,
-};
+use super::support::{debug_bounds, open_checkbox, read_observations, CheckboxTestConfig};
 
 #[gpui::test]
 fn indicator_is_absent_by_default_when_unchecked(cx: &mut TestAppContext) {

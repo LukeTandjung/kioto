@@ -55,7 +55,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsIndicator<T> {
 
         let state = context
             .as_ref()
-            .map(|context| context.indicator_render_state(cx))
+            .map(|context| {
+                context.read(cx, |runtime, props| {
+                    runtime.indicator_state(props.orientation())
+                })
+            })
             .unwrap_or_else(|| {
                 TabsIndicatorRenderState::new(
                     false,

@@ -1,7 +1,5 @@
 mod checkbox_indicator_render_state;
 mod checkbox_root_render_state;
-mod checkbox_state;
 
 pub use checkbox_indicator_render_state::CheckboxIndicatorRenderState;
 pub use checkbox_root_render_state::CheckboxRootRenderState;
-pub use checkbox_state::CheckboxState;

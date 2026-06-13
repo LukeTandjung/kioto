@@ -48,47 +48,50 @@ impl<T: Clone + Eq + 'static> Styled for TabsRoot<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let is_controlled = self.value.is_some();
+        let orientation = self.orientation;
         let context = TabsContext::new(
             self.id,
             cx,
             window,
             self.value,
             self.default_value,
-            TabsProps::new(self.orientation, self.on_value_change),
+            TabsProps::new(orientation, self.on_value_change),
         );
 
-        context.clear_registered_metadata(cx);
-
-        let mut registered_panel_index = 0;
+        context.update(cx, |runtime| runtime.clear_registered_metadata());
 
         for child in &self.children {
-            child.register_runtime(&mut registered_panel_index, &context, window, cx);
+            child.register_runtime(&context, window, cx);
         }
 
-        context.apply_automatic_fallback(cx);
-        context.sync_activation_direction_with_selected_value(cx);
-        context.sync_highlighted_tab_with_selected_value(cx);
+        if !is_controlled {
+            context.update(cx, |runtime| runtime.apply_fallback());
+        }
+
+        context.update(cx, |runtime| {
+            runtime.sync_activation_direction_with_selected_value(orientation);
+            runtime.sync_highlighted_tab_with_selected_value();
+        });
 
         // Scoped tab key bindings only dispatch once focus is inside the tabs list.
         // Seed focus once from the synced highlighted tab so initial keyboard use works.
-        context.focus_highlighted_tab_once(window, cx);
+        let focus_handle = context.update(cx, |runtime| runtime.take_initial_focus_handle());
+        if let Some(focus_handle) = focus_handle {
+            focus_handle.focus(window, cx);
+        }
 
-        let render_state = context.root_render_state(cx);
+        let render_state =
+            context.read(cx, |runtime, props| runtime.root_state(props.orientation()));
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(render_state, self.base),
             None => self.base,
         };
-        let mut panel_index = 0;
-
-        base.children(self.children.into_iter().map(|child| {
-            child
-                .map_panel(|panel| {
-                    let panel = panel.index(panel_index);
-                    panel_index += 1;
-                    panel
-                })
-                .add_state_context(context.clone())
-        }))
+        base.children(
+            self.children
+                .into_iter()
+                .map(|child| child.add_state_context(context.clone())),
+        )
     }
 }
 

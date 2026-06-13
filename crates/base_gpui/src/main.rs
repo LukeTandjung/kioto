@@ -172,9 +172,11 @@ impl Render for TabsTest {
                                             .border_1()
                                             .style_with_state(|state, root| {
                                                 let root = if state.checked {
-                                                    root.bg(rgb(0x111827)).border_color(rgb(0x111827))
+                                                    root.bg(rgb(0x111827))
+                                                        .border_color(rgb(0x111827))
                                                 } else {
-                                                    root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
+                                                    root.bg(rgb(0xffffff))
+                                                        .border_color(rgb(0x9ca3af))
                                                 };
 
                                                 if state.disabled || state.read_only {
@@ -210,9 +212,11 @@ impl Render for TabsTest {
                                             .border_1()
                                             .style_with_state(|state, root| {
                                                 if state.checked {
-                                                    root.bg(rgb(0x2563eb)).border_color(rgb(0x2563eb))
+                                                    root.bg(rgb(0x2563eb))
+                                                        .border_color(rgb(0x2563eb))
                                                 } else {
-                                                    root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
+                                                    root.bg(rgb(0xffffff))
+                                                        .border_color(rgb(0x9ca3af))
                                                 }
                                             })
                                             .child(

@@ -1,0 +1,458 @@
+use gpui::{Bounds, FocusHandle, Pixels};
+
+use crate::tabs::{
+    TabsActivationDirection, TabsIndicatorRenderState, TabsListRenderState, TabsOrientation,
+    TabsPanelRenderState, TabsRootRenderState, TabsTabMetadata, TabsTabPosition,
+    TabsTabRenderState, TabsTabSize,
+};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Move {
+    First,
+    Last,
+    Next,
+    Previous,
+}
+
+pub struct SelectOutcome<T: Clone + Eq + 'static> {
+    changed: bool,
+    value: Option<T>,
+}
+
+impl<T: Clone + Eq + 'static> SelectOutcome<T> {
+    fn new(changed: bool, value: Option<T>) -> Self {
+        Self { changed, value }
+    }
+
+    pub fn changed(&self) -> bool {
+        self.changed
+    }
+
+    pub fn value(&self) -> Option<&T> {
+        self.value.as_ref()
+    }
+}
+
+#[derive(Clone)]
+pub struct TabsRuntime<T: Clone + Eq + 'static> {
+    selected: Option<T>,
+    tabs: Vec<TabsTabMetadata<T>>,
+    highlighted_tab_index: Option<usize>,
+    last_synced_selected_value: Option<Option<T>>,
+    activation_direction: TabsActivationDirection,
+    activation_previous_value: Option<Option<T>>,
+    tab_bounds: Vec<(usize, Bounds<Pixels>)>,
+    tab_focus_handles: Vec<(usize, FocusHandle)>,
+    has_seeded_initial_focus: bool,
+}
+
+impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
+    fn default() -> Self {
+        Self {
+            selected: None,
+            tabs: Vec::new(),
+            highlighted_tab_index: None,
+            last_synced_selected_value: None,
+            activation_direction: TabsActivationDirection::None,
+            activation_previous_value: None,
+            tab_bounds: Vec::new(),
+            tab_focus_handles: Vec::new(),
+            has_seeded_initial_focus: false,
+        }
+    }
+}
+
+impl<T: Clone + Eq + 'static> TabsRuntime<T> {
+    pub fn new(selected: Option<T>) -> Self {
+        Self {
+            selected,
+            ..Self::default()
+        }
+    }
+
+    pub fn selected_value(&self) -> Option<T> {
+        self.selected.clone()
+    }
+
+    pub fn sync_selected_from_context(&mut self, selected: Option<T>) {
+        self.selected = selected;
+    }
+
+    pub fn clear_registered_metadata(&mut self) {
+        self.tabs.clear();
+    }
+
+    pub fn register_tab(&mut self, value: T, disabled: bool, index: usize) {
+        let metadata = TabsTabMetadata::new(value, disabled, index);
+
+        match self.tabs.iter().position(|tab| tab.index() == index) {
+            Some(existing_index) => self.tabs[existing_index] = metadata,
+            None => self.tabs.push(metadata),
+        }
+
+        self.tabs.sort_by_key(TabsTabMetadata::index);
+    }
+
+    pub fn set_tab_bounds(&mut self, bounds: Vec<(usize, Bounds<Pixels>)>) -> bool {
+        if self.tab_bounds == bounds {
+            return false;
+        }
+
+        self.tab_bounds = bounds;
+        true
+    }
+
+    pub fn register_tab_focus_handle(&mut self, index: usize, focus_handle: FocusHandle) -> bool {
+        match self
+            .tab_focus_handles
+            .iter()
+            .position(|(tab_index, _)| *tab_index == index)
+        {
+            Some(existing_index) if self.tab_focus_handles[existing_index].1 == focus_handle => {
+                false
+            }
+            Some(existing_index) => {
+                self.tab_focus_handles[existing_index] = (index, focus_handle);
+                true
+            }
+            None => {
+                self.tab_focus_handles.push((index, focus_handle));
+                self.tab_focus_handles.sort_by_key(|(index, _)| *index);
+                true
+            }
+        }
+    }
+
+    pub fn focus_handle_at_index(&self, index: usize) -> Option<FocusHandle> {
+        self.tab_focus_handles
+            .iter()
+            .find(|(tab_index, _)| *tab_index == index)
+            .map(|(_, focus_handle)| focus_handle.clone())
+    }
+
+    pub fn take_initial_focus_handle(&mut self) -> Option<FocusHandle> {
+        if self.has_seeded_initial_focus {
+            return None;
+        }
+
+        self.has_seeded_initial_focus = true;
+        self.highlighted_focus_handle()
+    }
+
+    pub fn highlighted_value(&self) -> Option<T> {
+        self.highlighted_tab_index
+            .and_then(|index| self.enabled_value_at_index(index).cloned())
+    }
+
+    pub fn highlight_tab(&mut self, index: Option<usize>) {
+        self.highlighted_tab_index = index;
+    }
+
+    pub fn move_highlight(&mut self, direction: Move, loop_focus: bool) {
+        match direction {
+            Move::First => self.highlighted_tab_index = self.first_enabled_index(),
+            Move::Last => self.highlighted_tab_index = self.last_enabled_index(),
+            Move::Next => {
+                if let Some(index) = self.next_enabled_index(self.highlighted_tab_index, loop_focus)
+                {
+                    self.highlighted_tab_index = Some(index);
+                }
+            }
+            Move::Previous => {
+                if let Some(index) =
+                    self.previous_enabled_index(self.highlighted_tab_index, loop_focus)
+                {
+                    self.highlighted_tab_index = Some(index);
+                }
+            }
+        }
+    }
+
+    pub fn apply_fallback(&mut self) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
+        let fallback = match self.selected.as_ref() {
+            Some(value) if self.contains_enabled_value(value) => return,
+            _ => self.first_enabled_value(),
+        };
+
+        self.activation_direction = TabsActivationDirection::None;
+        self.activation_previous_value = Some(fallback.clone());
+        self.selected = fallback;
+    }
+
+    pub fn select(&mut self, value: Option<T>, orientation: TabsOrientation) -> SelectOutcome<T> {
+        let previous = self.selected.clone();
+        let changed = previous != value;
+
+        self.activation_direction =
+            self.direction_between(previous.as_ref(), value.as_ref(), orientation);
+        self.activation_previous_value = Some(previous);
+        self.selected = value.clone();
+
+        SelectOutcome::new(changed, value)
+    }
+
+    pub fn sync_activation_direction_with_selected_value(&mut self, orientation: TabsOrientation) {
+        let selected = self.selected.clone();
+        let Some(previous) = self.activation_previous_value.clone() else {
+            self.activation_direction = TabsActivationDirection::None;
+            self.activation_previous_value = Some(selected);
+            return;
+        };
+
+        if previous == selected {
+            return;
+        }
+
+        self.activation_direction =
+            self.direction_between(previous.as_ref(), selected.as_ref(), orientation);
+        self.activation_previous_value = Some(selected);
+    }
+
+    pub fn sync_highlighted_tab_with_selected_value(&mut self) {
+        let selected = self.selected.clone();
+
+        if self.last_synced_selected_value.as_ref() == Some(&selected) {
+            return;
+        }
+
+        self.highlighted_tab_index = selected
+            .as_ref()
+            .and_then(|value| self.index_of_enabled_value(value))
+            .or_else(|| self.first_enabled_index());
+        self.last_synced_selected_value = Some(selected);
+    }
+
+    pub fn root_state(&self, orientation: TabsOrientation) -> TabsRootRenderState {
+        TabsRootRenderState::new(orientation, self.activation_direction)
+    }
+
+    pub fn list_state(&self, orientation: TabsOrientation) -> TabsListRenderState {
+        TabsListRenderState::new(orientation, self.activation_direction)
+    }
+
+    pub fn tab_state(
+        &self,
+        value: Option<&T>,
+        disabled: bool,
+        index: Option<usize>,
+        orientation: TabsOrientation,
+    ) -> TabsTabRenderState {
+        let active = match (value, self.selected.as_ref()) {
+            (Some(value), Some(selected)) => value == selected,
+            _ => false,
+        };
+
+        TabsTabRenderState::new(
+            active,
+            disabled,
+            self.highlighted_tab_index == index,
+            orientation,
+        )
+    }
+
+    pub fn panel_state(
+        &self,
+        value: Option<&T>,
+        orientation: TabsOrientation,
+    ) -> TabsPanelRenderState {
+        let active = match (value, self.selected.as_ref()) {
+            (Some(value), Some(selected)) => value == selected,
+            _ => false,
+        };
+
+        TabsPanelRenderState::new(!active, orientation, self.activation_direction)
+    }
+
+    pub fn indicator_state(&self, orientation: TabsOrientation) -> TabsIndicatorRenderState {
+        let selected = self.selected.as_ref();
+
+        TabsIndicatorRenderState::new(
+            selected.is_some(),
+            self.active_tab_position(selected),
+            self.active_tab_size(selected),
+            orientation,
+            self.activation_direction,
+        )
+    }
+
+    fn highlighted_focus_handle(&self) -> Option<FocusHandle> {
+        self.highlighted_tab_index
+            .and_then(|index| self.focus_handle_at_index(index))
+    }
+
+    fn direction_between(
+        &self,
+        previous: Option<&T>,
+        next: Option<&T>,
+        orientation: TabsOrientation,
+    ) -> TabsActivationDirection {
+        let Some(previous) = previous else {
+            return TabsActivationDirection::None;
+        };
+        let Some(next) = next else {
+            return TabsActivationDirection::None;
+        };
+
+        let Some(previous_index) = self.index_of_value(previous) else {
+            return TabsActivationDirection::None;
+        };
+        let Some(next_index) = self.index_of_value(next) else {
+            return TabsActivationDirection::None;
+        };
+
+        match previous_index.cmp(&next_index) {
+            std::cmp::Ordering::Less => match orientation {
+                TabsOrientation::Horizontal => TabsActivationDirection::Right,
+                TabsOrientation::Vertical => TabsActivationDirection::Down,
+            },
+            std::cmp::Ordering::Greater => match orientation {
+                TabsOrientation::Horizontal => TabsActivationDirection::Left,
+                TabsOrientation::Vertical => TabsActivationDirection::Up,
+            },
+            std::cmp::Ordering::Equal => TabsActivationDirection::None,
+        }
+    }
+
+    fn active_tab_position(&self, selected: Option<&T>) -> Option<TabsTabPosition> {
+        let bounds = self.active_tab_bounds(selected)?;
+        let origin = self.tab_bounds_origin()?;
+
+        Some(TabsTabPosition::new(
+            bounds.left() - origin.0,
+            bounds.right() - origin.0,
+            bounds.top() - origin.1,
+            bounds.bottom() - origin.1,
+        ))
+    }
+
+    fn active_tab_size(&self, selected: Option<&T>) -> Option<TabsTabSize> {
+        let bounds = self.active_tab_bounds(selected)?;
+
+        Some(TabsTabSize::new(bounds.size.width, bounds.size.height))
+    }
+
+    fn first_enabled_index(&self) -> Option<usize> {
+        self.tabs
+            .iter()
+            .find(|tab| !tab.disabled())
+            .map(TabsTabMetadata::index)
+    }
+
+    fn last_enabled_index(&self) -> Option<usize> {
+        self.tabs
+            .iter()
+            .rev()
+            .find(|tab| !tab.disabled())
+            .map(TabsTabMetadata::index)
+    }
+
+    fn next_enabled_index(&self, current: Option<usize>, loop_focus: bool) -> Option<usize> {
+        let current = current.or_else(|| self.first_enabled_index())?;
+
+        self.tabs
+            .iter()
+            .find(|tab| !tab.disabled() && tab.index() > current)
+            .map(TabsTabMetadata::index)
+            .or_else(|| loop_focus.then(|| self.first_enabled_index()).flatten())
+    }
+
+    fn previous_enabled_index(&self, current: Option<usize>, loop_focus: bool) -> Option<usize> {
+        let current = current.or_else(|| self.first_enabled_index())?;
+
+        self.tabs
+            .iter()
+            .rev()
+            .find(|tab| !tab.disabled() && tab.index() < current)
+            .map(TabsTabMetadata::index)
+            .or_else(|| loop_focus.then(|| self.last_enabled_index()).flatten())
+    }
+
+    fn enabled_value_at_index(&self, index: usize) -> Option<&T> {
+        self.tabs
+            .iter()
+            .find(|tab| !tab.disabled() && tab.index() == index)
+            .map(TabsTabMetadata::value)
+    }
+
+    fn index_of_value(&self, value: &T) -> Option<usize> {
+        self.tabs
+            .iter()
+            .find(|tab| tab.value() == value)
+            .map(TabsTabMetadata::index)
+    }
+
+    fn index_of_enabled_value(&self, value: &T) -> Option<usize> {
+        self.tabs
+            .iter()
+            .find(|tab| !tab.disabled() && tab.value() == value)
+            .map(TabsTabMetadata::index)
+    }
+
+    fn first_enabled_value(&self) -> Option<T> {
+        self.tabs
+            .iter()
+            .find(|tab| !tab.disabled())
+            .map(|tab| tab.value().clone())
+    }
+
+    fn contains_enabled_value(&self, value: &T) -> bool {
+        self.tabs
+            .iter()
+            .any(|tab| !tab.disabled() && tab.value() == value)
+    }
+
+    fn active_tab_bounds(&self, selected: Option<&T>) -> Option<Bounds<Pixels>> {
+        let selected = selected?;
+        let index = self.index_of_value(selected)?;
+
+        self.tab_bounds
+            .iter()
+            .find(|(tab_index, _)| *tab_index == index)
+            .map(|(_, bounds)| *bounds)
+    }
+
+    fn tab_bounds_origin(&self) -> Option<(Pixels, Pixels)> {
+        let first = self.tab_bounds.first()?.1;
+
+        Some(
+            self.tab_bounds
+                .iter()
+                .fold((first.left(), first.top()), |origin, (_, bounds)| {
+                    (origin.0.min(bounds.left()), origin.1.min(bounds.top()))
+                }),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Move, TabsRuntime};
+    use crate::tabs::TabsOrientation;
+
+    #[test]
+    fn move_highlight_skips_disabled_tabs() {
+        let mut runtime = TabsRuntime::new(Some(1));
+
+        runtime.register_tab(1, false, 0);
+        runtime.register_tab(2, true, 1);
+        runtime.register_tab(3, false, 2);
+        runtime.highlight_tab(Some(0));
+
+        runtime.move_highlight(Move::Next, false);
+
+        assert!(
+            !runtime
+                .tab_state(Some(&1), false, Some(0), TabsOrientation::Horizontal)
+                .highlighted
+        );
+        assert!(
+            runtime
+                .tab_state(Some(&3), false, Some(2), TabsOrientation::Horizontal)
+                .highlighted
+        );
+    }
+}

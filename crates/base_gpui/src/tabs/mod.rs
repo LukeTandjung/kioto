@@ -1,6 +1,8 @@
 pub mod actions;
 pub mod child;
+pub mod context;
 pub mod layers;
+pub mod runtime;
 
 #[cfg(test)]
 mod tests;
@@ -11,11 +13,12 @@ pub use actions::{
 };
 pub use child::{
     context::{
-        TabsActivationDirection, TabsContext, TabsIndicatorRenderState, TabsListRenderState,
-        TabsOrientation, TabsPanelMetadata, TabsPanelRenderState, TabsProps, TabsRootRenderState,
-        TabsRuntime, TabsState, TabsTabMetadata, TabsTabPosition, TabsTabRenderState, TabsTabSize,
-        TabsValueChangeHandler,
+        TabsActivationDirection, TabsIndicatorRenderState, TabsListRenderState, TabsOrientation,
+        TabsPanelRenderState, TabsProps, TabsRootRenderState, TabsTabMetadata, TabsTabPosition,
+        TabsTabRenderState, TabsTabSize, TabsValueChangeHandler,
     },
     TabsChild, TabsListChild,
 };
+pub use context::TabsContext;
 pub use layers::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab};
+pub use runtime::{Move, SelectOutcome, TabsRuntime};

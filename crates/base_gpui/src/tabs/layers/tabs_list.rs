@@ -8,9 +8,9 @@ use gpui::{
 use crate::{
     api::GenericChild,
     tabs::{
-        TabsActivateHighlighted, TabsContext, TabsListChild, TabsListRenderState, TabsOrientation,
-        TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft, TabsSelectRight,
-        TabsSelectUp, TABS_LIST_KEY_CONTEXT,
+        Move, TabsActivateHighlighted, TabsContext, TabsListChild, TabsListRenderState,
+        TabsOrientation, TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft,
+        TabsSelectRight, TabsSelectUp, TABS_LIST_KEY_CONTEXT,
     },
 };
 
@@ -46,9 +46,15 @@ impl<T: Clone + Eq + 'static> Styled for TabsList<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let context = self.context;
-        let render_state = context
+        let (render_state, orientation) = context
             .as_ref()
-            .map(|context| context.list_render_state(_cx));
+            .map(|context| {
+                context.read(_cx, |runtime, props| {
+                    let orientation = props.orientation();
+                    (Some(runtime.list_state(orientation)), orientation)
+                })
+            })
+            .unwrap_or((None, TabsOrientation::Horizontal));
         let child_tab_indices = {
             let mut tab_index = 0;
 
@@ -91,7 +97,9 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                     .filter_map(|(bounds, index)| index.map(|index| (index, bounds)))
                     .collect();
 
-                context.register_tab_bounds(tab_bounds, cx);
+                context.update(cx, |runtime| {
+                    runtime.set_tab_bounds(tab_bounds);
+                });
             }
         })
         .id("tabs-list")
@@ -102,14 +110,17 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 return;
             };
 
-            if context.props().orientation() != TabsOrientation::Horizontal {
+            if orientation != TabsOrientation::Horizontal {
                 return;
             }
 
-            context.highlight_previous_tab(loop_focus, cx);
+            context.update(cx, |runtime| {
+                runtime.move_highlight(Move::Previous, loop_focus);
+            });
 
             if activate_on_focus {
-                context.select_highlighted_tab(window, cx);
+                let value = context.read(cx, |runtime, _| runtime.highlighted_value());
+                context.select(value, window, cx);
             }
         })
         .on_action(move |_: &TabsSelectRight, window, cx| {
@@ -117,14 +128,17 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 return;
             };
 
-            if context.props().orientation() != TabsOrientation::Horizontal {
+            if orientation != TabsOrientation::Horizontal {
                 return;
             }
 
-            context.highlight_next_tab(loop_focus, cx);
+            context.update(cx, |runtime| {
+                runtime.move_highlight(Move::Next, loop_focus);
+            });
 
             if activate_on_focus {
-                context.select_highlighted_tab(window, cx);
+                let value = context.read(cx, |runtime, _| runtime.highlighted_value());
+                context.select(value, window, cx);
             }
         })
         .on_action(move |_: &TabsSelectUp, window, cx| {
@@ -132,14 +146,17 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 return;
             };
 
-            if context.props().orientation() != TabsOrientation::Vertical {
+            if orientation != TabsOrientation::Vertical {
                 return;
             }
 
-            context.highlight_previous_tab(loop_focus, cx);
+            context.update(cx, |runtime| {
+                runtime.move_highlight(Move::Previous, loop_focus);
+            });
 
             if activate_on_focus {
-                context.select_highlighted_tab(window, cx);
+                let value = context.read(cx, |runtime, _| runtime.highlighted_value());
+                context.select(value, window, cx);
             }
         })
         .on_action(move |_: &TabsSelectDown, window, cx| {
@@ -147,14 +164,17 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 return;
             };
 
-            if context.props().orientation() != TabsOrientation::Vertical {
+            if orientation != TabsOrientation::Vertical {
                 return;
             }
 
-            context.highlight_next_tab(loop_focus, cx);
+            context.update(cx, |runtime| {
+                runtime.move_highlight(Move::Next, loop_focus);
+            });
 
             if activate_on_focus {
-                context.select_highlighted_tab(window, cx);
+                let value = context.read(cx, |runtime, _| runtime.highlighted_value());
+                context.select(value, window, cx);
             }
         })
         .on_action(move |_: &TabsSelectFirst, window, cx| {
@@ -162,10 +182,13 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 return;
             };
 
-            context.highlight_first_tab(cx);
+            context.update(cx, |runtime| {
+                runtime.move_highlight(Move::First, loop_focus);
+            });
 
             if activate_on_focus {
-                context.select_highlighted_tab(window, cx);
+                let value = context.read(cx, |runtime, _| runtime.highlighted_value());
+                context.select(value, window, cx);
             }
         })
         .on_action(move |_: &TabsSelectLast, window, cx| {
@@ -173,10 +196,13 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 return;
             };
 
-            context.highlight_last_tab(cx);
+            context.update(cx, |runtime| {
+                runtime.move_highlight(Move::Last, loop_focus);
+            });
 
             if activate_on_focus {
-                context.select_highlighted_tab(window, cx);
+                let value = context.read(cx, |runtime, _| runtime.highlighted_value());
+                context.select(value, window, cx);
             }
         })
         .on_action(move |_: &TabsActivateHighlighted, window, cx| {
@@ -184,7 +210,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 return;
             };
 
-            context.select_highlighted_tab(window, cx);
+            let value = context.read(cx, |runtime, _| runtime.highlighted_value());
+            context.select(value, window, cx);
         })
         .children({
             let mut tab_index = 0;
