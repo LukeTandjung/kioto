@@ -59,31 +59,16 @@ Behavior:
 
 ## File layout
 
-Tabs currently uses the runtime/context split from the component architecture, with some metadata/render-state files still nested until the directory-flattening step:
+Tabs uses the runtime/context split from the component architecture:
 
 ```text
 crates/base_gpui/src/tabs/
   actions.rs
+  child.rs            # TabsChild and TabsListChild typed routing
   context.rs          # TabsContext: entity plumbing + controlled/uncontrolled rule
+  props.rs            # TabsOrientation, TabsProps, callback type
+  render_state.rs     # render-state structs for all drawing parts
   runtime.rs          # TabsRuntime: selected value, tab metadata, transitions, queries
-  child/
-    tabs_child.rs
-    tabs_list_child.rs
-    context/
-      props/
-        tabs_orientation.rs
-        tabs_props.rs
-      runtime/
-        tabs_activation_direction.rs
-        tabs_tab_metadata.rs
-        tabs_tab_position.rs
-        tabs_tab_size.rs
-      state/
-        tabs_indicator_render_state.rs
-        tabs_list_render_state.rs
-        tabs_panel_render_state.rs
-        tabs_root_render_state.rs
-        tabs_tab_render_state.rs
   layers/
     tabs_indicator.rs
     tabs_list.rs
@@ -147,7 +132,7 @@ Tabs intentionally does **not** keep panel metadata. Panel visibility derives fr
 - `TabsTab<T>`
 - `TabsIndicator<T>`
 
-Typed child-routing enums belong under `tabs/child/`, not `tabs/layers/`.
+Typed child-routing enums belong in `tabs/child.rs`, not `tabs/layers/`.
 
 ## Runtime registration
 

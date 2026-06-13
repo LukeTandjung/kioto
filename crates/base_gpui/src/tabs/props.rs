@@ -2,7 +2,11 @@ use std::rc::Rc;
 
 use gpui::{App, Window};
 
-use super::TabsOrientation;
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TabsOrientation {
+    Horizontal,
+    Vertical,
+}
 
 pub type TabsValueChangeHandler<T> = Rc<dyn Fn(Option<&T>, &mut Window, &mut App) + 'static>;
 

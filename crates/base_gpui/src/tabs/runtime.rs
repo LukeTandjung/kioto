@@ -1,10 +1,79 @@
 use gpui::{Bounds, FocusHandle, Pixels};
 
 use crate::tabs::{
-    TabsActivationDirection, TabsIndicatorRenderState, TabsListRenderState, TabsOrientation,
-    TabsPanelRenderState, TabsRootRenderState, TabsTabMetadata, TabsTabPosition,
-    TabsTabRenderState, TabsTabSize,
+    TabsIndicatorRenderState, TabsListRenderState, TabsOrientation, TabsPanelRenderState,
+    TabsRootRenderState, TabsTabRenderState,
 };
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum TabsActivationDirection {
+    #[default]
+    None,
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+#[derive(Clone)]
+pub struct TabsTabMetadata<T: Clone + Eq + 'static> {
+    value: T,
+    disabled: bool,
+    index: usize,
+}
+
+impl<T: Clone + Eq + 'static> TabsTabMetadata<T> {
+    pub fn new(value: T, disabled: bool, index: usize) -> Self {
+        Self {
+            value,
+            disabled,
+            index,
+        }
+    }
+
+    pub fn value(&self) -> &T {
+        &self.value
+    }
+
+    pub fn disabled(&self) -> bool {
+        self.disabled
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TabsTabPosition {
+    pub left: Pixels,
+    pub right: Pixels,
+    pub top: Pixels,
+    pub bottom: Pixels,
+}
+
+impl TabsTabPosition {
+    pub fn new(left: Pixels, right: Pixels, top: Pixels, bottom: Pixels) -> Self {
+        Self {
+            left,
+            right,
+            top,
+            bottom,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TabsTabSize {
+    pub width: Pixels,
+    pub height: Pixels,
+}
+
+impl TabsTabSize {
+    pub fn new(width: Pixels, height: Pixels) -> Self {
+        Self { width, height }
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Move {

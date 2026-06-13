@@ -46,21 +46,16 @@ Behavior:
 
 ## File layout
 
-Checkbox currently uses the runtime/context split from the component architecture, with props/render-state files still nested until the directory-flattening step:
+Checkbox uses the runtime/context split from the component architecture:
 
 ```text
 crates/base_gpui/src/checkbox/
   actions.rs
+  child.rs            # CheckboxChild typed routing
   context.rs          # CheckboxContext: entity plumbing + controlled/uncontrolled rule
+  props.rs            # CheckboxProps and callback type
+  render_state.rs     # root and indicator render-state structs
   runtime.rs          # CheckboxRuntime: checked value, focus state, commands, queries
-  child/
-    checkbox_child.rs
-    context/
-      props/
-        checkbox_props.rs
-      state/
-        checkbox_indicator_render_state.rs
-        checkbox_root_render_state.rs
   layers/
     checkbox_indicator.rs
     checkbox_root.rs
@@ -101,7 +96,7 @@ Do not grow Checkbox rendering logic on `CheckboxContext`. Checkbox behavior bel
 
 - `CheckboxIndicator`
 
-Typed child-routing enums belong under `checkbox/child/`, not `checkbox/layers/`.
+Typed child-routing enums belong in `checkbox/child.rs`, not `checkbox/layers/`.
 
 ## Activation and focus
 
