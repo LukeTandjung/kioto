@@ -46,7 +46,9 @@ let focused = focus_handle.is_focused(window);
 If styling needs focus state, sync it into runtime/render state:
 
 ```rust
-context.sync_focused(focus_handle.is_focused(window), cx);
+context.update(cx, |runtime| {
+    runtime.sync_focused(focus_handle.is_focused(window));
+});
 ```
 
 ## Programmatic focus

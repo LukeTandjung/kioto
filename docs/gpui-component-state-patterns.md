@@ -73,31 +73,25 @@ Rules:
 - Mutate with `entity.update(cx, |state, cx| { ... })`.
 - Call `cx.notify()` after mutations that should re-render.
 
-## 3. Element-owned keyed state
+## 3. Element-owned keyed runtime
 
 Use this for compound component internals that should persist while the element remains keyed in the rendered element tree.
 
-"Rendered element tree" means the GPUI elements produced by a view's `render(...)` method for a window frame. The state is tied to an element ID in that rendered tree, not to a standalone view struct.
+"Rendered element tree" means the GPUI elements produced by a view's `render(...)` method for a window frame. The runtime is tied to an element ID in that rendered tree, not to a standalone view struct.
 
-Create keyed state during `RenderOnce::render(...)` with `window.use_keyed_state(...)`:
-
-```rust
-let state: Entity<CheckboxState> = window.use_keyed_state(
-    id.clone(),
-    cx,
-    |_, _| CheckboxState::new(default),
-);
-```
-
-Create separate keyed state for related internals with `ElementId::NamedChild(...)`:
+Create keyed runtime during `RenderOnce::render(...)` with `window.use_keyed_state(...)`:
 
 ```rust
 let runtime: Entity<CheckboxRuntime> = window.use_keyed_state(
-    ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("runtime")),
+    id.clone(),
     cx,
-    |_, _| CheckboxRuntime::new(),
+    |_, _| CheckboxRuntime::new(default_checked),
 );
+```
 
+Use `ElementId::NamedChild(...)` for additional keyed facts attached to one component part:
+
+```rust
 let focus: Entity<FocusHandle> = window.use_keyed_state(
     ElementId::NamedChild(Arc::new(id), SharedString::from("focus")),
     cx,
@@ -108,10 +102,10 @@ let focus: Entity<FocusHandle> = window.use_keyed_state(
 Read/update the returned entity like any other entity:
 
 ```rust
-let checked = state.read(cx).get_value().copied().unwrap_or(false);
+let checked = runtime.read(cx).checked();
 
-state.update(cx, |state, cx| {
-    state.set_value(Some(true));
+runtime.update(cx, |runtime, cx| {
+    runtime.toggle(false, false);
     cx.notify();
 });
 ```
@@ -119,58 +113,72 @@ state.update(cx, |state, cx| {
 Rules:
 
 - The `ElementId` must be stable across renders.
-- Use named child IDs for separate per-part state, e.g. `runtime`, `focus`.
+- Use named child IDs for additional per-part state, e.g. `focus`.
 - Use this when the caller should not have to create/pass an `Entity` manually.
-- This pattern powers `GenericContext<State, Props, Runtime>`.
+- Prefer one component runtime entity over split state/runtime entities.
+- Do not reintroduce `GenericContext` / `GenericState`; inline small context plumbing per component.
 
 ## Controlled vs uncontrolled state
 
-For Base UI-style components, use this split:
+For Base UI-style components, keep this split:
 
 ```text
 controlled value snapshot = caller-provided source of truth for this render
-state entity              = internal uncontrolled value
+runtime                   = internal value + component metadata + derived transition state
 props                     = current render config/callbacks
-runtime                   = derived internal metadata
 ```
 
 Behavior:
 
-- Controlled: read the external value, call callbacks, do not mutate internal value as source of truth.
-- Uncontrolled: read/mutate internal keyed state and call callbacks.
+- Controlled: reconcile the runtime to the external value for this render, call callbacks, and do not mutate the runtime as source of truth.
+- Uncontrolled: read/mutate the runtime value and call callbacks.
+- Props are immutable render inputs; do not put runtime state in props.
 
 Example:
 
 ```rust
-pub fn request_toggle(&self, window: &mut Window, cx: &mut App) {
-    if self.inner.props().disabled() || self.inner.props().read_only() {
-        return;
-    }
+pub fn toggle(&self, window: &mut Window, cx: &mut App) {
+    let controlled = *self.controlled.as_ref();
+    let props = Rc::clone(&self.props);
+    let outcome = self.runtime.update(cx, |runtime, cx| {
+        let current = controlled.unwrap_or_else(|| runtime.checked_value());
 
-    let next = !self.checked(cx);
-    self.inner.set_state(Some(next), cx, |props, value, cx| {
-        if let (Some(on_change), Some(value)) = (props.on_checked_change(), value) {
-            on_change(*value, window, cx);
+        runtime.sync_checked_from_context(current);
+        let outcome = runtime.toggle(props.disabled(), props.read_only());
+
+        if controlled.is_some() {
+            runtime.sync_checked_from_context(current);
         }
+
+        cx.notify();
+        outcome
     });
+
+    if outcome.changed() {
+        if let Some(on_change) = self.props.on_checked_change() {
+            on_change(outcome.checked(), window, cx);
+        }
+    }
 }
 ```
 
-## State vs props vs runtime vs render state
+The callback fires after the entity update returns, not inside the `Entity::update(...)` closure.
+
+## Props vs runtime vs render state
 
 Keep these distinct:
 
 | Kind | Meaning | Example |
 |---|---|---|
-| State | Primary value | checkbox `checked`, tabs selected value |
 | Props | Current render config/callbacks | `disabled`, `orientation`, `on_change` |
-| Runtime | Internal derived metadata | tab bounds, highlighted index, focus flag |
+| Runtime | Internal value, metadata, derived transitions | checkbox `checked`, tabs selected value, tab bounds, focused flag |
 | Render state | Public styling snapshot | `checked`, `focused`, `active`, `hidden` |
 
 Render state is not persistent state. It is computed for styling/render decisions.
 
 ## Related docs
 
+- `docs/base-gpui-component-architecture.md`
 - `docs/gpui-element-id.md`
 - `docs/gpui-focus.md`
 - `docs/gpui-keyboard-actions.md`

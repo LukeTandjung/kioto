@@ -1,6 +1,6 @@
 # GPUI `ElementId`
 
-`ElementId` gives a rendered element a stable identity. It is also used for keyed state.
+`ElementId` gives a rendered element a stable identity. It is also used for keyed runtime state.
 
 ## Root ID
 
@@ -26,32 +26,33 @@ pub fn id(mut self, id: impl Into<ElementId>) -> Self {
 }
 ```
 
-## Keyed state
+## Keyed runtime
 
 Use stable IDs with `window.use_keyed_state(...)`:
 
 ```rust
-let state = window.use_keyed_state(id.clone(), cx, |_, _| CheckboxState::new(default));
+let runtime = window.use_keyed_state(id.clone(), cx, |_, _| CheckboxRuntime::new(default));
 ```
 
-If the ID changes, GPUI treats it as different state.
+If the ID changes, GPUI treats it as different runtime state.
 
 ## Named child IDs
 
-Use `ElementId::NamedChild(...)` for separate state attached to one component part:
+Use `ElementId::NamedChild(...)` for additional state attached to one component part:
 
 ```rust
-let runtime = window.use_keyed_state(
-    ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("runtime")),
+let focus = window.use_keyed_state(
+    ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("focus")),
     cx,
-    |_, _| CheckboxRuntime::new(),
+    |_, cx| cx.focus_handle(),
 );
 ```
 
 Common names:
 
-- `"runtime"` for component runtime metadata;
 - `"focus"` for a stable `FocusHandle`.
+
+Prefer one keyed component runtime entity at the root ID; use named child IDs only for separate GPUI handles or facts with an independent lifecycle.
 
 ## Rules
 

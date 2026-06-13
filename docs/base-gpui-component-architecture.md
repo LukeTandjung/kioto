@@ -1,154 +1,163 @@
 # `base_gpui` Component Architecture
 
-This document describes the generic architecture for compound GPUI components in `crates/base_gpui`.
+This document describes the architecture for compound GPUI components in `crates/base_gpui`.
 
-The main design goal is to separate:
+The public API surface of each component mirrors Base UI: compound part composition
+(`Root` / `List` / `Tab` / ...), `value` / `default_value` / `on_value_change`
+controlled-uncontrolled props, and state-aware styling via `style_with_state`.
+The internals do **not** mirror Base UI's React internals — React idioms such as
+effect-based prop diffing are compensations for React's render model and must not be
+ported into GPUI's immediate-mode render.
 
-1. reusable generic mechanics,
-2. component-specific behavior/state/runtime,
-3. renderable GPUI layers.
+## Design rule
 
-Component-specific details belong near the component, for example in `crates/base_gpui/src/<component>/AGENTS.md`.
+Modules are carved by **knowledge**, not by widget. All knowledge in a compound
+component (what children exist, what is selected, what is highlighted, how
+transitions are derived) is one entangled body of knowledge, so it lives in **one
+deep module per component**. The renderable parts are peers — views of the same
+runtime — arranged hub-and-spoke around it, not in layers.
+
+Per component there are exactly three kinds of module:
+
+| Module | Depth | Responsibility |
+|---|---|---|
+| `<Component>Runtime<T>` | deep | all state, all business logic |
+| `<Component>Context<T>` | thin | injection vehicle: entity plumbing + controlled/uncontrolled rule |
+| Parts (`Root`, `List`, ...) | thin | GPUI adapters: input events → commands, queries → styles |
+
+```text
+parts (peers, thin)          injection (thin)         business logic (deep)
+ComponentRoot ─────┐
+ComponentList ─────┤
+ComponentPart ─────┼──→  ComponentContext<T>  ──→  ComponentRuntime<T>
+ComponentPanel ────┘     Entity<Runtime>             all state, all rules
+                         + Rc<Props>
+                         + controlled marker
+```
 
 ## Directory shape
 
-Reusable primitives live under `api`:
-
-```text
-crates/base_gpui/src/api/
-  child/
-    generic_child.rs
-    context/
-      generic_context.rs
-      state/generic_state.rs
-```
-
-A component owns its own folder:
-
 ```text
 crates/base_gpui/src/<component>/
-  AGENTS.md                  # component-specific implementation notes
-  actions.rs                 # optional GPUI key dispatch actions/bindings
-  child/
-    <component>_child.rs      # typed compound child enum
-    context/
-      <component>_context.rs  # component-specific context wrapper
-      props/                  # public/injected props
-      runtime/                # runtime metadata and derived runtime state
-      state/                  # selected/open/etc. state container
-  layers/                     # renderable GPUI elements only
+  mod.rs
+  actions.rs        # optional GPUI key dispatch actions/bindings
+  runtime.rs        # ComponentRuntime + metadata structs + command enums/outcomes
+  context.rs        # ComponentContext
+  props.rs          # injected props/callbacks/config
+  render_state.rs   # render-state structs (one per part that draws)
+  child.rs          # typed child enums + walk_children
+  layers/           # renderable GPUI parts only
+  tests/
 ```
 
-## Layer responsibilities
+Do not nest `child/context/{props,runtime,state}/` taxonomies. One file per concept,
+directly under the component folder.
 
-### `GenericState`
+Reusable primitives live under `api/` and stay minimal: `GenericChild<C>` plus any
+shared keyed-entity / controlled-resolution helper that contexts share. If a shared
+helper is trivially small, inline it per-context instead.
 
-`GenericState` is the minimal reusable interface for state containers used by `GenericContext`.
+## The runtime (deep module)
 
-It should only describe generic state mechanics, such as:
+`ComponentRuntime<T>` is one struct that owns **all** component state: child
+metadata, uncontrolled selection, highlight, derived transition state (e.g.
+activation direction), measured bounds, focus handles. It uses plain `&mut self` /
+`&self` methods, no GPUI entity types, and is unit-testable without a window.
 
-- constructing state from an optional default value,
-- reading the current value,
-- setting the current value.
+Its interface has exactly two vocabularies:
 
-Component-specific behavior does not belong here.
-
-### `GenericContext<S, P, R>`
-
-`GenericContext` is the reusable storage/mechanics layer.
-
-It owns:
-
-- controlled vs uncontrolled state resolution,
-- keyed GPUI state entity creation,
-- keyed GPUI runtime entity creation,
-- generic state mutation,
-- generic runtime mutation,
-- generic props access.
-
-It should expose only generic mechanics like:
+**Commands** — one method per thing-that-can-happen, named in domain language:
 
 ```rust
-get_state
-set_state
-set_state_silent
-get_runtime
-set_runtime
-is_controlled
-props
+fn sync_children(&mut self, tabs: Vec<TabMeta<T>>, panels: Vec<PanelMeta<T>>);
+fn reconcile(&mut self, observed: Option<T>);
+fn select(&mut self, value: Option<T>) -> SelectOutcome<T>;
+fn move_highlight(&mut self, direction: Move, loop_focus: bool);
+fn set_bounds(&mut self, bounds: Vec<(usize, Bounds<Pixels>)>) -> bool;
+fn register_focus_handle(&mut self, index: usize, handle: FocusHandle) -> bool;
 ```
 
-It should not expose component-specific operations like:
+**Queries** — one method per part-that-draws, returning render-state structs:
 
 ```rust
-select_item
-register_item
-highlight_item
-apply_component_fallback
+fn root_state(&self) -> ComponentRootRenderState;
+fn part_state(&self, value: Option<&T>, /* part-local facts */) -> ComponentPartRenderState;
 ```
 
-Those belong on the component context wrapper.
+Rules:
 
-### Component context wrapper
+- No getter/setter pairs. A getter/setter pair is state escaping the module.
+- No query answers "what is the highlighted index?" — only "am I highlighted?".
+  Parts ask part-shaped questions and emit event-shaped commands.
+- Every transition (direction, highlight sync, fallback) is computed inside the
+  runtime, once. Do not keep shadow copies of values to detect changes by diffing;
+  `reconcile` is the single transition-resolution point.
+- `select` returns an outcome describing what changed so the caller can fire
+  callbacks; the runtime itself never calls user callbacks.
 
-Each component should define a wrapper around `GenericContext`:
+## The context (injection vehicle)
 
 ```rust
 pub struct ComponentContext<T: Clone + Eq + 'static> {
-    inner: GenericContext<ComponentState<T>, ComponentProps<T>, ComponentRuntime<T>>,
+    runtime: Entity<ComponentRuntime<T>>,  // keyed GPUI state
+    props: Rc<ComponentProps<T>>,
+    controlled: Rc<Option<Option<T>>>,
 }
 ```
 
-This wrapper is where component-specific behavior belongs.
-
-Typical responsibilities include:
-
-- interpreting selected/open/active values,
-- applying uncontrolled fallback semantics,
-- syncing derived runtime state with controlled props,
-- registering component-specific metadata,
-- navigating highlighted/focused items,
-- exposing component-specific render-state helpers,
-- hiding direct generic runtime mutation behind component vocabulary.
-
-The component context may call `inner.get_runtime(...)` and `inner.set_runtime(...)`, but callers outside the context should prefer component-specific methods instead of mutating runtime directly.
-
-Do not add component-specific inherent impls to `GenericContext<SpecificState, SpecificProps, SpecificRuntime>`. Such impls are globally visible and blur generic vs component responsibility.
-
-### `GenericChild<C>`
-
-`GenericChild<C>` only means:
+Methods, exactly three shapes:
 
 ```rust
-pub trait GenericChild<C>: IntoElement {
-    fn add_state_context(self, context: C) -> Self;
-}
+fn read<O>(&self, cx: &App, f: impl FnOnce(&ComponentRuntime<T>, &ComponentProps<T>) -> O) -> O;
+fn update<O>(&self, cx: &mut App, f: impl FnOnce(&mut ComponentRuntime<T>) -> O) -> O; // notifies
+fn select(&self, value: Option<T>, window: &mut Window, cx: &mut App); // or toggle for boolean components
 ```
 
-It is intentionally unbounded. Do not require `C` to expose or contain `GenericContext`.
+The value-changing method (`select`, `toggle`, etc.) is the one non-trivial method:
+it resolves controlled vs uncontrolled, calls the runtime command, and fires the
+props callback based on the outcome. The controlled/uncontrolled rule lives here
+(and in what value is passed to `reconcile`) — nowhere else.
 
-Reason: child context injection should not leak how a context is implemented internally. A component child should receive the component wrapper context, not the raw generic context.
+The context must never grow component vocabulary (`register_tab`,
+`highlight_next_tab`, ...). Those names belong on the runtime, where they take
+`&mut self` and related state sits behind one borrow.
 
-Good shape:
+## Parts (renderable layers)
+
+Files under `layers/` are GPUI renderable pieces. A part's `render` does only two
+things:
+
+1. translate GPUI input events into context commands
+   (`context.update(cx, |m| m.move_highlight(...))`),
+2. call one query and feed the result to `style_with_state`.
+
+Parts never see runtime internals — render-state structs and commands only.
+
+The root is the single mutation site outside event handlers:
 
 ```rust
-impl<T: Clone + Eq + 'static> GenericChild<ComponentContext<T>> for ComponentPart<T> {
-    fn add_state_context(mut self, context: ComponentContext<T>) -> Self {
-        self.context = Some(context);
-        self
-    }
+fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+    let context = ComponentContext::new(...);
+
+    let (metadata, indexed_children) = walk_children(self.children);
+    context.update(cx, |runtime| {
+        runtime.sync_children(metadata);
+        runtime.reconcile(/* controlled value or uncontrolled current */);
+    });
+    context.seed_initial_focus(window, cx);
+
+    // pure rendering from here: inject context, style via root_state
 }
 ```
 
-Avoid injecting `GenericContext<ComponentState<T>, ComponentProps<T>, ComponentRuntime<T>>` directly into component children.
+`walk_children` (in `child.rs`) is the only function that knows which children
+count as which part and assigns indices. It returns both the metadata for
+`sync_children` and the indexed children for rendering. No index counter may be
+threaded through child enums or recomputed in a part.
 
-`GenericChild` should not grow runtime registration APIs. Registration shapes are component-specific and should remain on component-owned types/context methods until multiple components prove a common abstraction.
+## Typed child enums
 
-### Typed compound child enums
-
-Compound roots should keep typed children before GPUI erases elements to `AnyElement`.
-
-Generic shape:
+Compound roots keep typed children before GPUI erases elements to `AnyElement`:
 
 ```rust
 pub enum ComponentChild<T: Clone + Eq + 'static> {
@@ -157,214 +166,105 @@ pub enum ComponentChild<T: Clone + Eq + 'static> {
 }
 ```
 
-This allows the root to pre-register metadata and inject context before rendering.
+Their only jobs: typed composition, context injection (`GenericChild`), and being
+walkable by `walk_children`. They must not carry registration traversal or index
+bookkeeping. Nested compound layers may define their own constrained child enums in
+`child.rs`.
 
-Child enums are responsible for routing operations across variants, for example:
-
-- context injection,
-- child indexing,
-- component-specific runtime registration traversal,
-- constrained child sets for nested compound layers.
-
-Nested compound layers can define their own typed child enums under `child/` when they need a constrained child set.
-
-Typed child-routing enums are not renderable layers. Keep them under `child/`, not `layers/`.
-
-### Props
-
-Component props are injected into the component context and should hold stable configuration/callbacks needed by child layers.
-
-Props may include:
-
-- orientation/configuration,
-- controlled callback handlers,
-- behavior flags,
-- stable public configuration needed across children.
-
-Props should not own runtime metadata. Runtime metadata belongs in runtime.
-
-### State
-
-Component state is the primary selected/open/active value that participates in controlled/uncontrolled semantics.
-
-State should be small and generic enough to satisfy `GenericState`:
-
-- `new(default)`
-- `get_value()`
-- `set_value(...)`
-
-Derived state and registered metadata belong in runtime, not primary state.
-
-### Runtime
-
-Runtime stores component-specific metadata and derived runtime state that is not the primary selected/open value.
-
-Runtime may own:
-
-- registered child metadata,
-- child ordering,
-- highlighted/focused indices,
-- activation direction bookkeeping,
-- measurement/cache data,
-- GPUI handles needed by component behavior.
-
-Runtime shape is component-specific. Do not force a generic runtime registration abstraction until multiple components prove the same shape.
-
-### Renderable layers
-
-Files under `layers/` are GPUI renderable pieces.
-
-Typical responsibilities:
-
-- Root creates the component context, pre-registers metadata, applies fallback, and injects context.
-- Composite containers render child groups and own relevant key contexts/actions.
-- Leaf parts render interactive or visual elements and know their own metadata.
-- Visual helpers render purely visual layers while reading component render state.
-
-Renderable layers may know their own metadata, but should route runtime insertion through the component context.
-
-Good shape:
+## `GenericChild<C>`
 
 ```rust
-impl<T: Clone + Eq + 'static> ComponentPart<T> {
-    pub fn register_runtime(&self, index: usize, context: &ComponentContext<T>, cx: &mut App) {
-        if let Some(value) = self.value.as_ref() {
-            context.register_part(value.clone(), index, cx);
-        }
-    }
+pub trait GenericChild<C>: IntoElement {
+    fn add_state_context(self, context: C) -> Self;
 }
 ```
 
-Avoid mutating runtime directly from arbitrary render layers. The component context should know how metadata enters component runtime.
+Intentionally unbounded: children receive the component context, and the trait must
+not leak how a context is implemented.
 
-## State-aware styling
+## Props
 
-Normal GPUI builder styling remains the default for static styles:
+Props hold stable public configuration and callbacks: orientation, behavior flags,
+controlled callback handlers. Props never own runtime state or metadata — those
+belong to the runtime.
+
+## Render-state structs
+
+Render-state structs are component-specific public API, modeling the same
+information Base UI exposes through state-aware `className` / `style` / `render`
+callbacks, adapted to GPUI. They are the return types of runtime queries and the
+input to `style_with_state`:
 
 ```rust
 ComponentPart::new()
-    .px_3()
-    .py_2()
-    .rounded_md()
+    .style_with_state(|state, part| if state.active { part.bg(...) } else { part })
 ```
 
-For styles that depend on component state, expose a `style_with_state` builder on the relevant renderable layer:
-
-```rust
-ComponentPart::new()
-    .style_with_state(|state, part| {
-        if state.active {
-            part.bg(/* active color */)
-        } else {
-            part
-        }
-    })
-```
-
-Render-state structs are component-specific public API. They should model the same information that Base UI exposes through state-aware `className`, `style`, and `render` callbacks, adapted to GPUI.
-
-Use GPUI render-state structs instead of porting DOM data attributes or CSS variable APIs directly.
-
-Render layers should not independently recompute shared component state when the component context can compute it. Prefer context helpers such as:
-
-```rust
-context.part_render_state(...)
-```
+Do not port DOM data attributes or CSS variable APIs.
 
 ## Measurement and layout-derived state
 
-When a Base UI component relies on DOM measurement APIs, translate the behavior into GPUI-native layout/prepaint mechanisms.
-
-Guidelines:
-
-- Use GPUI measurement hooks such as `Div::on_children_prepainted(...)` when appropriate.
-- Store measured facts in component runtime.
-- Expose measured facts through render-state structs when styling or visual layers need them.
-- Do not port Base UI CSS variable names unless they become useful GPUI API.
+Translate Base UI DOM measurement into GPUI-native mechanisms
+(`Div::on_children_prepainted(...)`). Measured facts go into the runtime via a
+command (`set_bounds`) that returns whether anything changed, and come out through
+render-state queries.
 
 ## Keyboard dispatch
 
-Use GPUI key dispatch for keyboard behavior instead of raw `on_key_down` when implementing component commands.
+Use GPUI key dispatch instead of raw `on_key_down`:
 
-A component with keyboard behavior should usually have:
-
-1. `actions.rs`,
-2. an `init(cx: &mut App)` function that binds keys,
-3. a `key_context(...)` on the relevant rendered layer,
-4. `on_action(...)` handlers.
-
-Generic shape:
-
-```rust
-pub const COMPONENT_KEY_CONTEXT: &str = "Component";
-
-actions!(base_gpui_component, [
-    ComponentMovePrevious,
-    ComponentMoveNext,
-    ComponentActivate,
-]);
-```
-
-Keys are bound in the component `init(cx)` and registered from `base_gpui::init(cx)`.
-
-The relevant layer handles actions through component context methods:
+1. `actions.rs` defines actions,
+2. component `init(cx)` binds keys (registered from `base_gpui::init(cx)`),
+3. the relevant layer sets `key_context(...)`,
+4. `on_action(...)` handlers translate actions into runtime commands via the context.
 
 ```rust
 div()
     .key_context(COMPONENT_KEY_CONTEXT)
     .on_action(move |_: &ComponentMoveNext, window, cx| {
-        // component-specific behavior via ComponentContext
+        context.update(cx, |runtime| runtime.move_highlight(Move::Next, loop_focus));
     })
 ```
 
+## Invariants
+
+1. State mutates in exactly two places: the top of root render
+   (`sync_children` + `reconcile`) and event handlers (via context commands).
+   Nowhere else.
+2. Every transition is computed inside the runtime, once. No sync-by-diffing, no
+   shadow previous-value fields outside the runtime.
+3. Knowledge of child indexing lives only in `walk_children`.
+4. Parts never see runtime internals — render-state structs and commands only.
+5. The context never grows component vocabulary.
+
 ## Implementation checklist for a new component
 
-When adding a new compound component:
-
-1. Create `<component>/child/context/state`.
-   - Define the primary state container.
-   - Implement `GenericState`.
-
-2. Create `<component>/child/context/props`.
-   - Define injected props/callbacks/config.
-
-3. Create `<component>/child/context/runtime`.
-   - Define component-specific runtime metadata/state.
-   - Keep metadata structs specific to the component.
-
-4. Create `<component>/child/context/<component>_context.rs`.
-   - Wrap `GenericContext<State, Props, Runtime>`.
-   - Put all component-specific behavior here.
-   - Hide direct generic runtime mutation behind component-specific methods where practical.
-
-5. Create renderable layers under `<component>/layers`.
-   - Root creates the component context.
-   - Root keeps typed children before `AnyElement` erasure.
-   - Children implement `GenericChild<ComponentContext>`.
-
-6. Create `<component>/child/<component>_child.rs`.
-   - Define typed child variants.
-   - Route context injection.
-   - Route component-specific metadata registration traversal if needed.
-
-7. Add nested child enums under `<component>/child/` when nested layers need constrained child sets.
-
-8. Add `actions.rs` if the component has keyboard behavior.
-   - Define actions.
-   - Bind keys in component `init`.
-   - Add a key context and `on_action` handlers to the relevant layer.
-
-9. Add component-specific `AGENTS.md` if implementation notes would otherwise clutter generic docs.
-
-10. Re-export from module `mod.rs` files.
+1. `runtime.rs` — write the runtime **comments-first**: sketch the signature block
+   (commands + queries) with doc comments before any bodies. If a method's comment
+   is hard to write in pure component-domain language, the design is wrong — that
+   knowledge belongs inside the runtime, not on its interface.
+2. `props.rs` — injected props/callbacks/config.
+3. `render_state.rs` — one render-state struct per part that draws.
+4. `context.rs` — `read` / `update` / `select`, nothing else.
+5. `child.rs` — typed child enum(s) + `walk_children`.
+6. `layers/` — root creates the context, walks children once, calls
+   `sync_children` + `reconcile`, injects context; other parts are event/query
+   adapters implementing `GenericChild<ComponentContext<T>>`.
+7. `actions.rs` if the component has keyboard behavior.
+8. Unit-test the runtime directly (no window needed) plus rendered behavior tests
+   under `tests/`.
+9. Re-export from `mod.rs`.
 
 ## Rules of thumb
 
-- Generic primitives should not know tabs, accordions, menus, etc.
-- Component context should translate generic mechanics into component language.
-- Children should receive the component wrapper context, not the raw generic context.
-- Children may know their own metadata.
-- Component context should know how metadata enters runtime.
-- Runtime registration should stay component-specific unless a real reusable pattern emerges.
-- Prefer GPUI key dispatch actions over raw key-down handlers for keyboard commands.
-- Avoid `utils/`; put reusable API primitives under `api/` and component code under the component folder.
+- Decompose by knowledge, not by widget. Entangled knowledge = one module.
+- The deep module is the runtime; everything else stays thin.
+- Hide decisions, not just mechanics. Hiding entity plumbing while index
+  assignment or transition detection escapes into parts is the cheap kind of
+  hiding and buys nothing.
+- Same tier of abstraction = same module's clients, not layers to invent.
+- A small runtime (e.g. checkbox) is expected and fine — depth is about the
+  interface-to-knowledge ratio, not line count.
+- Generic primitives must not know tabs, accordions, menus, etc.
+- Avoid `utils/`; reusable API primitives go under `api/`, component code under
+  the component folder.

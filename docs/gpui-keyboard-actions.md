@@ -40,7 +40,7 @@ div()
     .key_context(CHECKBOX_ROOT_KEY_CONTEXT)
     .focusable()
     .on_action(move |_: &CheckboxToggle, window, cx| {
-        context.request_toggle(window, cx);
+        context.toggle(window, cx);
     })
 ```
 
@@ -48,7 +48,7 @@ Rules:
 
 - Bind keys in `init(cx)`.
 - Scope bindings with `key_context(...)`.
-- Put behavior on the component context, not in the layer closure when possible.
+- Translate actions into context/runtime commands rather than open-coding behavior in the layer closure.
 - Only bind keys the component should handle. For checkbox, Space toggles; Enter is intentionally unbound.
 
 ## Focus requirement
@@ -73,7 +73,7 @@ pub const TABS_LIST_KEY_CONTEXT: &str = "TabsList";
 TabsList::new()
     .key_context(TABS_LIST_KEY_CONTEXT)
     .focusable()
-    .on_action(move |_: &TabsSelectRight, window, cx| {
-        context.highlight_next_tab(loop_focus, cx);
+    .on_action(move |_: &TabsSelectRight, _window, cx| {
+        context.update(cx, |runtime| runtime.move_highlight(Move::Next, loop_focus));
     })
 ```
