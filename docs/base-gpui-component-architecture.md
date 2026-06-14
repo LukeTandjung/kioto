@@ -45,7 +45,8 @@ crates/base_gpui/src/<component>/
   context.rs        # ComponentContext
   props.rs          # injected props/callbacks/config
   render_state.rs   # render-state structs (one per part that draws)
-  child.rs          # typed child enums + walk_children
+  child.rs          # typed child enums
+  child_wiring.rs   # optional private child traversal/indexing/context attachment
   layers/           # renderable GPUI parts only
   tests/
 ```
@@ -53,9 +54,7 @@ crates/base_gpui/src/<component>/
 Do not nest `child/context/{props,runtime,state}/` taxonomies. One file per concept,
 directly under the component folder.
 
-Reusable primitives live under `api/` and stay minimal: `GenericChild<C>` plus any
-shared keyed-entity / controlled-resolution helper that contexts share. If a shared
-helper is trivially small, inline it per-context instead.
+Do not introduce shared generic primitives for tiny plumbing. If a helper is trivially small, inline it per-component; a generic abstraction that only saves a setter usually creates more ontology than it removes.
 
 ## The runtime (deep module)
 
@@ -69,12 +68,11 @@ Its interface has exactly two vocabularies:
 **Commands** — one method per thing-that-can-happen, named in domain language:
 
 ```rust
-fn sync_children(&mut self, tabs: Vec<TabMeta<T>>, panels: Vec<PanelMeta<T>>);
-fn reconcile(&mut self, observed: Option<T>);
+fn sync_children(&mut self, metadata: Vec<ChildMeta<T>>, focus_handles: Vec<(usize, FocusHandle)>);
+fn reconcile(&mut self, observed: Option<T>, allow_fallback: bool);
 fn select(&mut self, value: Option<T>) -> SelectOutcome<T>;
 fn move_highlight(&mut self, direction: Move, loop_focus: bool);
 fn set_bounds(&mut self, bounds: Vec<(usize, Bounds<Pixels>)>) -> bool;
-fn register_focus_handle(&mut self, index: usize, handle: FocusHandle) -> bool;
 ```
 
 **Queries** — one method per part-that-draws, returning render-state structs:
@@ -139,21 +137,24 @@ The root is the single mutation site outside event handlers:
 fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
     let context = ComponentContext::new(...);
 
-    let (metadata, indexed_children) = walk_children(self.children);
-    context.update(cx, |runtime| {
-        runtime.sync_children(metadata);
-        runtime.reconcile(/* controlled value or uncontrolled current */);
+    let wired_children = wire_children(self.children, context.clone(), window, cx);
+    let initial_focus = context.update(cx, |runtime| {
+        runtime.sync_children(wired_children.metadata, wired_children.focus_handles);
+        runtime.reconcile(
+            /* controlled value or uncontrolled current */,
+            /* allow uncontrolled fallback */,
+        );
+        runtime.take_initial_focus_handle()
     });
-    context.seed_initial_focus(window, cx);
+    if let Some(focus_handle) = initial_focus {
+        focus_handle.focus(window, cx);
+    }
 
-    // pure rendering from here: inject context, style via root_state
+    // pure rendering from here: style via root_state and render wired children
 }
 ```
 
-`walk_children` (in `child.rs`) is the only function that knows which children
-count as which part and assigns indices. It returns both the metadata for
-`sync_children` and the indexed children for rendering. No index counter may be
-threaded through child enums or recomputed in a part.
+`wire_children` (in `child_wiring.rs` when a component needs non-trivial child wiring) is the only function that knows which children count as which part and assigns indices. It returns both the metadata for `sync_children` and the wired children for rendering. No index counter may be threaded through child enums or recomputed in a part. Keep child-wiring traits in a private module; do not expose helper methods on public layer types just to satisfy traversal or context attachment.
 
 ## Typed child enums
 
@@ -166,21 +167,7 @@ pub enum ComponentChild<T: Clone + Eq + 'static> {
 }
 ```
 
-Their only jobs: typed composition, context injection (`GenericChild`), and being
-walkable by `walk_children`. They must not carry registration traversal or index
-bookkeeping. Nested compound layers may define their own constrained child enums in
-`child.rs`.
-
-## `GenericChild<C>`
-
-```rust
-pub trait GenericChild<C>: IntoElement {
-    fn add_state_context(self, context: C) -> Self;
-}
-```
-
-Intentionally unbounded: children receive the component context, and the trait must
-not leak how a context is implemented.
+Their only public job is typed composition. Private component-local child wiring may attach context, walk descendants, assign indices, and collect metadata before erasing to `AnyElement`. They must not expose registration traversal or index bookkeeping as public helper methods. Nested compound layers may define their own constrained child enums in `child.rs`.
 
 ## Props
 
@@ -233,7 +220,7 @@ div()
    Nowhere else.
 2. Every transition is computed inside the runtime, once. No sync-by-diffing, no
    shadow previous-value fields outside the runtime.
-3. Knowledge of child indexing lives only in `walk_children`.
+3. Knowledge of child indexing lives only in component-local child wiring.
 4. Parts never see runtime internals — render-state structs and commands only.
 5. The context never grows component vocabulary.
 
@@ -246,10 +233,9 @@ div()
 2. `props.rs` — injected props/callbacks/config.
 3. `render_state.rs` — one render-state struct per part that draws.
 4. `context.rs` — `read` / `update` / `select`, nothing else.
-5. `child.rs` — typed child enum(s) + `walk_children`.
-6. `layers/` — root creates the context, walks children once, calls
-   `sync_children` + `reconcile`, injects context; other parts are event/query
-   adapters implementing `GenericChild<ComponentContext<T>>`.
+5. `child.rs` — typed child enum(s); add private `child_wiring.rs` when traversal/indexing/context attachment needs an internal layer-wiring trait.
+6. `layers/` — root creates the context, wires children once, calls
+   `sync_children` + `reconcile`; other parts are event/query adapters.
 7. `actions.rs` if the component has keyboard behavior.
 8. Unit-test the runtime directly (no window needed) plus rendered behavior tests
    under `tests/`.
@@ -265,6 +251,5 @@ div()
 - Same tier of abstraction = same module's clients, not layers to invent.
 - A small runtime (e.g. checkbox) is expected and fine — depth is about the
   interface-to-knowledge ratio, not line count.
-- Generic primitives must not know tabs, accordions, menus, etc.
-- Avoid `utils/`; reusable API primitives go under `api/`, component code under
-  the component folder.
+- Avoid shared generic primitives unless they describe a deep, repeated concept.
+- Avoid `utils/`; component code belongs under the component folder.
