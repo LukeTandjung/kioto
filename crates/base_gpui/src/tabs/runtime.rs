@@ -1,8 +1,8 @@
 use gpui::{Bounds, FocusHandle, Pixels};
 
 use crate::tabs::{
-    TabsIndicatorRenderState, TabsListRenderState, TabsOrientation, TabsPanelRenderState,
-    TabsRootRenderState, TabsTabRenderState,
+    runtime_control::TabsRuntimeControl, TabsIndicatorRenderState, TabsListRenderState,
+    TabsOrientation, TabsPanelRenderState, TabsRootRenderState, TabsTabRenderState,
 };
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -107,9 +107,7 @@ pub struct TabsRuntime<T: Clone + Eq + 'static> {
     selected: Option<T>,
     tabs: Vec<TabsTabMetadata<T>>,
     highlighted_tab_index: Option<usize>,
-    last_synced_selected_value: Option<Option<T>>,
     activation_direction: TabsActivationDirection,
-    activation_previous_value: Option<Option<T>>,
     tab_bounds: Vec<(usize, Bounds<Pixels>)>,
     tab_focus_handles: Vec<(usize, FocusHandle)>,
     has_seeded_initial_focus: bool,
@@ -121,9 +119,7 @@ impl<T: Clone + Eq + 'static> Default for TabsRuntime<T> {
             selected: None,
             tabs: Vec::new(),
             highlighted_tab_index: None,
-            last_synced_selected_value: None,
             activation_direction: TabsActivationDirection::None,
-            activation_previous_value: None,
             tab_bounds: Vec::new(),
             tab_focus_handles: Vec::new(),
             has_seeded_initial_focus: false,
@@ -143,23 +139,54 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         self.selected.clone()
     }
 
-    pub fn sync_selected_from_context(&mut self, selected: Option<T>) {
-        self.selected = selected;
+    pub fn sync_children(
+        &mut self,
+        mut tabs: Vec<TabsTabMetadata<T>>,
+        mut tab_focus_handles: Vec<(usize, FocusHandle)>,
+    ) {
+        let highlighted_value = self
+            .highlighted_tab_index
+            .and_then(|index| self.enabled_value_at_index(index).cloned());
+
+        tabs.sort_by_key(TabsTabMetadata::index);
+        tab_focus_handles.sort_by_key(|(index, _)| *index);
+
+        self.tabs = tabs;
+        self.tab_focus_handles = tab_focus_handles;
+        self.highlighted_tab_index = highlighted_value
+            .as_ref()
+            .and_then(|value| self.index_of_enabled_value(value));
+        self.tab_bounds
+            .retain(|(index, _)| self.tabs.iter().any(|tab| tab.index() == *index));
     }
 
-    pub fn clear_registered_metadata(&mut self) {
-        self.tabs.clear();
-    }
+    pub fn reconcile(
+        &mut self,
+        observed_selected: Option<T>,
+        allow_fallback: bool,
+        orientation: TabsOrientation,
+    ) {
+        let previous = self.selected.clone();
+        let needs_fallback =
+            allow_fallback && !self.selected_is_enabled(observed_selected.as_ref());
+        let selected = match needs_fallback {
+            true => self.first_enabled_value(),
+            false => observed_selected,
+        };
+        let selected_changed = previous != selected;
 
-    pub fn register_tab(&mut self, value: T, disabled: bool, index: usize) {
-        let metadata = TabsTabMetadata::new(value, disabled, index);
-
-        match self.tabs.iter().position(|tab| tab.index() == index) {
-            Some(existing_index) => self.tabs[existing_index] = metadata,
-            None => self.tabs.push(metadata),
+        if selected_changed {
+            self.activation_direction = match needs_fallback {
+                true => TabsActivationDirection::None,
+                false => self.direction_between(previous.as_ref(), selected.as_ref(), orientation),
+            };
         }
 
-        self.tabs.sort_by_key(TabsTabMetadata::index);
+        self.selected = selected;
+
+        if selected_changed || self.highlighted_tab_index.is_none() {
+            self.sync_highlight_with_selected();
+        }
     }
 
     pub fn set_tab_bounds(&mut self, bounds: Vec<(usize, Bounds<Pixels>)>) -> bool {
@@ -169,34 +196,6 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
 
         self.tab_bounds = bounds;
         true
-    }
-
-    pub fn register_tab_focus_handle(&mut self, index: usize, focus_handle: FocusHandle) -> bool {
-        match self
-            .tab_focus_handles
-            .iter()
-            .position(|(tab_index, _)| *tab_index == index)
-        {
-            Some(existing_index) if self.tab_focus_handles[existing_index].1 == focus_handle => {
-                false
-            }
-            Some(existing_index) => {
-                self.tab_focus_handles[existing_index] = (index, focus_handle);
-                true
-            }
-            None => {
-                self.tab_focus_handles.push((index, focus_handle));
-                self.tab_focus_handles.sort_by_key(|(index, _)| *index);
-                true
-            }
-        }
-    }
-
-    pub fn focus_handle_at_index(&self, index: usize) -> Option<FocusHandle> {
-        self.tab_focus_handles
-            .iter()
-            .find(|(tab_index, _)| *tab_index == index)
-            .map(|(_, focus_handle)| focus_handle.clone())
     }
 
     pub fn take_initial_focus_handle(&mut self) -> Option<FocusHandle> {
@@ -211,10 +210,6 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
     pub fn highlighted_value(&self) -> Option<T> {
         self.highlighted_tab_index
             .and_then(|index| self.enabled_value_at_index(index).cloned())
-    }
-
-    pub fn highlight_tab(&mut self, index: Option<usize>) {
-        self.highlighted_tab_index = index;
     }
 
     pub fn move_highlight(&mut self, direction: Move, loop_focus: bool) {
@@ -237,62 +232,10 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         }
     }
 
-    pub fn apply_fallback(&mut self) {
-        if self.tabs.is_empty() {
-            return;
-        }
-
-        let fallback = match self.selected.as_ref() {
-            Some(value) if self.contains_enabled_value(value) => return,
-            _ => self.first_enabled_value(),
-        };
-
-        self.activation_direction = TabsActivationDirection::None;
-        self.activation_previous_value = Some(fallback.clone());
-        self.selected = fallback;
-    }
-
     pub fn select(&mut self, value: Option<T>, orientation: TabsOrientation) -> SelectOutcome<T> {
-        let previous = self.selected.clone();
-        let changed = previous != value;
+        let current = self.selected.clone();
 
-        self.activation_direction =
-            self.direction_between(previous.as_ref(), value.as_ref(), orientation);
-        self.activation_previous_value = Some(previous);
-        self.selected = value.clone();
-
-        SelectOutcome::new(changed, value)
-    }
-
-    pub fn sync_activation_direction_with_selected_value(&mut self, orientation: TabsOrientation) {
-        let selected = self.selected.clone();
-        let Some(previous) = self.activation_previous_value.clone() else {
-            self.activation_direction = TabsActivationDirection::None;
-            self.activation_previous_value = Some(selected);
-            return;
-        };
-
-        if previous == selected {
-            return;
-        }
-
-        self.activation_direction =
-            self.direction_between(previous.as_ref(), selected.as_ref(), orientation);
-        self.activation_previous_value = Some(selected);
-    }
-
-    pub fn sync_highlighted_tab_with_selected_value(&mut self) {
-        let selected = self.selected.clone();
-
-        if self.last_synced_selected_value.as_ref() == Some(&selected) {
-            return;
-        }
-
-        self.highlighted_tab_index = selected
-            .as_ref()
-            .and_then(|value| self.index_of_enabled_value(value))
-            .or_else(|| self.first_enabled_index());
-        self.last_synced_selected_value = Some(selected);
+        self.select_from(current, value, orientation, true)
     }
 
     pub fn root_state(&self, orientation: TabsOrientation) -> TabsRootRenderState {
@@ -351,6 +294,30 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
     fn highlighted_focus_handle(&self) -> Option<FocusHandle> {
         self.highlighted_tab_index
             .and_then(|index| self.focus_handle_at_index(index))
+    }
+
+    fn focus_handle_at_index(&self, index: usize) -> Option<FocusHandle> {
+        self.tab_focus_handles
+            .iter()
+            .find(|(tab_index, _)| *tab_index == index)
+            .map(|(_, focus_handle)| focus_handle.clone())
+    }
+
+    fn sync_highlight_with_selected(&mut self) {
+        self.highlighted_tab_index = self.highlight_for_value(self.selected.as_ref());
+    }
+
+    fn highlight_for_value(&self, value: Option<&T>) -> Option<usize> {
+        value
+            .and_then(|value| self.index_of_enabled_value(value))
+            .or_else(|| self.first_enabled_index())
+    }
+
+    fn selected_is_enabled(&self, selected: Option<&T>) -> bool {
+        match selected {
+            Some(value) => self.contains_enabled_value(value),
+            None => false,
+        }
     }
 
     fn direction_between(
@@ -497,19 +464,48 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
     }
 }
 
+impl<T: Clone + Eq + 'static> TabsRuntimeControl<T> for TabsRuntime<T> {
+    fn select_from(
+        &mut self,
+        current: Option<T>,
+        value: Option<T>,
+        orientation: TabsOrientation,
+        commit: bool,
+    ) -> SelectOutcome<T> {
+        let changed = current != value;
+
+        self.activation_direction =
+            self.direction_between(current.as_ref(), value.as_ref(), orientation);
+        self.highlighted_tab_index = self.highlight_for_value(value.as_ref());
+
+        if commit {
+            self.selected = value.clone();
+        } else {
+            self.selected = current;
+        }
+
+        SelectOutcome::new(changed, value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Move, TabsRuntime};
+    use super::{Move, TabsRuntime, TabsTabMetadata};
     use crate::tabs::TabsOrientation;
 
     #[test]
     fn move_highlight_skips_disabled_tabs() {
         let mut runtime = TabsRuntime::new(Some(1));
 
-        runtime.register_tab(1, false, 0);
-        runtime.register_tab(2, true, 1);
-        runtime.register_tab(3, false, 2);
-        runtime.highlight_tab(Some(0));
+        runtime.sync_children(
+            vec![
+                TabsTabMetadata::new(1, false, 0),
+                TabsTabMetadata::new(2, true, 1),
+                TabsTabMetadata::new(3, false, 2),
+            ],
+            Vec::new(),
+        );
+        runtime.move_highlight(Move::First, false);
 
         runtime.move_highlight(Move::Next, false);
 
@@ -521,6 +517,59 @@ mod tests {
         assert!(
             runtime
                 .tab_state(Some(&3), false, Some(2), TabsOrientation::Horizontal)
+                .highlighted
+        );
+    }
+
+    #[test]
+    fn reconcile_applies_uncontrolled_fallback() {
+        let mut runtime = TabsRuntime::new(Some(2));
+
+        runtime.sync_children(
+            vec![
+                TabsTabMetadata::new(1, false, 0),
+                TabsTabMetadata::new(2, true, 1),
+            ],
+            Vec::new(),
+        );
+        runtime.reconcile(runtime.selected_value(), true, TabsOrientation::Horizontal);
+
+        assert!(
+            runtime
+                .tab_state(Some(&1), false, Some(0), TabsOrientation::Horizontal)
+                .active
+        );
+        assert!(
+            runtime
+                .tab_state(Some(&1), false, Some(0), TabsOrientation::Horizontal)
+                .highlighted
+        );
+        assert_eq!(
+            runtime
+                .root_state(TabsOrientation::Horizontal)
+                .activation_direction,
+            super::TabsActivationDirection::None
+        );
+    }
+
+    #[test]
+    fn reconcile_preserves_keyboard_highlight_when_selection_is_unchanged() {
+        let mut runtime = TabsRuntime::new(Some(1));
+
+        runtime.sync_children(
+            vec![
+                TabsTabMetadata::new(1, false, 0),
+                TabsTabMetadata::new(2, false, 1),
+            ],
+            Vec::new(),
+        );
+        runtime.reconcile(runtime.selected_value(), true, TabsOrientation::Horizontal);
+        runtime.move_highlight(Move::Next, false);
+        runtime.reconcile(runtime.selected_value(), true, TabsOrientation::Horizontal);
+
+        assert!(
+            runtime
+                .tab_state(Some(&2), false, Some(1), TabsOrientation::Horizontal)
                 .highlighted
         );
     }

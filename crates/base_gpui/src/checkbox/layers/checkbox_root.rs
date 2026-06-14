@@ -6,12 +6,9 @@ use gpui::{
     StyleRefinement, Styled, Window,
 };
 
-use crate::{
-    api::GenericChild,
-    checkbox::{
-        CheckboxCheckedChangeHandler, CheckboxChild, CheckboxContext, CheckboxProps,
-        CheckboxRootRenderState, CheckboxToggle, CHECKBOX_ROOT_KEY_CONTEXT,
-    },
+use crate::checkbox::{
+    child_wiring::CheckboxChildNode, CheckboxCheckedChangeHandler, CheckboxChild, CheckboxContext,
+    CheckboxProps, CheckboxRootRenderState, CheckboxToggle, CHECKBOX_ROOT_KEY_CONTEXT,
 };
 
 #[derive(IntoElement)]
@@ -126,7 +123,7 @@ impl RenderOnce for CheckboxRoot {
             .children(
                 self.children
                     .into_iter()
-                    .map(|child| child.add_state_context(context.clone())),
+                    .map(|child| child.with_checkbox_context(context.clone())),
             )
     }
 }

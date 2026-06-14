@@ -5,9 +5,8 @@ use gpui::{
     RenderOnce, StyleRefinement, Styled, Window,
 };
 
-use crate::{
-    api::GenericChild,
-    tabs::{TabsContext, TabsOrientation, TabsPanelRenderState},
+use crate::tabs::{
+    child_wiring::TabsChildNode, TabsContext, TabsOrientation, TabsPanelRenderState,
 };
 
 #[derive(IntoElement)]
@@ -83,8 +82,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<TabsContext<T>> for TabsPanel<T> {
-    fn add_state_context(mut self, context: TabsContext<T>) -> Self {
+impl<T: Clone + Eq + 'static> TabsChildNode<T> for TabsPanel<T> {
+    fn with_tabs_context(mut self, context: TabsContext<T>) -> Self {
         self.context = Some(context);
         self
     }

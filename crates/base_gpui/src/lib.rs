@@ -1,4 +1,3 @@
-pub mod api;
 pub mod checkbox;
 pub mod tabs;
 

@@ -5,12 +5,9 @@ use gpui::{
     Window,
 };
 
-use crate::{
-    api::GenericChild,
-    tabs::{
-        TabsChild, TabsContext, TabsOrientation, TabsProps, TabsRootRenderState,
-        TabsValueChangeHandler,
-    },
+use crate::tabs::{
+    child_wiring::wire_children, TabsChild, TabsContext, TabsOrientation, TabsProps,
+    TabsRootRenderState, TabsValueChangeHandler,
 };
 
 #[derive(IntoElement)]
@@ -48,7 +45,8 @@ impl<T: Clone + Eq + 'static> Styled for TabsRoot<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let is_controlled = self.value.is_some();
+        let controlled = self.value.clone();
+        let is_controlled = controlled.is_some();
         let orientation = self.orientation;
         let context = TabsContext::new(
             self.id,
@@ -58,25 +56,20 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
             self.default_value,
             TabsProps::new(orientation, self.on_value_change),
         );
-
-        context.update(cx, |runtime| runtime.clear_registered_metadata());
-
-        for child in &self.children {
-            child.register_runtime(&context, window, cx);
-        }
-
-        if !is_controlled {
-            context.update(cx, |runtime| runtime.apply_fallback());
-        }
-
-        context.update(cx, |runtime| {
-            runtime.sync_activation_direction_with_selected_value(orientation);
-            runtime.sync_highlighted_tab_with_selected_value();
-        });
+        let wired_children = wire_children(self.children, context.clone(), window, cx);
+        let tabs = wired_children.tabs;
+        let tab_focus_handles = wired_children.tab_focus_handles;
+        let children = wired_children.children;
 
         // Scoped tab key bindings only dispatch once focus is inside the tabs list.
         // Seed focus once from the synced highlighted tab so initial keyboard use works.
-        let focus_handle = context.update(cx, |runtime| runtime.take_initial_focus_handle());
+        let focus_handle = context.update(cx, |runtime| {
+            runtime.sync_children(tabs, tab_focus_handles);
+
+            let observed_selected = controlled.unwrap_or_else(|| runtime.selected_value());
+            runtime.reconcile(observed_selected, !is_controlled, orientation);
+            runtime.take_initial_focus_handle()
+        });
         if let Some(focus_handle) = focus_handle {
             focus_handle.focus(window, cx);
         }
@@ -87,11 +80,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
             Some(style_with_state) => style_with_state(render_state, self.base),
             None => self.base,
         };
-        base.children(
-            self.children
-                .into_iter()
-                .map(|child| child.add_state_context(context.clone())),
-        )
+        base.children(children)
     }
 }
 

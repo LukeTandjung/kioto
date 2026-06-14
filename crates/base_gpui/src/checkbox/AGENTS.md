@@ -52,6 +52,7 @@ Checkbox uses the runtime/context split from the component architecture:
 crates/base_gpui/src/checkbox/
   actions.rs
   child.rs            # CheckboxChild typed routing
+  child_wiring.rs     # private child context attachment
   context.rs          # CheckboxContext: entity plumbing + controlled/uncontrolled rule
   props.rs            # CheckboxProps and callback type
   render_state.rs     # root and indicator render-state structs
@@ -61,7 +62,7 @@ crates/base_gpui/src/checkbox/
     checkbox_root.rs
 ```
 
-There is no `CheckboxState` and no `GenericContext` usage in Checkbox. The checked value lives in `CheckboxRuntime`.
+There is no `CheckboxState`, no `GenericContext`, and no shared generic child abstraction in Checkbox. The checked value lives in `CheckboxRuntime`.
 
 ## Context, props, runtime
 
@@ -96,7 +97,7 @@ Do not grow Checkbox rendering logic on `CheckboxContext`. Checkbox behavior bel
 
 - `CheckboxIndicator`
 
-Typed child-routing enums belong in `checkbox/child.rs`, not `checkbox/layers/`.
+Typed child-routing enums belong in `checkbox/child.rs`, not `checkbox/layers/`. Private context attachment belongs in `checkbox/child_wiring.rs`, not a shared generic child abstraction.
 
 ## Activation and focus
 

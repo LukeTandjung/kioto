@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{App, ElementId, Entity, Window};
 
-use crate::tabs::{TabsProps, TabsRuntime};
+use crate::tabs::{runtime_control::TabsRuntimeControl, TabsProps, TabsRuntime};
 
 pub struct TabsContext<T: Clone + Eq + 'static> {
     runtime: Entity<TabsRuntime<T>>,
@@ -52,18 +52,8 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
         cx: &mut App,
         update: impl FnOnce(&mut TabsRuntime<T>) -> Output,
     ) -> Output {
-        let controlled = self.controlled.as_ref().clone();
-
         self.runtime.update(cx, |runtime, cx| {
-            if let Some(selected) = controlled.as_ref() {
-                runtime.sync_selected_from_context(selected.clone());
-            }
-
             let output = update(runtime);
-
-            if let Some(selected) = controlled.as_ref() {
-                runtime.sync_selected_from_context(selected.clone());
-            }
 
             cx.notify();
             output
@@ -79,12 +69,7 @@ impl<T: Clone + Eq + 'static> TabsContext<T> {
                 None => runtime.selected_value(),
             };
 
-            runtime.sync_selected_from_context(current.clone());
-            let outcome = runtime.select(value, orientation);
-
-            if controlled.is_some() {
-                runtime.sync_selected_from_context(current);
-            }
+            let outcome = runtime.select_from(current, value, orientation, controlled.is_none());
 
             cx.notify();
             outcome

@@ -55,7 +55,7 @@ Behavior:
 - `default_value(...)` initializes uncontrolled selection.
 - If no uncontrolled default is provided, fallback selects the first enabled tab.
 - Controlled mode preserves externally supplied values even if disabled or missing.
-- Uncontrolled fallback uses registered tab metadata and falls back to first enabled tab or `None`.
+- Uncontrolled fallback uses walked tab metadata and falls back to first enabled tab or `None`.
 
 ## File layout
 
@@ -65,10 +65,12 @@ Tabs uses the runtime/context split from the component architecture:
 crates/base_gpui/src/tabs/
   actions.rs
   child.rs            # TabsChild and TabsListChild typed routing
+  child_wiring.rs     # private child traversal, indexing, and context attachment
   context.rs          # TabsContext: entity plumbing + controlled/uncontrolled rule
   props.rs            # TabsOrientation, TabsProps, callback type
   render_state.rs     # render-state structs for all drawing parts
   runtime.rs          # TabsRuntime: selected value, tab metadata, transitions, queries
+  runtime_control.rs  # private controlled-selection bridge trait
   layers/
     tabs_indicator.rs
     tabs_list.rs
@@ -77,7 +79,7 @@ crates/base_gpui/src/tabs/
     tabs_tab.rs
 ```
 
-There is no `TabsState<T>` and no `GenericContext` usage in Tabs. The selected value lives in `TabsRuntime<T>`.
+There is no `TabsState<T>`, no `GenericContext`, and no shared generic child abstraction in Tabs. The selected value lives in `TabsRuntime<T>`.
 
 ## Context, props, runtime
 
@@ -105,9 +107,9 @@ Do not grow Tabs vocabulary on `TabsContext<T>` (`register_tab`, `highlight_next
 `TabsRuntime<T>` owns Tabs-specific runtime facts:
 
 - uncontrolled selected value,
-- registered tab metadata,
+- walked tab metadata,
 - highlighted tab index,
-- selected-value sync bookkeeping,
+- selection reconciliation and uncontrolled fallback,
 - activation direction bookkeeping,
 - measured tab bounds for indicator state,
 - tab focus handles for roving focus,
@@ -115,7 +117,7 @@ Do not grow Tabs vocabulary on `TabsContext<T>` (`register_tab`, `highlight_next
 
 Tabs intentionally does **not** keep panel metadata. Panel visibility derives from the panel's local `value` and the runtime selected value.
 
-## Typed child routing
+## Typed child routing and wiring
 
 `TabsRoot<T>` keeps typed `TabsChild<T>` children before GPUI erases to `AnyElement`.
 
@@ -125,7 +127,7 @@ Tabs intentionally does **not** keep panel metadata. Panel visibility derives fr
 - `TabsPanel<T>`
 - `TabsIndicator<T>`
 
-`TabsList<T>` keeps typed `TabsListChild<T>` children so the list can accept both tabs and indicators while preserving tab-only registration and measurement.
+`TabsList<T>` keeps typed `TabsListChild<T>` children so the list can accept both tabs and indicators while preserving tab-only metadata collection and measurement.
 
 `TabsListChild<T>` currently routes:
 
@@ -134,23 +136,16 @@ Tabs intentionally does **not** keep panel metadata. Panel visibility derives fr
 
 Typed child-routing enums belong in `tabs/child.rs`, not `tabs/layers/`.
 
-## Runtime registration
-
-Runtime registration is Tabs-specific and should remain explicit.
-
-Current registration flow:
+`tabs/child_wiring.rs` owns the private Tabs child ontology. It wires the typed child hierarchy before GPUI erases children to `AnyElement`:
 
 1. `TabsRoot<T>` creates `TabsContext<T>`.
-2. `TabsRoot<T>` clears registered tab metadata.
-3. `TabsRoot<T>` traverses typed children and pre-registers tabs before fallback/render.
-4. `TabsList<T>` registers tab children only.
-5. `TabsTab<T>` registers tab metadata and its stable keyed `FocusHandle`.
-6. `TabsRoot<T>` applies uncontrolled fallback after tab metadata registration.
+2. `child_wiring::wire_children(...)` walks typed children, assigns tab indices, collects tab metadata, collects stable keyed tab `FocusHandle`s, attaches `TabsContext<T>`, and returns wired children for rendering.
+3. `TabsRoot<T>` updates `TabsRuntime<T>` with `sync_children(...)` and `reconcile(...)` in one root render update.
+4. Layers render from the wired children.
 
-`TabsPanel<T>` does not register runtime metadata.
+`TabsPanel<T>` does not register runtime metadata. Panel visibility derives from its local `value` and the runtime selected value.
 
-Do not move runtime mutation back into leaf render paths except through the established registration methods.
-Do not generalize runtime registration into `GenericChild`; metadata shapes differ by component.
+Do not move child indexing or runtime metadata collection back into leaf render paths. Do not generalize child wiring into a shared child abstraction; metadata shapes differ by component. Keep child-wiring traits in the private `child_wiring` module so layer internals do not become public helper methods.
 
 ## Selection and fallback
 
@@ -159,17 +154,16 @@ Selection behavior:
 - Enabled inactive tab click selects that tab.
 - Clicking active tab is a no-op.
 - Clicking disabled tab is a no-op.
-- User-initiated selection computes activation direction from registered tab order.
+- User-initiated selection computes activation direction from walked tab order.
 - Automatic fallback has activation direction `None`.
 - Disabled or removed selected tabs trigger fallback only in uncontrolled mode.
 
 `TabsRuntime<T>` owns this behavior through methods such as:
 
+- `sync_children(...)`
+- `reconcile(...)`
 - `select(...)`
-- `apply_fallback(...)`
 - `move_highlight(...)`
-- `sync_activation_direction_with_selected_value(...)`
-- `sync_highlighted_tab_with_selected_value(...)`
 
 `TabsContext<T>::select(...)` is responsible for controlled/uncontrolled resolution and firing `on_value_change` after the runtime update returns its outcome.
 
@@ -265,20 +259,17 @@ Do not port:
 
 Translate behavior into GPUI-native state, runtime, measurement, focus handles, and actions.
 
-## Tests / verification backlog
+## Tests / verification
 
-Current desired verification areas are tracked in:
+Rendered behavior tests live under `crates/base_gpui/src/tabs/tests/` and cover:
 
-```text
-issues/port-baseui-tabs.md
-```
-
-Important remaining areas:
-
-- controlled and uncontrolled usage examples,
-- disabled/fallback examples,
-- keyboard behavior verification,
+- controlled and uncontrolled selection,
+- disabled and removed-tab fallback,
+- click activation,
+- keyboard navigation,
 - `activate_on_focus`,
 - `loop_focus`,
 - panel visibility and `keep_mounted`,
 - indicator movement.
+
+`TabsRuntime<T>` also has window-free unit tests for runtime-only behavior.

@@ -6,9 +6,9 @@ use gpui::{
     StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
-use crate::{
-    api::GenericChild,
-    tabs::{TabsContext, TabsOrientation, TabsTabRenderState},
+use crate::tabs::{
+    child_wiring::{TabsChildNode, TabsChildWiring},
+    TabsContext, TabsOrientation, TabsTabRenderState,
 };
 
 #[derive(IntoElement)]
@@ -20,6 +20,7 @@ pub struct TabsTab<T: Clone + Eq + 'static> {
     value: Option<T>,
     disabled: bool,
     index: Option<usize>,
+    focus_handle: Option<FocusHandle>,
     style_with_state: Option<Rc<dyn Fn(TabsTabRenderState, Div) -> Div + 'static>>,
 }
 
@@ -33,6 +34,7 @@ impl<T: Clone + Eq + 'static> Default for TabsTab<T> {
             value: None,
             disabled: false,
             index: None,
+            focus_handle: None,
             style_with_state: None,
         }
     }
@@ -60,25 +62,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             value,
             disabled,
             index,
+            focus_handle,
             style_with_state,
         } = self;
 
-        let focus_handle = context
-            .as_ref()
-            .and_then(|context| {
-                index.and_then(|index| {
-                    context.read(cx, |runtime, _| runtime.focus_handle_at_index(index))
-                })
-            })
-            .unwrap_or_else(|| {
-                let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
-                    ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("focus")),
-                    cx,
-                    |_, cx| cx.focus_handle(),
-                );
-
-                focus_handle_entity.read(cx).clone()
-            });
+        let focus_handle = focus_handle.unwrap_or_else(|| tab_focus_handle(&id, window, cx));
 
         let state = context
             .as_ref()
@@ -94,7 +82,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
         let highlighted = state.highlighted;
 
         let selectable = match !disabled && !active {
-            true => context.zip(value).zip(index),
+            true => context.zip(value),
             false => None,
         };
 
@@ -110,23 +98,15 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
                     .tab_index(if highlighted { 0 } else { -1 }),
             )
             .children(children)
-            .when_some(selectable, |this, ((context, value), index)| {
+            .when_some(selectable, |this, (context, value)| {
                 this.on_click(move |event, window, cx| {
                     if !matches!(event, ClickEvent::Mouse(_)) {
                         return;
                     }
 
-                    context.update(cx, |runtime| runtime.highlight_tab(Some(index)));
                     context.select(Some(value.clone()), window, cx);
                 })
             })
-    }
-}
-
-impl<T: Clone + Eq + 'static> GenericChild<TabsContext<T>> for TabsTab<T> {
-    fn add_state_context(mut self, context: TabsContext<T>) -> Self {
-        self.context = Some(context);
-        self
     }
 }
 
@@ -162,29 +142,39 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
         self.style_with_state = Some(Rc::new(style));
         self
     }
+}
 
-    pub fn register_runtime(
-        &self,
-        index: usize,
-        context: &TabsContext<T>,
+impl<T: Clone + Eq + 'static> TabsChildNode<T> for TabsTab<T> {
+    fn with_tabs_context(mut self, context: TabsContext<T>) -> Self {
+        self.context = Some(context);
+        self
+    }
+
+    fn wire_tabs_child(
+        mut self,
+        wiring: &mut TabsChildWiring<T>,
         window: &mut Window,
         cx: &mut App,
-    ) {
-        let value = self.value.clone();
-        let disabled = self.disabled;
-        let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
-            ElementId::NamedChild(Arc::new(self.id.clone()), SharedString::from("focus")),
-            cx,
-            |_, cx| cx.focus_handle(),
-        );
-        let focus_handle = focus_handle_entity.read(cx).clone();
+    ) -> Self {
+        let focus_handle = tab_focus_handle(&self.id, window, cx);
+        let index = wiring.register_tab(self.value.clone(), self.disabled, focus_handle.clone());
 
-        context.update(cx, |runtime| {
-            if let Some(value) = value {
-                runtime.register_tab(value, disabled, index);
-            }
-
-            runtime.register_tab_focus_handle(index, focus_handle);
-        });
+        self.index = Some(index);
+        self.focus_handle = Some(focus_handle);
+        self
     }
+
+    fn tab_index(&self) -> Option<usize> {
+        self.index
+    }
+}
+
+fn tab_focus_handle(id: &ElementId, window: &mut Window, cx: &mut App) -> FocusHandle {
+    let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
+        ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("focus")),
+        cx,
+        |_, cx| cx.focus_handle(),
+    );
+
+    focus_handle_entity.read(cx).clone()
 }

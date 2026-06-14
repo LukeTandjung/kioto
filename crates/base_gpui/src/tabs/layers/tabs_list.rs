@@ -5,13 +5,11 @@ use gpui::{
     StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
-use crate::{
-    api::GenericChild,
-    tabs::{
-        Move, TabsActivateHighlighted, TabsContext, TabsListChild, TabsListRenderState,
-        TabsOrientation, TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft,
-        TabsSelectRight, TabsSelectUp, TABS_LIST_KEY_CONTEXT,
-    },
+use crate::tabs::{
+    child_wiring::{TabsChildNode, TabsChildWiring},
+    Move, TabsActivateHighlighted, TabsContext, TabsListChild, TabsListRenderState,
+    TabsOrientation, TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft,
+    TabsSelectRight, TabsSelectUp, TABS_LIST_KEY_CONTEXT,
 };
 
 #[derive(IntoElement)]
@@ -55,22 +53,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
                 })
             })
             .unwrap_or((None, TabsOrientation::Horizontal));
-        let child_tab_indices = {
-            let mut tab_index = 0;
-
-            self.children
-                .iter()
-                .map(|child| {
-                    if child.is_tab() {
-                        let index = Some(tab_index);
-                        tab_index += 1;
-                        index
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>()
-        };
+        let child_tab_indices = self
+            .children
+            .iter()
+            .map(TabsChildNode::tab_index)
+            .collect::<Vec<_>>();
         let bounds_context = context.clone();
         let select_left_context = context.clone();
         let select_right_context = context.clone();
@@ -213,31 +200,33 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
             let value = context.read(cx, |runtime, _| runtime.highlighted_value());
             context.select(value, window, cx);
         })
-        .children({
-            let mut tab_index = 0;
-
+        .children(
             self.children
                 .into_iter()
-                .map(|child| {
-                    let index = match child.is_tab() {
-                        true => {
-                            let index = Some(tab_index);
-                            tab_index += 1;
-                            index
-                        }
-                        false => None,
-                    };
-
-                    child.into_any_element_with_context(index, context.clone())
-                })
-                .collect::<Vec<_>>()
-        })
+                .map(IntoElement::into_element)
+                .collect::<Vec<_>>(),
+        )
     }
 }
 
-impl<T: Clone + Eq + 'static> GenericChild<TabsContext<T>> for TabsList<T> {
-    fn add_state_context(mut self, context: TabsContext<T>) -> Self {
-        self.context = Some(context);
+impl<T: Clone + Eq + 'static> TabsChildNode<T> for TabsList<T> {
+    fn with_tabs_context(mut self, context: TabsContext<T>) -> Self {
+        self.context = Some(context.clone());
+        self.children = self
+            .children
+            .into_iter()
+            .map(|child| child.with_tabs_context(context.clone()))
+            .collect();
+        self
+    }
+
+    fn wire_tabs_child(
+        mut self,
+        wiring: &mut TabsChildWiring<T>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Self {
+        self.children = wiring.wire_list_children(self.children, window, cx);
         self
     }
 }
@@ -276,16 +265,5 @@ impl<T: Clone + Eq + 'static> TabsList<T> {
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self
-    }
-
-    pub fn register_runtime(&self, context: &TabsContext<T>, window: &mut Window, cx: &mut App) {
-        let mut tab_index = 0;
-
-        for child in &self.children {
-            if child.is_tab() {
-                child.register_runtime(tab_index, context, window, cx);
-                tab_index += 1;
-            }
-        }
     }
 }

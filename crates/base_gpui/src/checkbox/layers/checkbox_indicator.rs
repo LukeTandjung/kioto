@@ -5,9 +5,8 @@ use gpui::{
     Styled, Window,
 };
 
-use crate::{
-    api::GenericChild,
-    checkbox::{CheckboxContext, CheckboxIndicatorRenderState},
+use crate::checkbox::{
+    child_wiring::CheckboxChildNode, CheckboxContext, CheckboxIndicatorRenderState,
 };
 
 #[derive(IntoElement)]
@@ -66,8 +65,8 @@ impl RenderOnce for CheckboxIndicator {
     }
 }
 
-impl GenericChild<CheckboxContext> for CheckboxIndicator {
-    fn add_state_context(mut self, context: CheckboxContext) -> Self {
+impl CheckboxChildNode for CheckboxIndicator {
+    fn with_checkbox_context(mut self, context: CheckboxContext) -> Self {
         self.context = Some(context);
         self
     }
