@@ -7,49 +7,45 @@ use gpui::{
 };
 
 use crate::{
-    checkbox::{
-        child_wiring::CheckboxChildNode, CheckboxCheckedChangeHandler, CheckboxChild,
-        CheckboxContext, CheckboxProps, CheckboxRootRenderState, CheckboxToggle,
-        CHECKBOX_ROOT_KEY_CONTEXT,
-    },
     field::{
         current_field_context, current_field_item_disabled, FieldControlRegistration, FieldValue,
+    },
+    switch::{
+        child_wiring::SwitchChildNode, SwitchCheckedChangeDetails, SwitchCheckedChangeHandler,
+        SwitchCheckedChangeSource, SwitchChild, SwitchContext, SwitchProps, SwitchRootRenderState,
+        SwitchToggle, SWITCH_ROOT_KEY_CONTEXT,
     },
 };
 
 #[derive(IntoElement)]
-pub struct CheckboxRoot {
+pub struct SwitchRoot {
     id: ElementId,
     base: Div,
-    children: Vec<CheckboxChild>,
+    children: Vec<SwitchChild>,
     name: Option<SharedString>,
     default_checked: bool,
     checked: Option<bool>,
-    indeterminate: bool,
     value: Option<SharedString>,
     form: Option<SharedString>,
-    parent: bool,
     unchecked_value: Option<SharedString>,
     disabled: bool,
     read_only: bool,
     required: bool,
-    on_checked_change: Option<CheckboxCheckedChangeHandler>,
-    style_with_state: Option<Rc<dyn Fn(CheckboxRootRenderState, Div) -> Div + 'static>>,
+    on_checked_change: Option<SwitchCheckedChangeHandler>,
+    style_with_state: Option<Rc<dyn Fn(SwitchRootRenderState, Div) -> Div + 'static>>,
 }
 
-impl Default for CheckboxRoot {
+impl Default for SwitchRoot {
     fn default() -> Self {
         Self {
-            id: ElementId::from("checkbox"),
+            id: ElementId::from("switch"),
             base: div(),
             children: Vec::new(),
             name: None,
             default_checked: false,
             checked: None,
-            indeterminate: false,
             value: None,
             form: None,
-            parent: false,
             unchecked_value: None,
             disabled: false,
             read_only: false,
@@ -60,13 +56,13 @@ impl Default for CheckboxRoot {
     }
 }
 
-impl Styled for CheckboxRoot {
+impl Styled for SwitchRoot {
     fn style(&mut self) -> &mut StyleRefinement {
         self.base.style()
     }
 }
 
-impl RenderOnce for CheckboxRoot {
+impl RenderOnce for SwitchRoot {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let field_context = current_field_context();
         let field_disabled = field_context
@@ -77,19 +73,17 @@ impl RenderOnce for CheckboxRoot {
         let disabled = self.disabled || field_disabled || item_disabled;
         let name = self.name.clone();
         let id = self.id.clone();
-        let context = CheckboxContext::new(
+        let context = SwitchContext::new(
             self.id.clone(),
             cx,
             window,
             self.checked.map(Some),
             Some(self.default_checked),
-            CheckboxProps::new(
+            SwitchProps::new(
                 self.name,
                 self.value,
                 self.form,
-                self.parent,
                 self.unchecked_value,
-                self.indeterminate,
                 disabled,
                 self.read_only,
                 self.required,
@@ -127,8 +121,8 @@ impl RenderOnce for CheckboxRoot {
             None => self.base,
         };
 
-        let action_context = context.clone();
-        let toggle_context = context.clone();
+        let keyboard_context = context.clone();
+        let pointer_context = context.clone();
 
         base.id(self.id)
             .track_focus(
@@ -136,40 +130,37 @@ impl RenderOnce for CheckboxRoot {
                     .tab_stop(!disabled)
                     .tab_index(if disabled { -1 } else { 0 }),
             )
-            .key_context(CHECKBOX_ROOT_KEY_CONTEXT)
+            .key_context(SWITCH_ROOT_KEY_CONTEXT)
             .focusable()
-            .on_action(move |_: &CheckboxToggle, window, cx| {
-                action_context.toggle(window, cx);
+            .on_action(move |_: &SwitchToggle, window, cx| {
+                keyboard_context.toggle(SwitchCheckedChangeSource::Keyboard, window, cx);
             })
             .on_click(move |event, window, cx| {
                 if !matches!(event, ClickEvent::Mouse(_)) {
                     return;
                 }
 
-                toggle_context.toggle(window, cx);
+                pointer_context.toggle(SwitchCheckedChangeSource::Pointer, window, cx);
             })
             .children(
                 self.children
                     .into_iter()
-                    .map(|child| child.with_checkbox_context(context.clone())),
+                    .map(|child| child.with_switch_context(context.clone())),
             )
     }
 }
 
-impl CheckboxRoot {
+impl SwitchRoot {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn child(mut self, child: impl Into<CheckboxChild>) -> Self {
+    pub fn child(mut self, child: impl Into<SwitchChild>) -> Self {
         self.children.push(child.into());
         self
     }
 
-    pub fn children(
-        mut self,
-        children: impl IntoIterator<Item = impl Into<CheckboxChild>>,
-    ) -> Self {
+    pub fn children(mut self, children: impl IntoIterator<Item = impl Into<SwitchChild>>) -> Self {
         self.children.extend(children.into_iter().map(Into::into));
         self
     }
@@ -194,11 +185,6 @@ impl CheckboxRoot {
         self
     }
 
-    pub fn indeterminate(mut self, indeterminate: bool) -> Self {
-        self.indeterminate = indeterminate;
-        self
-    }
-
     pub fn value(mut self, value: impl Into<SharedString>) -> Self {
         self.value = Some(value.into());
         self
@@ -206,11 +192,6 @@ impl CheckboxRoot {
 
     pub fn form(mut self, form: impl Into<SharedString>) -> Self {
         self.form = Some(form.into());
-        self
-    }
-
-    pub fn parent(mut self, parent: bool) -> Self {
-        self.parent = parent;
         self
     }
 
@@ -236,7 +217,8 @@ impl CheckboxRoot {
 
     pub fn on_checked_change(
         mut self,
-        on_checked_change: impl Fn(bool, &mut Window, &mut App) + 'static,
+        on_checked_change: impl Fn(bool, &mut SwitchCheckedChangeDetails, &mut Window, &mut App)
+            + 'static,
     ) -> Self {
         self.on_checked_change = Some(Rc::new(on_checked_change));
         self
@@ -244,7 +226,7 @@ impl CheckboxRoot {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(CheckboxRootRenderState, Div) -> Div + 'static,
+        style: impl Fn(SwitchRootRenderState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

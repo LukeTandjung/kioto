@@ -1,6 +1,10 @@
 use base_gpui::{
     checkbox::{CheckboxIndicator, CheckboxRoot},
+    field::{FieldDescription, FieldError, FieldLabel, FieldRoot},
+    radio_group::{RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot},
+    switch::{SwitchRoot, SwitchThumb},
     tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab},
+    utils::direction::{DirectionProvider, TextDirection},
 };
 use gpui::{
     div, prelude::*, px, rgb, size, App, Bounds, Context, IntoElement, Render, Window,
@@ -153,6 +157,153 @@ impl Render for TabsTest {
                             ),
                     )
                     .child(
+                        div().flex().flex_col().gap_3().child("Switch").child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap_2()
+                                .child(
+                                    SwitchRoot::new()
+                                        .id("example-switch")
+                                        .default_checked(true)
+                                        .w(px(36.0))
+                                        .h(px(20.0))
+                                        .rounded_full()
+                                        .border_1()
+                                        .p(px(2.0))
+                                        .style_with_state(|state, root| {
+                                            let root = if state.checked {
+                                                root.bg(rgb(0x111827)).border_color(rgb(0x111827))
+                                            } else {
+                                                root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
+                                            };
+
+                                            if state.focused {
+                                                root.shadow_md()
+                                            } else {
+                                                root
+                                            }
+                                        })
+                                        .child(
+                                            SwitchThumb::new()
+                                                .size(px(14.0))
+                                                .rounded_full()
+                                                .style_with_state(|state, thumb| {
+                                                    let thumb = if state.root.checked {
+                                                        thumb.ml(px(16.0)).bg(rgb(0xffffff))
+                                                    } else {
+                                                        thumb.bg(rgb(0x111827))
+                                                    };
+
+                                                    if state.root.disabled || state.root.read_only {
+                                                        thumb.opacity(0.5)
+                                                    } else {
+                                                        thumb
+                                                    }
+                                                }),
+                                        ),
+                                )
+                                .child("Notifications"),
+                        ),
+                    )
+                    .child(
+                        FieldRoot::new()
+                            .id("example-field")
+                            .invalid(true)
+                            .flex()
+                            .flex_col()
+                            .gap_2()
+                            .child(
+                                FieldLabel::new()
+                                    .text_size(px(13.0))
+                                    .text_color(rgb(0x374151))
+                                    .child("Field-wrapped switch"),
+                            )
+                            .child_any(
+                                SwitchRoot::new()
+                                    .id("field-switch")
+                                    .default_checked(false)
+                                    .w(px(36.0))
+                                    .h(px(20.0))
+                                    .rounded_full()
+                                    .border_1()
+                                    .p(px(2.0))
+                                    .style_with_state(|state, root| {
+                                        if state.checked {
+                                            root.bg(rgb(0x111827)).border_color(rgb(0x111827))
+                                        } else {
+                                            root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
+                                        }
+                                    })
+                                    .child(
+                                        SwitchThumb::new()
+                                            .size(px(14.0))
+                                            .rounded_full()
+                                            .style_with_state(|state, thumb| {
+                                                if state.root.checked {
+                                                    thumb.ml(px(16.0)).bg(rgb(0xffffff))
+                                                } else {
+                                                    thumb.bg(rgb(0x111827))
+                                                }
+                                            }),
+                                    ),
+                            )
+                            .child(
+                                FieldError::new()
+                                    .text_color(rgb(0xdc2626))
+                                    .text_size(px(12.0))
+                                    .child("This field is marked invalid."),
+                            )
+                            .child(
+                                FieldDescription::new()
+                                    .text_color(rgb(0x6b7280))
+                                    .text_size(px(12.0))
+                                    .child("Labels can focus the registered control."),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_3()
+                            .child("Radio Group (LTR arrows)")
+                            .child(
+                                DirectionProvider::new()
+                                    .direction(TextDirection::Ltr)
+                                    .child(
+                                        RadioGroupRoot::<&'static str>::new()
+                                            .id("example-radio-group-ltr")
+                                            .default_value(Some("standard"))
+                                            .flex()
+                                            .gap_2()
+                                            .child(example_radio("ltr", "standard"))
+                                            .child(example_radio("ltr", "express"))
+                                            .child(example_radio("ltr", "overnight")),
+                                    ),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_3()
+                            .child("Radio Group (RTL arrows)")
+                            .child(
+                                DirectionProvider::new()
+                                    .direction(TextDirection::Rtl)
+                                    .child(
+                                        RadioGroupRoot::<&'static str>::new()
+                                            .id("example-radio-group-rtl")
+                                            .default_value(Some("express"))
+                                            .flex()
+                                            .gap_2()
+                                            .child(example_radio("rtl", "standard"))
+                                            .child(example_radio("rtl", "express"))
+                                            .child(example_radio("rtl", "overnight")),
+                                    ),
+                            ),
+                    )
+                    .child(
                         div()
                             .flex()
                             .flex_col()
@@ -237,11 +388,44 @@ impl Render for TabsTest {
     }
 }
 
+fn example_radio(group: &'static str, value: &'static str) -> RadioGroupRadio<&'static str> {
+    RadioGroupRadio::new()
+        .id(format!("example-radio-{group}-{value}"))
+        .value(value)
+        .size(px(22.0))
+        .rounded_full()
+        .border_1()
+        .flex()
+        .items_center()
+        .justify_center()
+        .style_with_state(|state, radio| {
+            let radio = if state.checked {
+                radio.bg(rgb(0x111827)).border_color(rgb(0x111827))
+            } else if state.highlighted {
+                radio.bg(rgb(0xf3f4f6)).border_color(rgb(0x6b7280))
+            } else {
+                radio.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
+            };
+
+            if state.disabled || state.read_only {
+                radio.opacity(0.5)
+            } else {
+                radio
+            }
+        })
+        .child(
+            RadioGroupIndicator::new()
+                .size(px(8.0))
+                .rounded_full()
+                .bg(rgb(0xffffff)),
+        )
+}
+
 fn main() {
     application().run(|cx: &mut App| {
         base_gpui::init(cx);
 
-        let bounds = Bounds::centered(None, size(px(500.0), px(360.0)), cx);
+        let bounds = Bounds::centered(None, size(px(500.0), px(620.0)), cx);
 
         cx.open_window(
             WindowOptions {

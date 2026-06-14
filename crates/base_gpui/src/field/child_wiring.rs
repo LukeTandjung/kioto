@@ -1,0 +1,90 @@
+use crate::field::{
+    FieldChild, FieldContext, FieldDescription, FieldError, FieldItem, FieldItemChild, FieldLabel,
+    FieldValidity,
+};
+
+pub trait FieldChildNode: Sized {
+    fn with_field_context(self, context: FieldContext) -> Self;
+}
+
+pub fn wire_children(children: Vec<FieldChild>, context: FieldContext) -> Vec<FieldChild> {
+    children
+        .into_iter()
+        .map(|child| child.with_field_context(context.clone()))
+        .collect()
+}
+
+pub fn wire_item_children(
+    children: Vec<FieldItemChild>,
+    context: FieldContext,
+) -> Vec<FieldItemChild> {
+    children
+        .into_iter()
+        .map(|child| child.with_field_context(context.clone()))
+        .collect()
+}
+
+impl FieldChildNode for FieldChild {
+    fn with_field_context(self, context: FieldContext) -> Self {
+        match self {
+            Self::Item(item) => Self::Item(item.with_field_context(context)),
+            Self::Label(label) => Self::Label(label.with_field_context(context)),
+            Self::Description(description) => {
+                Self::Description(description.with_field_context(context))
+            }
+            Self::Error(error) => Self::Error(error.with_field_context(context)),
+            Self::Validity(validity) => Self::Validity(validity.with_field_context(context)),
+            Self::Any(any) => Self::Any(any),
+        }
+    }
+}
+
+impl FieldChildNode for FieldItemChild {
+    fn with_field_context(self, context: FieldContext) -> Self {
+        match self {
+            Self::Label(label) => Self::Label(label.with_field_context(context)),
+            Self::Description(description) => {
+                Self::Description(description.with_field_context(context))
+            }
+            Self::Error(error) => Self::Error(error.with_field_context(context)),
+            Self::Validity(validity) => Self::Validity(validity.with_field_context(context)),
+            Self::Any(any) => Self::Any(any),
+        }
+    }
+}
+
+impl FieldChildNode for FieldItem {
+    fn with_field_context(mut self, context: FieldContext) -> Self {
+        self.context = Some(context.clone());
+        self.children = wire_item_children(self.children, context);
+        self
+    }
+}
+
+impl FieldChildNode for FieldLabel {
+    fn with_field_context(mut self, context: FieldContext) -> Self {
+        self.context = Some(context);
+        self
+    }
+}
+
+impl FieldChildNode for FieldDescription {
+    fn with_field_context(mut self, context: FieldContext) -> Self {
+        self.context = Some(context);
+        self
+    }
+}
+
+impl FieldChildNode for FieldError {
+    fn with_field_context(mut self, context: FieldContext) -> Self {
+        self.context = Some(context);
+        self
+    }
+}
+
+impl FieldChildNode for FieldValidity {
+    fn with_field_context(mut self, context: FieldContext) -> Self {
+        self.context = Some(context);
+        self
+    }
+}
