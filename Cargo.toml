@@ -15,5 +15,8 @@ gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["font-kit", "wayland", "x11"] }
 gpui-component = { git = "https://github.com/longbridge/gpui-component" }
 
+[workspace.lints.clippy]
+pub_with_shorthand = "deny"
+
 [patch.crates-io]
 gpui = { git = "https://github.com/zed-industries/zed" }

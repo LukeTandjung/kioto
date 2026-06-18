@@ -14,7 +14,7 @@ use crate::field::{
 pub struct FieldError {
     base: Div,
     children: Vec<AnyElement>,
-    pub(crate) context: Option<FieldContext>,
+    context: Option<FieldContext>,
     matcher: FieldErrorMatch,
     style_with_state: Option<Rc<dyn Fn(FieldErrorRenderState, Div) -> Div + 'static>>,
 }
@@ -87,6 +87,11 @@ impl RenderOnce for FieldError {
 impl FieldError {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn with_field_context(mut self, context: FieldContext) -> Self {
+        self.context = Some(context);
+        self
     }
 
     pub fn match_(mut self, key: FieldValidityKey) -> Self {

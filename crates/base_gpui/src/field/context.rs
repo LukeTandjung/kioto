@@ -15,10 +15,7 @@ pub fn current_field_context() -> Option<FieldContext> {
     FIELD_CONTEXT_STACK.with(|stack| stack.borrow().last().cloned())
 }
 
-pub(crate) fn with_field_context<Output>(
-    context: FieldContext,
-    f: impl FnOnce() -> Output,
-) -> Output {
+pub fn with_field_context<Output>(context: FieldContext, f: impl FnOnce() -> Output) -> Output {
     struct FieldContextGuard;
 
     impl Drop for FieldContextGuard {

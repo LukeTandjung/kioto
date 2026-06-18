@@ -10,10 +10,7 @@ pub fn current_field_item_disabled() -> bool {
         .unwrap_or(false)
 }
 
-pub(crate) fn with_field_item_disabled<Output>(
-    disabled: bool,
-    f: impl FnOnce() -> Output,
-) -> Output {
+pub fn with_field_item_disabled<Output>(disabled: bool, f: impl FnOnce() -> Output) -> Output {
     struct FieldItemGuard;
 
     impl Drop for FieldItemGuard {

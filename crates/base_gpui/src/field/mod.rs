@@ -14,7 +14,9 @@ mod tests;
 pub use child::{FieldChild, FieldItemChild};
 pub use context::{current_field_context, FieldContext};
 pub use item_context::current_field_item_disabled;
-pub use layers::{FieldDescription, FieldError, FieldItem, FieldLabel, FieldRoot, FieldValidity};
+pub use layers::{
+    FieldControl, FieldDescription, FieldError, FieldItem, FieldLabel, FieldRoot, FieldValidity,
+};
 pub use props::{FieldProps, FieldValidationHandler};
 pub use render_state::{
     FieldDescriptionRenderState, FieldErrorRenderState, FieldItemRenderState,

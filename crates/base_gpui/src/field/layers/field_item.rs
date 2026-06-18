@@ -6,15 +6,15 @@ use gpui::{
 };
 
 use crate::field::{
-    context::current_field_context, item_context::with_field_item_disabled, FieldContext,
-    FieldItemChild, FieldItemRenderState,
+    child_wiring::wire_item_children, context::current_field_context,
+    item_context::with_field_item_disabled, FieldContext, FieldItemChild, FieldItemRenderState,
 };
 
 #[derive(IntoElement)]
 pub struct FieldItem {
-    pub(crate) base: Div,
-    pub(crate) children: Vec<FieldItemChild>,
-    pub(crate) context: Option<FieldContext>,
+    base: Div,
+    children: Vec<FieldItemChild>,
+    context: Option<FieldContext>,
     disabled: bool,
     style_with_state: Option<Rc<dyn Fn(FieldItemRenderState, Div) -> Div + 'static>>,
 }
@@ -84,6 +84,12 @@ impl FieldItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn with_field_context(mut self, context: FieldContext) -> Self {
+        self.context = Some(context.clone());
+        self.children = wire_item_children(self.children, context);
         self
     }
 

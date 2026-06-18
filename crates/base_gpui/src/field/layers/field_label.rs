@@ -14,7 +14,7 @@ use crate::field::{
 pub struct FieldLabel {
     base: Div,
     children: Vec<AnyElement>,
-    pub(crate) context: Option<FieldContext>,
+    context: Option<FieldContext>,
     style_with_state: Option<Rc<dyn Fn(FieldLabelRenderState, Div) -> Div + 'static>>,
 }
 
@@ -77,6 +77,11 @@ impl RenderOnce for FieldLabel {
 impl FieldLabel {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn with_field_context(mut self, context: FieldContext) -> Self {
+        self.context = Some(context);
+        self
     }
 
     pub fn style_with_state(

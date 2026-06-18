@@ -1,6 +1,6 @@
 use crate::field::{
-    FieldChild, FieldContext, FieldDescription, FieldError, FieldItem, FieldItemChild, FieldLabel,
-    FieldValidity,
+    FieldChild, FieldContext, FieldControl, FieldDescription, FieldError, FieldItem,
+    FieldItemChild, FieldLabel, FieldValidity,
 };
 
 pub trait FieldChildNode: Sized {
@@ -29,6 +29,7 @@ impl FieldChildNode for FieldChild {
         match self {
             Self::Item(item) => Self::Item(item.with_field_context(context)),
             Self::Label(label) => Self::Label(label.with_field_context(context)),
+            Self::Control(control) => Self::Control(control.with_field_context(context)),
             Self::Description(description) => {
                 Self::Description(description.with_field_context(context))
             }
@@ -43,6 +44,7 @@ impl FieldChildNode for FieldItemChild {
     fn with_field_context(self, context: FieldContext) -> Self {
         match self {
             Self::Label(label) => Self::Label(label.with_field_context(context)),
+            Self::Control(control) => Self::Control(control.with_field_context(context)),
             Self::Description(description) => {
                 Self::Description(description.with_field_context(context))
             }
@@ -54,37 +56,37 @@ impl FieldChildNode for FieldItemChild {
 }
 
 impl FieldChildNode for FieldItem {
-    fn with_field_context(mut self, context: FieldContext) -> Self {
-        self.context = Some(context.clone());
-        self.children = wire_item_children(self.children, context);
-        self
+    fn with_field_context(self, context: FieldContext) -> Self {
+        self.with_field_context(context)
     }
 }
 
 impl FieldChildNode for FieldLabel {
-    fn with_field_context(mut self, context: FieldContext) -> Self {
-        self.context = Some(context);
-        self
+    fn with_field_context(self, context: FieldContext) -> Self {
+        self.with_field_context(context)
+    }
+}
+
+impl FieldChildNode for FieldControl {
+    fn with_field_context(self, context: FieldContext) -> Self {
+        self.with_field_context(context)
     }
 }
 
 impl FieldChildNode for FieldDescription {
-    fn with_field_context(mut self, context: FieldContext) -> Self {
-        self.context = Some(context);
-        self
+    fn with_field_context(self, context: FieldContext) -> Self {
+        self.with_field_context(context)
     }
 }
 
 impl FieldChildNode for FieldError {
-    fn with_field_context(mut self, context: FieldContext) -> Self {
-        self.context = Some(context);
-        self
+    fn with_field_context(self, context: FieldContext) -> Self {
+        self.with_field_context(context)
     }
 }
 
 impl FieldChildNode for FieldValidity {
-    fn with_field_context(mut self, context: FieldContext) -> Self {
-        self.context = Some(context);
-        self
+    fn with_field_context(self, context: FieldContext) -> Self {
+        self.with_field_context(context)
     }
 }

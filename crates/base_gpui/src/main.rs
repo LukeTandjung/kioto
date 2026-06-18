@@ -1,6 +1,7 @@
 use base_gpui::{
     checkbox::{CheckboxIndicator, CheckboxRoot},
-    field::{FieldDescription, FieldError, FieldLabel, FieldRoot},
+    field::{FieldControl, FieldDescription, FieldError, FieldLabel, FieldRoot},
+    primitives::input::input,
     radio_group::{RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot},
     switch::{SwitchRoot, SwitchThumb},
     tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab},
@@ -259,6 +260,81 @@ impl Render for TabsTest {
                                     .text_color(rgb(0x6b7280))
                                     .text_size(px(12.0))
                                     .child("Labels can focus the registered control."),
+                            ),
+                    )
+                    .child(
+                        div().flex().flex_col().gap_2().child("Plain input").child(
+                            input()
+                                .id("example-plain-input")
+                                .name("plain")
+                                .default_value("Hello GPUI")
+                                .placeholder("Type here")
+                                .w_full()
+                                .h(px(32.0))
+                                .rounded_md()
+                                .border_1()
+                                .border_color(rgb(0xd1d5db))
+                                .px_2()
+                                .style_with_state(|state, input| {
+                                    if state.focused {
+                                        input.border_color(rgb(0x2563eb))
+                                    } else {
+                                        input
+                                    }
+                                }),
+                        ),
+                    )
+                    .child(
+                        FieldRoot::new()
+                            .id("example-input-field")
+                            .validation_mode(base_gpui::field::FieldValidationMode::OnBlur)
+                            .flex()
+                            .flex_col()
+                            .gap_2()
+                            .child(
+                                FieldLabel::new()
+                                    .text_size(px(13.0))
+                                    .text_color(rgb(0x374151))
+                                    .child("Email"),
+                            )
+                            .child(
+                                FieldControl::new()
+                                    .id("example-email-input")
+                                    .name("email")
+                                    .required(true)
+                                    .placeholder("hello@example.com")
+                                    .w_full()
+                                    .h(px(32.0))
+                                    .rounded_md()
+                                    .border_1()
+                                    .px_2()
+                                    .style_with_state(|state, input| {
+                                        let input = if state.invalid {
+                                            input.border_color(rgb(0xdc2626))
+                                        } else if state.focused {
+                                            input.border_color(rgb(0x2563eb))
+                                        } else {
+                                            input.border_color(rgb(0xd1d5db))
+                                        };
+
+                                        if state.disabled || state.read_only {
+                                            input.opacity(0.5)
+                                        } else {
+                                            input
+                                        }
+                                    }),
+                            )
+                            .child(
+                                FieldError::new()
+                                    .text_color(rgb(0xdc2626))
+                                    .text_size(px(12.0))
+                                    .child("Email is required."),
+                            )
+                            .child(
+                                FieldDescription::new()
+                                    .text_color(rgb(0x6b7280))
+                                    .text_size(px(12.0))
+                                    .child("A reusable GPUI input primitive inside Field."),
                             ),
                     )
                     .child(

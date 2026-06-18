@@ -14,7 +14,7 @@ use crate::field::{
 pub struct FieldDescription {
     base: Div,
     children: Vec<AnyElement>,
-    pub(crate) context: Option<FieldContext>,
+    context: Option<FieldContext>,
     style_with_state: Option<Rc<dyn Fn(FieldDescriptionRenderState, Div) -> Div + 'static>>,
 }
 
@@ -67,6 +67,11 @@ impl RenderOnce for FieldDescription {
 impl FieldDescription {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn with_field_context(mut self, context: FieldContext) -> Self {
+        self.context = Some(context);
+        self
     }
 
     pub fn style_with_state(

@@ -62,6 +62,7 @@
             rustc
             clippy
             rust-analyzer
+            ast-grep
             yazi
             rustfmt
           ];
