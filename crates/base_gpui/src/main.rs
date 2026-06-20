@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use base_gpui::{
     checkbox::{CheckboxIndicator, CheckboxRoot},
     checkbox_group::CheckboxGroup,
@@ -8,6 +10,10 @@ use base_gpui::{
     number_field::{
         NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput,
         NumberFieldRoot,
+    },
+    popover::{
+        PopoverArrow, PopoverClose, PopoverDescription, PopoverPopup, PopoverPortal,
+        PopoverPositioner, PopoverRoot, PopoverTitle, PopoverTrigger,
     },
     radio_group::{RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot},
     select::{
@@ -108,6 +114,11 @@ impl Render for ComponentGallery {
                                 "Select",
                                 "Trigger, value, popup/list, item labels, and indicator state.",
                                 select_demo(),
+                            ))
+                            .child(component_card(
+                                "Popover",
+                                "Anchored popup with trigger, title, description, arrow, and close.",
+                                popover_demo(),
                             ))
                             .child(component_card(
                                 "Field + Select",
@@ -227,6 +238,90 @@ fn separator_demo() -> impl IntoElement {
                 )
                 .child("Log in")
                 .child("Sign up"),
+        )
+}
+
+fn popover_demo() -> impl IntoElement {
+    PopoverRoot::<()>::new()
+        .id("gallery-popover")
+        .flex()
+        .items_center()
+        .gap_2()
+        .child(
+            PopoverTrigger::<()>::new()
+                .id("details")
+                .px_3()
+                .py_2()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0x9ca3af))
+                .bg(rgb(0xffffff))
+                .text_size(px(13.0))
+                .text_color(rgb(0x111827))
+                .child("Open details"),
+        )
+        .child(
+            PopoverTrigger::<()>::new()
+                .id("help")
+                .open_on_hover(true)
+                .delay(Duration::from_millis(150))
+                .close_delay(Duration::from_millis(150))
+                .px_3()
+                .py_2()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0x9ca3af))
+                .bg(rgb(0xffffff))
+                .text_size(px(13.0))
+                .text_color(rgb(0x111827))
+                .child("Open help"),
+        )
+        .child(
+            PopoverPortal::<()>::new().child(
+                PopoverPositioner::<()>::new().side_offset(px(8.0)).child(
+                    PopoverPopup::<()>::new()
+                        .w(px(220.0))
+                        .rounded_md()
+                        .border_1()
+                        .border_color(rgb(0xd1d5db))
+                        .bg(rgb(0xffffff))
+                        .shadow_lg()
+                        .p_3()
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .child(
+                            PopoverArrow::<()>::new()
+                                .w(px(10.0))
+                                .h(px(10.0))
+                                .bg(rgb(0xffffff)),
+                        )
+                        .child(
+                            PopoverTitle::<()>::new()
+                                .text_size(px(14.0))
+                                .text_color(rgb(0x111827))
+                                .child("Popover title"),
+                        )
+                        .child(
+                            PopoverDescription::<()>::new()
+                                .text_size(px(12.0))
+                                .text_color(rgb(0x6b7280))
+                                .child("This popup is ported with GPUI-native anchored rendering."),
+                        )
+                        .child(
+                            PopoverClose::<()>::new()
+                                .self_start()
+                                .mt_1()
+                                .px_2()
+                                .py_1()
+                                .rounded_sm()
+                                .bg(rgb(0xe5e7eb))
+                                .text_size(px(12.0))
+                                .text_color(rgb(0x111827))
+                                .child("Close"),
+                        ),
+                ),
+            ),
         )
 }
 

@@ -5,6 +5,7 @@ pub mod fieldset;
 pub mod form;
 pub mod input;
 pub mod number_field;
+pub mod popover;
 pub mod primitives;
 pub mod radio_group;
 pub mod select;
@@ -19,6 +20,7 @@ pub fn init(cx: &mut gpui::App) {
     fieldset::init(cx);
     form::init(cx);
     number_field::init(cx);
+    popover::init(cx);
     primitives::input::init(cx);
     radio_group::init(cx);
     select::init(cx);
