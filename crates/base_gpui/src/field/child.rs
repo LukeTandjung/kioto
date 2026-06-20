@@ -1,6 +1,7 @@
 use gpui::{AnyElement, IntoElement};
 
 use crate::{
+    checkbox_group::CheckboxGroup,
     field::{FieldControl, FieldDescription, FieldError, FieldItem, FieldLabel, FieldValidity},
     input::Input,
     number_field::NumberFieldRoot,
@@ -15,6 +16,7 @@ pub enum FieldChild {
     Error(FieldError),
     Validity(FieldValidity),
     NumberField(NumberFieldRoot),
+    CheckboxGroup(CheckboxGroup),
     Any(AnyElement),
 }
 
@@ -31,6 +33,7 @@ impl IntoElement for FieldChild {
             Self::Error(error) => error.into_any_element(),
             Self::Validity(validity) => validity.into_any_element(),
             Self::NumberField(number_field) => number_field.into_any_element(),
+            Self::CheckboxGroup(checkbox_group) => checkbox_group.into_any_element(),
             Self::Any(any) => any,
         }
     }
@@ -84,6 +87,12 @@ impl From<NumberFieldRoot> for FieldChild {
     }
 }
 
+impl From<CheckboxGroup> for FieldChild {
+    fn from(value: CheckboxGroup) -> Self {
+        Self::CheckboxGroup(value)
+    }
+}
+
 pub enum FieldItemChild {
     Label(FieldLabel),
     Control(FieldControl),
@@ -92,6 +101,7 @@ pub enum FieldItemChild {
     Error(FieldError),
     Validity(FieldValidity),
     NumberField(NumberFieldRoot),
+    CheckboxGroup(CheckboxGroup),
     Any(AnyElement),
 }
 
@@ -107,6 +117,7 @@ impl IntoElement for FieldItemChild {
             Self::Error(error) => error.into_any_element(),
             Self::Validity(validity) => validity.into_any_element(),
             Self::NumberField(number_field) => number_field.into_any_element(),
+            Self::CheckboxGroup(checkbox_group) => checkbox_group.into_any_element(),
             Self::Any(any) => any,
         }
     }
@@ -151,5 +162,11 @@ impl From<FieldValidity> for FieldItemChild {
 impl From<NumberFieldRoot> for FieldItemChild {
     fn from(value: NumberFieldRoot) -> Self {
         Self::NumberField(value)
+    }
+}
+
+impl From<CheckboxGroup> for FieldItemChild {
+    fn from(value: CheckboxGroup) -> Self {
+        Self::CheckboxGroup(value)
     }
 }

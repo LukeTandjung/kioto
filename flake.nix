@@ -62,6 +62,7 @@
             rustc
             clippy
             rust-analyzer
+            cargo-watch
             ast-grep
             yazi
             rustfmt

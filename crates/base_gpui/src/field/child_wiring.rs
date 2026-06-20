@@ -43,6 +43,7 @@ impl FieldChildNode for FieldChild {
             Self::NumberField(number_field) => {
                 Self::NumberField(number_field.with_field_context(context))
             }
+            Self::CheckboxGroup(checkbox_group) => Self::CheckboxGroup(checkbox_group),
             Self::Any(any) => Self::Any(any),
         }
     }
@@ -62,6 +63,7 @@ impl FieldChildNode for FieldItemChild {
             Self::NumberField(number_field) => {
                 Self::NumberField(number_field.with_field_context(context))
             }
+            Self::CheckboxGroup(checkbox_group) => Self::CheckboxGroup(checkbox_group),
             Self::Any(any) => Self::Any(any),
         }
     }

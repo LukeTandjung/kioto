@@ -1,6 +1,8 @@
 use base_gpui::{
     checkbox::{CheckboxIndicator, CheckboxRoot},
+    checkbox_group::CheckboxGroup,
     field::{FieldDescription, FieldError, FieldLabel, FieldRoot},
+    fieldset::{FieldsetLegend, FieldsetRoot},
     form::Form,
     input::Input,
     number_field::{
@@ -88,6 +90,11 @@ impl Render for ComponentGallery {
                                 form_demo(),
                             ))
                             .child(component_card(
+                                "Fieldset",
+                                "Grouped fields with legend state and disabled propagation.",
+                                fieldset_demo(),
+                            ))
+                            .child(component_card(
                                 "Number Field",
                                 "Text editing, stepping, min/max, and formatted numeric value.",
                                 number_field_demo(),
@@ -111,6 +118,11 @@ impl Render for ComponentGallery {
                                 "Checkbox",
                                 "Unchecked and checked states with indicator rendering.",
                                 checkbox_demo(),
+                            ))
+                            .child(component_card(
+                                "Checkbox Group",
+                                "Shared selected values, parent state, and disabled propagation.",
+                                checkbox_group_demo(),
                             )),
                     ),
             )
@@ -449,6 +461,82 @@ fn form_demo() -> impl IntoElement {
         )
 }
 
+fn fieldset_demo() -> impl IntoElement {
+    FieldsetRoot::new()
+        .id("example-fieldset")
+        .flex()
+        .flex_col()
+        .gap_2()
+        .style_with_state(|state, root| {
+            if state.disabled {
+                root.opacity(0.5)
+            } else {
+                root
+            }
+        })
+        .child(
+            FieldsetLegend::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x111827))
+                .style_with_state(|state, legend| {
+                    if state.disabled {
+                        legend.text_color(rgb(0x9ca3af))
+                    } else {
+                        legend
+                    }
+                })
+                .child("Billing details"),
+        )
+        .child_any(fieldset_text_field(
+            "example-fieldset-company",
+            "Company",
+            "Acme Inc.",
+        ))
+        .child_any(fieldset_text_field(
+            "example-fieldset-tax-id",
+            "Tax ID",
+            "Enter fiscal number",
+        ))
+}
+
+fn fieldset_text_field(
+    id_prefix: &'static str,
+    label: &'static str,
+    placeholder: &'static str,
+) -> impl IntoElement {
+    FieldRoot::new()
+        .id(id_prefix)
+        .flex()
+        .flex_col()
+        .gap_1()
+        .child(
+            FieldLabel::new()
+                .text_size(px(12.0))
+                .text_color(rgb(0x374151))
+                .child(label),
+        )
+        .child(
+            Input::new()
+                .id(format!("{id_prefix}-input"))
+                .placeholder(placeholder)
+                .w_full()
+                .h(px(30.0))
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .px_2()
+                .style_with_state(|state, input| {
+                    if state.disabled {
+                        input.bg(rgb(0xf3f4f6)).opacity(0.6)
+                    } else if state.focused {
+                        input.border_color(rgb(0x2563eb))
+                    } else {
+                        input
+                    }
+                }),
+        )
+}
+
 fn number_field_demo() -> impl IntoElement {
     NumberFieldRoot::new()
         .id("example-number-field")
@@ -632,6 +720,42 @@ fn checkbox_demo() -> impl IntoElement {
                 .child(gallery_checkbox("checked-checkbox", true, 0x2563eb))
                 .child("Starts checked."),
         )
+}
+
+fn checkbox_group_demo() -> impl IntoElement {
+    CheckboxGroup::new()
+        .id("example-checkbox-group")
+        .default_value(["fuji"])
+        .all_values(["fuji", "gala", "granny"])
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .child(
+                    gallery_checkbox("example-checkbox-group-parent", false, 0x111827).parent(true),
+                )
+                .child("All apples"),
+        )
+        .child(checkbox_group_row("Fuji", "fuji"))
+        .child(checkbox_group_row("Gala", "gala"))
+        .child(checkbox_group_row("Granny Smith", "granny"))
+}
+
+fn checkbox_group_row(label: &'static str, value: &'static str) -> impl IntoElement {
+    div()
+        .flex()
+        .items_center()
+        .gap_2()
+        .child(
+            gallery_checkbox("example-checkbox-group-item", false, 0x2563eb)
+                .id(format!("example-checkbox-group-{value}"))
+                .value(value),
+        )
+        .child(label)
 }
 
 fn gallery_checkbox(id: &'static str, default_checked: bool, checked_color: u32) -> CheckboxRoot {

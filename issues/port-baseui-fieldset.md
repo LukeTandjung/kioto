@@ -17,15 +17,15 @@ This is a follow-up prerequisite for full Form parity: Form should respect Field
 
 ## Acceptance Criteria
 
-- [ ] Inspect Base UI Fieldset source, docs, and tests before implementation.
-- [ ] Create `crates/base_gpui/src/fieldset/` following `docs/base-gpui-component-architecture.md`.
-- [ ] Export and initialize Fieldset from `crates/base_gpui/src/lib.rs`.
-- [ ] Descendant fields/controls inherit disabled state from Fieldset.
-- [ ] Nested Fieldsets combine disabled state deterministically.
-- [ ] Legend/group label behavior is represented with GPUI-native composition.
-- [ ] Form validation and value collection skip fields disabled by Fieldset.
-- [ ] Add Fieldset tests for disabled propagation, nested behavior, and Form integration.
-- [ ] Add demo coverage.
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui fieldset` passes.
-- [ ] `cargo test -p base_gpui` passes.
+- [x] Inspect Base UI Fieldset source, docs, and tests before implementation.
+- [x] Create `crates/base_gpui/src/fieldset/` following `docs/base-gpui-component-architecture.md`.
+- [x] Export and initialize Fieldset from `crates/base_gpui/src/lib.rs`.
+- [x] Descendant fields/controls inherit disabled state from Fieldset.
+- [x] Nested Fieldsets combine disabled state deterministically.
+- [x] Legend/group label behavior is represented with GPUI-native composition.
+- [x] Form validation and value collection skip fields disabled by Fieldset.
+- [x] Add Fieldset tests for disabled propagation, nested behavior, and Form integration.
+- [x] Add demo coverage.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui fieldset` passes.
+- [x] `cargo test -p base_gpui` passes.

@@ -87,7 +87,7 @@ impl Render for CheckboxTestView {
         }
 
         let change_observations = Rc::clone(&self.observations);
-        root = root.on_checked_change(move |next, _window, _cx| {
+        root = root.on_checked_change(move |next, _details, _window, _cx| {
             change_observations.borrow_mut().value_changes.push(next);
         });
 

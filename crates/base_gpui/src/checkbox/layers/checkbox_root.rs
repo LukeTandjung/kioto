@@ -8,13 +8,15 @@ use gpui::{
 
 use crate::{
     checkbox::{
-        child_wiring::CheckboxChildNode, CheckboxCheckedChangeHandler, CheckboxChild,
-        CheckboxContext, CheckboxProps, CheckboxRootRenderState, CheckboxToggle,
+        child_wiring::CheckboxChildNode, CheckboxCheckedChangeHandler, CheckboxCheckedChangeSource,
+        CheckboxChild, CheckboxContext, CheckboxProps, CheckboxRootRenderState, CheckboxToggle,
         CHECKBOX_ROOT_KEY_CONTEXT,
     },
+    checkbox_group::{current_checkbox_group_context, CheckboxGroupChildMetadata},
     field::{
         current_field_context, current_field_item_disabled, FieldControlRegistration, FieldValue,
     },
+    fieldset::current_fieldset_disabled,
 };
 
 #[derive(IntoElement)]
@@ -74,22 +76,50 @@ impl RenderOnce for CheckboxRoot {
             .map(|context| context.read(cx, |runtime, props| runtime.root_state(props).disabled))
             .unwrap_or(false);
         let item_disabled = current_field_item_disabled();
-        let disabled = self.disabled || field_disabled || item_disabled;
+        let fieldset_disabled = current_fieldset_disabled();
+        let group_context = current_checkbox_group_context();
+        let group_disabled = group_context
+            .as_ref()
+            .map(|context| context.disabled())
+            .unwrap_or(false);
+        let disabled =
+            self.disabled || field_disabled || item_disabled || fieldset_disabled || group_disabled;
         let name = self.name.clone();
         let id = self.id.clone();
+        let value = self.value.clone();
+        let parent = self.parent;
+        let group_checked = group_context.as_ref().and_then(|context| {
+            if parent {
+                Some(context.parent_checked(cx))
+            } else {
+                value
+                    .as_ref()
+                    .map(|value| context.checked_for_value(value, cx))
+            }
+        });
+        let indeterminate = if parent {
+            self.indeterminate
+                || group_context
+                    .as_ref()
+                    .map(|context| context.parent_indeterminate(cx))
+                    .unwrap_or(false)
+        } else {
+            self.indeterminate
+        };
+        let controlled_checked = group_checked.or(self.checked).map(Some);
         let context = CheckboxContext::new(
             self.id.clone(),
             cx,
             window,
-            self.checked.map(Some),
+            controlled_checked,
             Some(self.default_checked),
             CheckboxProps::new(
                 self.name,
                 self.value,
                 self.form,
-                self.parent,
+                parent,
                 self.unchecked_value,
-                self.indeterminate,
+                indeterminate,
                 disabled,
                 self.read_only,
                 self.required,
@@ -109,11 +139,24 @@ impl RenderOnce for CheckboxRoot {
 
         let render_state = context.read(cx, |runtime, props| runtime.root_state(props));
         let disabled = render_state.disabled;
-        if let Some(field_context) = field_context.as_ref() {
+        let focused = focus_handle.is_focused(window);
+        if let Some(group_context) = group_context.as_ref() {
+            group_context.register_checkbox(
+                CheckboxGroupChildMetadata::new(id.to_string())
+                    .maybe_value(value.clone())
+                    .disabled(disabled)
+                    .required(render_state.required)
+                    .parent(parent)
+                    .checked(render_state.checked)
+                    .focused(focused)
+                    .focus_handle(focus_handle.clone()),
+                cx,
+            );
+        } else if let Some(field_context) = field_context.as_ref() {
             let mut registration = FieldControlRegistration::new(id.to_string())
                 .value(FieldValue::Bool(render_state.checked))
                 .disabled(disabled)
-                .focused(focus_handle.is_focused(window))
+                .focused(focused)
                 .required(render_state.required)
                 .focus_handle(focus_handle.clone());
             if let Some(name) = name {
@@ -128,7 +171,11 @@ impl RenderOnce for CheckboxRoot {
         };
 
         let action_context = context.clone();
+        let action_group_context = group_context.clone();
+        let action_value = value.clone();
         let toggle_context = context.clone();
+        let toggle_group_context = group_context;
+        let toggle_value = value;
 
         base.id(self.id)
             .track_focus(
@@ -139,20 +186,58 @@ impl RenderOnce for CheckboxRoot {
             .key_context(CHECKBOX_ROOT_KEY_CONTEXT)
             .focusable()
             .on_action(move |_: &CheckboxToggle, window, cx| {
-                action_context.toggle(window, cx);
+                request_checkbox_toggle(
+                    &action_context,
+                    action_group_context.as_ref(),
+                    action_value.clone(),
+                    parent,
+                    CheckboxCheckedChangeSource::Keyboard,
+                    window,
+                    cx,
+                );
             })
             .on_click(move |event, window, cx| {
                 if !matches!(event, ClickEvent::Mouse(_)) {
                     return;
                 }
 
-                toggle_context.toggle(window, cx);
+                request_checkbox_toggle(
+                    &toggle_context,
+                    toggle_group_context.as_ref(),
+                    toggle_value.clone(),
+                    parent,
+                    CheckboxCheckedChangeSource::Pointer,
+                    window,
+                    cx,
+                );
             })
             .children(
                 self.children
                     .into_iter()
                     .map(|child| child.with_checkbox_context(context.clone())),
             )
+    }
+}
+
+fn request_checkbox_toggle(
+    checkbox_context: &CheckboxContext,
+    group_context: Option<&crate::checkbox_group::CheckboxGroupContext>,
+    value: Option<SharedString>,
+    parent: bool,
+    source: CheckboxCheckedChangeSource,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let Some(next_checked) = checkbox_context.request_toggle(source, window, cx) else {
+        return;
+    };
+
+    match group_context {
+        Some(group_context) if parent => group_context.toggle_parent(window, cx),
+        Some(group_context) if value.is_some() => {
+            group_context.toggle_child(value, next_checked, window, cx);
+        }
+        _ => checkbox_context.commit_checked(next_checked, cx),
     }
 }
 
@@ -236,7 +321,8 @@ impl CheckboxRoot {
 
     pub fn on_checked_change(
         mut self,
-        on_checked_change: impl Fn(bool, &mut Window, &mut App) + 'static,
+        on_checked_change: impl Fn(bool, &mut crate::checkbox::CheckboxCheckedChangeDetails, &mut Window, &mut App)
+            + 'static,
     ) -> Self {
         self.on_checked_change = Some(Rc::new(on_checked_change));
         self

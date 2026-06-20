@@ -10,6 +10,7 @@ use crate::{
         current_field_context, current_field_item_disabled, FieldContext, FieldControlRegistration,
         FieldValue,
     },
+    fieldset::current_fieldset_disabled,
     number_field::{
         child_wiring::wire_children, format_number, NumberFieldChangeDetails,
         NumberFieldChangeReason, NumberFieldChild, NumberFieldCommitDetails,
@@ -92,7 +93,8 @@ impl RenderOnce for NumberFieldRoot {
         let field_disabled = field_state.map(|state| state.disabled).unwrap_or(false);
         let field_valid = field_state.and_then(|state| state.valid);
         let item_disabled = current_field_item_disabled();
-        let disabled = self.disabled || field_disabled || item_disabled;
+        let fieldset_disabled = current_fieldset_disabled();
+        let disabled = self.disabled || field_disabled || item_disabled || fieldset_disabled;
         let id = self.id.clone();
         let name = self.name.clone();
 

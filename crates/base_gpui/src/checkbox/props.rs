@@ -2,7 +2,10 @@ use std::rc::Rc;
 
 use gpui::{App, SharedString, Window};
 
-pub type CheckboxCheckedChangeHandler = Rc<dyn Fn(bool, &mut Window, &mut App) + 'static>;
+use crate::checkbox::CheckboxCheckedChangeDetails;
+
+pub type CheckboxCheckedChangeHandler =
+    Rc<dyn Fn(bool, &mut CheckboxCheckedChangeDetails, &mut Window, &mut App) + 'static>;
 
 #[derive(Clone, Default)]
 pub struct CheckboxProps {

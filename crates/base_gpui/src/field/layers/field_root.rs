@@ -12,6 +12,7 @@ use crate::{
         FieldProps, FieldRootRenderState, FieldValidationHandler, FieldValidationMode,
         FieldValidationResult, FieldValue,
     },
+    fieldset::current_fieldset_disabled,
     form::{current_form_context, FormFieldRegistration, FormFieldSnapshot},
 };
 
@@ -59,6 +60,7 @@ impl Styled for FieldRoot {
 impl RenderOnce for FieldRoot {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let form_context = current_form_context();
+        let disabled = self.disabled || current_fieldset_disabled();
         let validation_mode = self.validation_mode.unwrap_or_else(|| {
             form_context
                 .as_ref()
@@ -72,7 +74,7 @@ impl RenderOnce for FieldRoot {
             window,
             FieldProps::new(
                 self.name,
-                self.disabled,
+                disabled,
                 self.invalid,
                 self.dirty,
                 self.touched,

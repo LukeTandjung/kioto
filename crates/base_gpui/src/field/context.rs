@@ -196,7 +196,7 @@ impl FieldContext {
         let result = match self.props.validate() {
             Some(validate) => validate(&value, window, cx),
             None if self.read(cx, |runtime, _| runtime.required()) => {
-                if value.filled() {
+                if !self.read(cx, |runtime, _| runtime.value_missing()) {
                     FieldValidationResult::Valid
                 } else {
                     FieldValidationResult::Validity(FieldValidityData {

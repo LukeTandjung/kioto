@@ -7,6 +7,7 @@ use gpui::{
 
 use crate::{
     field::{current_field_context, FieldControlRegistration, FieldValue},
+    fieldset::current_fieldset_disabled,
     radio_group::{
         child_wiring::wire_children, RadioGroupChild, RadioGroupContext, RadioGroupProps,
         RadioGroupRootRenderState, RadioGroupValueChangeDetails, RadioGroupValueChangeHandler,
@@ -61,7 +62,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for RadioGroupRoot<T> {
             .as_ref()
             .map(|context| context.read(cx, |runtime, props| runtime.root_state(props).disabled))
             .unwrap_or(false);
-        let disabled = self.disabled || field_disabled;
+        let disabled = self.disabled || field_disabled || current_fieldset_disabled();
         let name = self.name.clone();
         let id = self.id.clone();
         let controlled = self.value.clone();

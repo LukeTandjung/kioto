@@ -10,6 +10,7 @@ pub enum FormValue {
     Present,
     Bool(bool),
     Text(SharedString),
+    List(Vec<SharedString>),
     Number(f64),
 }
 
@@ -20,6 +21,7 @@ impl From<FieldValue> for FormValue {
             FieldValue::Present => Self::Present,
             FieldValue::Bool(value) => Self::Bool(value),
             FieldValue::Text(value) => Self::Text(value),
+            FieldValue::List(value) => Self::List(value),
         }
     }
 }

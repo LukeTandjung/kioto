@@ -6,6 +6,7 @@ pub enum FieldValue {
     Present,
     Bool(bool),
     Text(SharedString),
+    List(Vec<SharedString>),
 }
 
 impl FieldValue {
@@ -15,6 +16,7 @@ impl FieldValue {
             Self::Present => true,
             Self::Bool(value) => *value,
             Self::Text(value) => !value.is_empty(),
+            Self::List(value) => !value.is_empty(),
         }
     }
 }

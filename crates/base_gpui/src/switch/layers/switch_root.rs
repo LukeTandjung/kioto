@@ -10,6 +10,7 @@ use crate::{
     field::{
         current_field_context, current_field_item_disabled, FieldControlRegistration, FieldValue,
     },
+    fieldset::current_fieldset_disabled,
     switch::{
         child_wiring::SwitchChildNode, SwitchCheckedChangeDetails, SwitchCheckedChangeHandler,
         SwitchCheckedChangeSource, SwitchChild, SwitchContext, SwitchProps, SwitchRootRenderState,
@@ -70,7 +71,8 @@ impl RenderOnce for SwitchRoot {
             .map(|context| context.read(cx, |runtime, props| runtime.root_state(props).disabled))
             .unwrap_or(false);
         let item_disabled = current_field_item_disabled();
-        let disabled = self.disabled || field_disabled || item_disabled;
+        let fieldset_disabled = current_fieldset_disabled();
+        let disabled = self.disabled || field_disabled || item_disabled || fieldset_disabled;
         let name = self.name.clone();
         let id = self.id.clone();
         let context = SwitchContext::new(

@@ -13,6 +13,7 @@ pub struct FieldControlRegistration {
     disabled: bool,
     focused: bool,
     required: bool,
+    value_missing: bool,
     focus_handle: Option<FocusHandle>,
 }
 
@@ -25,6 +26,7 @@ impl FieldControlRegistration {
             disabled: false,
             focused: false,
             required: false,
+            value_missing: false,
             focus_handle: None,
         }
     }
@@ -51,6 +53,11 @@ impl FieldControlRegistration {
 
     pub fn required(mut self, required: bool) -> Self {
         self.required = required;
+        self
+    }
+
+    pub fn value_missing(mut self, value_missing: bool) -> Self {
+        self.value_missing = value_missing;
         self
     }
 
@@ -81,6 +88,10 @@ impl FieldControlRegistration {
 
     pub fn required_value(&self) -> bool {
         self.required
+    }
+
+    pub fn value_missing_value(&self) -> bool {
+        self.value_missing
     }
 
     pub fn focus_handle_ref(&self) -> Option<&FocusHandle> {
@@ -274,6 +285,15 @@ impl FieldRuntime {
             .any(|control| control.registration.required && !control.registration.disabled)
     }
 
+    /// Returns whether any enabled required control is currently missing a value.
+    pub fn value_missing(&self) -> bool {
+        self.controls.iter().any(|control| {
+            control.registration.required
+                && !control.registration.disabled
+                && (control.registration.value_missing || !control.registration.value.filled())
+        })
+    }
+
     /// Returns whether any registered control is filled.
     pub fn filled(&self) -> bool {
         self.controls.iter().any(RegisteredControl::filled)
@@ -361,10 +381,10 @@ impl FieldRuntime {
         let previous = self.validity_data.clone();
         let value = self.value();
         let initial_value = self.initial_value();
-        let state = if value.filled() {
-            FieldValidityState::valid()
-        } else {
+        let state = if self.value_missing() {
             FieldValidityState::value_missing()
+        } else {
+            FieldValidityState::valid()
         };
         let error = if state.value_missing {
             SharedString::from("Required")

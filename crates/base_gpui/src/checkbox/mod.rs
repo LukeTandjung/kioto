@@ -16,4 +16,7 @@ pub use context::CheckboxContext;
 pub use layers::{CheckboxIndicator, CheckboxRoot};
 pub use props::{CheckboxCheckedChangeHandler, CheckboxProps};
 pub use render_state::{CheckboxIndicatorRenderState, CheckboxRootRenderState};
-pub use runtime::{CheckboxRuntime, ToggleOutcome};
+pub use runtime::{
+    CheckboxCheckedChangeDetails, CheckboxCheckedChangeReason, CheckboxCheckedChangeSource,
+    CheckboxRuntime, ToggleOutcome,
+};

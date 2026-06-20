@@ -2,7 +2,10 @@ use std::rc::Rc;
 
 use gpui::{App, ElementId, Entity, Window};
 
-use crate::checkbox::{CheckboxProps, CheckboxRuntime};
+use crate::checkbox::{
+    CheckboxCheckedChangeDetails, CheckboxCheckedChangeReason, CheckboxCheckedChangeSource,
+    CheckboxProps, CheckboxRuntime,
+};
 
 pub struct CheckboxContext {
     runtime: Entity<CheckboxRuntime>,
@@ -70,32 +73,64 @@ impl CheckboxContext {
         })
     }
 
-    pub fn toggle(&self, window: &mut Window, cx: &mut App) {
+    pub fn request_toggle(
+        &self,
+        source: CheckboxCheckedChangeSource,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<bool> {
         let controlled = *self.controlled.as_ref();
         let props = Rc::clone(&self.props);
-        let outcome = self.runtime.update(cx, |runtime, cx| {
+        let outcome = self.runtime.update(cx, |runtime, _cx| {
             let current = match controlled {
                 Some(checked) => checked,
                 None => runtime.checked_value(),
             };
 
             runtime.sync_checked_from_context(current);
-            let outcome = runtime.toggle(props.disabled(), props.read_only());
+            let outcome = runtime.request_toggle(props.disabled(), props.read_only());
 
-            if controlled.is_some() {
-                runtime.sync_checked_from_context(current);
+            if let Some(checked) = controlled {
+                runtime.sync_checked_from_context(checked);
             }
 
-            cx.notify();
             outcome
         });
 
         if !outcome.changed() {
+            return None;
+        }
+
+        let next_checked = outcome.checked();
+        let mut details =
+            CheckboxCheckedChangeDetails::new(CheckboxCheckedChangeReason::None, source, true);
+
+        if let Some(on_checked_change) = self.props.on_checked_change() {
+            on_checked_change(next_checked, &mut details, window, cx);
+        }
+
+        if details.is_canceled() {
+            return None;
+        }
+
+        Some(next_checked)
+    }
+
+    pub fn commit_checked(&self, checked: bool, cx: &mut App) {
+        if self.controlled.as_ref().is_some() {
             return;
         }
 
-        if let Some(on_checked_change) = self.props.on_checked_change() {
-            on_checked_change(outcome.checked(), window, cx);
+        self.runtime.update(cx, |runtime, cx| {
+            if runtime.commit_checked(checked) {
+                cx.notify();
+            }
+        });
+    }
+
+    pub fn toggle(&self, source: CheckboxCheckedChangeSource, window: &mut Window, cx: &mut App) {
+        if let Some(next_checked) = self.request_toggle(source, window, cx) {
+            self.commit_checked(next_checked, cx);
         }
     }
 }
