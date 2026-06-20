@@ -4,7 +4,7 @@
 
 Base UI Number Field provides a numeric text input with controlled/uncontrolled numeric value, parse/format behavior, increment/decrement controls, keyboard stepping, optional scrubbing, disabled/read-only/required state, and Field integration.
 
-`crates/base_gpui` now has a generic GPUI-native `input()` primitive and a Field component family. Number Field should be the first higher-level text-entry component built on top of `input()`, without making `input()` special-purpose. The goal is to port the useful Base UI Number Field behavior into GPUI-native components while preserving the local architecture: deep runtime/state module, thin layers, typed render state, and no DOM/React leakage.
+`crates/base_gpui` now has a generic GPUI-native `input()` primitive and a Field component family. Number Field should be the first higher-level text-entry component built on top of `input()`, without making `input()` special-purpose. The goal is to port the useful Base UI Number Field behavior into GPUI-native components while preserving the local architecture: deep runtime/state module, thin layers, typed style state, and no DOM/React leakage.
 
 ## Scope
 
@@ -151,7 +151,7 @@ When rendered inside `FieldRoot`, Number Field should register a control with:
 - focused state;
 - stable focus handle for label-click focus.
 
-Required-only Field validation should treat `None` / empty input as missing. Full numeric validity flags (`rangeUnderflow`, `rangeOverflow`, `stepMismatch`, `badInput`) can be represented in Number Field render state first and wired into Field validity only if the existing Field model supports it cleanly.
+Required-only Field validation should treat `None` / empty input as missing. Full numeric validity flags (`rangeUnderflow`, `rangeOverflow`, `stepMismatch`, `badInput`) can be represented in Number Field style state first and wired into Field validity only if the existing Field model supports it cleanly.
 
 ## Expected implementation files
 
@@ -162,7 +162,7 @@ crates/base_gpui/src/number_field/child.rs
 crates/base_gpui/src/number_field/child_wiring.rs
 crates/base_gpui/src/number_field/context.rs
 crates/base_gpui/src/number_field/props.rs
-crates/base_gpui/src/number_field/render_state.rs
+crates/base_gpui/src/number_field/style_state.rs
 crates/base_gpui/src/number_field/runtime.rs
 crates/base_gpui/src/number_field/number.rs
 crates/base_gpui/src/number_field/layers/mod.rs
@@ -176,12 +176,12 @@ crates/base_gpui/src/number_field/layers/number_field_scrub_area_cursor.rs
 crates/base_gpui/src/number_field/tests/
 ```
 
-Alternative filenames are fine if they preserve the same architecture: deep runtime/state, thin layers, typed child wiring, typed render state, and isolated number parsing/validation helpers.
+Alternative filenames are fine if they preserve the same architecture: deep runtime/state, thin layers, typed child wiring, typed style state, and isolated number parsing/validation helpers.
 
 ## Out of scope / drop from Base UI
 
 - Do not port React hooks/context directly.
-- Do not port `className`, web `style`, `render` props, or DOM data attributes; expose typed render-state structs and `style_with_state(...)`.
+- Do not port `className`, web `style`, `render` props, or DOM data attributes; expose typed style-state structs and `style_with_state(...)`.
 - Do not port hidden DOM inputs, browser form submission, or `FormData`.
 - Do not port DOM event objects, propagation APIs, or cancellation APIs literally.
 - Do not implement locale-aware `Intl.NumberFormat` parity in phase 1.
@@ -284,9 +284,9 @@ Alternative filenames are fine if they preserve the same architecture: deep runt
 - [x] Number-specific text changes are observed through `input()` value changes.
 - [x] Input displays `input_value` from Number Field runtime.
 - [x] Input receives disabled/read-only/required state from root.
-- [x] Input focus updates root/input render state.
+- [x] Input focus updates root/input style state.
 - [x] Input blur commits/parses/formats/clamps as specified.
-- [x] Input supports `style_with_state(...)` with `NumberFieldInputRenderState`.
+- [x] Input supports `style_with_state(...)` with `NumberFieldInputStyleState`.
 
 ### Button / keyboard / wheel behavior
 
@@ -310,7 +310,7 @@ Alternative filenames are fine if they preserve the same architecture: deep runt
 - [x] Horizontal scrubbing is supported.
 - [x] Vertical scrubbing is either supported or explicitly deferred.
 - [x] `pixel_sensitivity` controls how many pixels produce one step.
-- [x] Scrubbing sets `scrubbing == true` in render state while active.
+- [x] Scrubbing sets `scrubbing == true` in style state while active.
 - [x] Releasing pointer after scrubbing commits the value.
 - [x] `NumberFieldScrubAreaCursor` renders only while scrubbing, or exposes state so users can style it as hidden/visible.
 - [x] Pointer lock and cursor teleport behavior are not required in phase 1.
@@ -337,15 +337,15 @@ Alternative filenames are fine if they preserve the same architecture: deep runt
 
 ### Styling/state exposure
 
-- [x] Add `NumberFieldRootRenderState`.
-- [x] Add `NumberFieldInputRenderState`.
-- [x] Add `NumberFieldGroupRenderState`.
-- [x] Add `NumberFieldIncrementRenderState`.
-- [x] Add `NumberFieldDecrementRenderState`.
-- [x] Add `NumberFieldScrubAreaRenderState`.
-- [x] Add `NumberFieldScrubAreaCursorRenderState`.
-- [x] Render states expose `value`, `input_value`, `disabled`, `read_only`, `required`, `scrubbing`, `touched`, `dirty`, `valid`, `invalid`, `filled`, and `focused` where relevant.
-- [x] Stepper render states expose whether the control can increment/decrement at the current boundary.
+- [x] Add `NumberFieldRootStyleState`.
+- [x] Add `NumberFieldInputStyleState`.
+- [x] Add `NumberFieldGroupStyleState`.
+- [x] Add `NumberFieldIncrementStyleState`.
+- [x] Add `NumberFieldDecrementStyleState`.
+- [x] Add `NumberFieldScrubAreaStyleState`.
+- [x] Add `NumberFieldScrubAreaCursorStyleState`.
+- [x] Style states expose `value`, `input_value`, `disabled`, `read_only`, `required`, `scrubbing`, `touched`, `dirty`, `valid`, `invalid`, `filled`, and `focused` where relevant.
+- [x] Stepper style states expose whether the control can increment/decrement at the current boundary.
 - [x] `style_with_state(...)` receives typed state for every public layer.
 - [x] Do not expose DOM data attributes as styling API.
 - [x] Do not expose CSS variable names as styling API.
@@ -386,7 +386,7 @@ Add behavior tests under `crates/base_gpui/src/number_field/tests/` where practi
 - [x] `on_value_committed` fires on blur after typing.
 - [x] Scrub drag changes value.
 - [x] Scrub release commits value.
-- [x] Render states expose disabled/read-only/required/focused/dirty/touched/filled/scrubbing.
+- [x] Style states expose disabled/read-only/required/focused/dirty/touched/filled/scrubbing.
 - [x] Field label click focuses the Number Field input.
 - [x] Field filled/dirty/focused/touched states update from Number Field registration.
 - [x] Field required validation reports missing value for an empty required Number Field.

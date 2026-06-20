@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::tabs::{
     child_wiring::wire_children, TabsChild, TabsContext, TabsOrientation, TabsProps,
-    TabsRootRenderState, TabsValueChangeHandler,
+    TabsRootStyleState, TabsValueChangeHandler,
 };
 
 #[derive(IntoElement)]
@@ -19,7 +19,7 @@ pub struct TabsRoot<T: Clone + Eq + 'static> {
     value: Option<Option<T>>,
     on_value_change: Option<TabsValueChangeHandler<T>>,
     orientation: TabsOrientation,
-    style_with_state: Option<Rc<dyn Fn(TabsRootRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(TabsRootStyleState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsRoot<T> {
@@ -74,10 +74,10 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsRoot<T> {
             focus_handle.focus(window, cx);
         }
 
-        let render_state =
+        let style_state =
             context.read(cx, |runtime, props| runtime.root_state(props.orientation()));
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
         base.children(children)
@@ -129,7 +129,7 @@ impl<T: Clone + Eq + 'static> TabsRoot<T> {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(TabsRootRenderState, Div) -> Div + 'static,
+        style: impl Fn(TabsRootStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

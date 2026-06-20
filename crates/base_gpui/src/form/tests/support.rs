@@ -7,14 +7,14 @@ use gpui::{
 
 use crate::{
     field::{
-        FieldError, FieldErrorRenderState, FieldRoot, FieldRootRenderState, FieldValidationMode,
-        FieldValidity, FieldValidityRenderState,
+        FieldError, FieldErrorStyleState, FieldRoot, FieldRootStyleState, FieldValidationMode,
+        FieldValidity, FieldValidityStyleState,
     },
     form::{
-        current_form_context, Form, FormContext, FormErrors, FormRenderState, FormSubmitDetails,
+        current_form_context, Form, FormContext, FormErrors, FormStyleState, FormSubmitDetails,
         FormSubmitReason, FormValue, FormValues,
     },
-    input::{Input, InputRenderState},
+    input::{Input, InputStyleState},
 };
 
 #[derive(Clone, Debug)]
@@ -48,11 +48,11 @@ pub struct FormSubmissionObservation {
 
 #[derive(Clone, Default)]
 pub struct FormObservations {
-    pub form_states: Vec<FormRenderState>,
-    pub field_states: Vec<FieldRootRenderState>,
-    pub error_states: Vec<FieldErrorRenderState>,
-    pub validity_states: Vec<FieldValidityRenderState>,
-    pub input_states: Vec<InputRenderState>,
+    pub form_states: Vec<FormStyleState>,
+    pub field_states: Vec<FieldRootStyleState>,
+    pub error_states: Vec<FieldErrorStyleState>,
+    pub validity_states: Vec<FieldValidityStyleState>,
+    pub input_states: Vec<InputStyleState>,
     pub submissions: Vec<FormSubmissionObservation>,
 }
 
@@ -65,28 +65,28 @@ impl FormObservations {
         self.input_states.clear();
     }
 
-    pub fn last_field_state(&self) -> FieldRootRenderState {
+    pub fn last_field_state(&self) -> FieldRootStyleState {
         self.field_states
             .last()
             .copied()
             .expect("field state should be observed")
     }
 
-    pub fn last_error_state(&self) -> FieldErrorRenderState {
+    pub fn last_error_state(&self) -> FieldErrorStyleState {
         self.error_states
             .last()
             .cloned()
             .expect("field error state should be observed")
     }
 
-    pub fn last_validity_state(&self) -> FieldValidityRenderState {
+    pub fn last_validity_state(&self) -> FieldValidityStyleState {
         self.validity_states
             .last()
             .cloned()
             .expect("field validity state should be observed")
     }
 
-    pub fn last_input_state(&self) -> InputRenderState {
+    pub fn last_input_state(&self) -> InputStyleState {
         self.input_states
             .last()
             .cloned()

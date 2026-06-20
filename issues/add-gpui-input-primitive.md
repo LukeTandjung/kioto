@@ -118,7 +118,7 @@ crates/base_gpui/src/primitives/mod.rs
 crates/base_gpui/src/primitives/input/mod.rs
 crates/base_gpui/src/primitives/input/actions.rs
 crates/base_gpui/src/primitives/input/props.rs
-crates/base_gpui/src/primitives/input/render_state.rs
+crates/base_gpui/src/primitives/input/style_state.rs
 crates/base_gpui/src/primitives/input/runtime.rs
 crates/base_gpui/src/primitives/input/layers/mod.rs
 crates/base_gpui/src/primitives/input/layers/input.rs
@@ -162,7 +162,7 @@ Alternative filenames are fine if they preserve the same architecture: deep runt
 - [x] Support `.required(bool)`, defaulting to `false`.
 - [x] Support `.auto_focus(bool)`, defaulting to `false`.
 - [x] Support `.tab_index(isize)` or a documented GPUI equivalent.
-- [x] Support `style_with_state(...)` with a typed render state.
+- [x] Support `style_with_state(...)` with a typed style state.
 - [x] Re-export ergonomic names from `primitives/input/mod.rs` and `primitives/mod.rs`.
 
 ### Text input behavior
@@ -237,10 +237,10 @@ Alternative filenames are fine if they preserve the same architecture: deep runt
 
 ### Styling/state exposure
 
-- [x] Add an `InputRenderState` or equivalent typed render-state struct.
-- [x] Render state exposes `disabled`, `read_only`, `required`, `focused`, `empty`/`filled`, `dirty`, and whether the input is controlled if useful.
-- [x] Render state includes field-derived invalid/valid facts if available without introducing stale/cyclic dependencies.
-- [x] `style_with_state(...)` receives the current render state.
+- [x] Add an `InputStyleState` or equivalent typed style-state struct.
+- [x] Style state exposes `disabled`, `read_only`, `required`, `focused`, `empty`/`filled`, `dirty`, and whether the input is controlled if useful.
+- [x] Style state includes field-derived invalid/valid facts if available without introducing stale/cyclic dependencies.
+- [x] `style_with_state(...)` receives the current style state.
 - [x] Do not expose DOM data attributes as the styling API.
 - [x] Do not expose CSS variable names as the styling API.
 

@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::number_field::{
     NumberFieldChangeReason, NumberFieldCommitReason, NumberFieldContext,
-    NumberFieldDecrementRenderState, NumberFieldStepAmount, NumberFieldStepDirection,
+    NumberFieldDecrementStyleState, NumberFieldStepAmount, NumberFieldStepDirection,
 };
 
 #[derive(IntoElement)]
@@ -16,7 +16,7 @@ pub struct NumberFieldDecrement {
     base: Div,
     children: Vec<AnyElement>,
     context: Option<NumberFieldContext>,
-    style_with_state: Option<Rc<dyn Fn(NumberFieldDecrementRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(NumberFieldDecrementStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for NumberFieldDecrement {
@@ -43,10 +43,10 @@ impl RenderOnce for NumberFieldDecrement {
             .context
             .expect("NumberFieldDecrement must be rendered inside NumberFieldRoot");
         let id = self.id.unwrap_or_else(|| context.child_id("decrement"));
-        let render_state = context.read(cx, |runtime, props| runtime.decrement_state(props));
+        let style_state = context.read(cx, |runtime, props| runtime.decrement_state(props));
         let click_context = context.clone();
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -97,7 +97,7 @@ impl NumberFieldDecrement {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(NumberFieldDecrementRenderState, Div) -> Div + 'static,
+        style: impl Fn(NumberFieldDecrementStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

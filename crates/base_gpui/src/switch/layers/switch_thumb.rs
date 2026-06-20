@@ -5,14 +5,14 @@ use gpui::{
     Window,
 };
 
-use crate::switch::{child_wiring::SwitchChildNode, SwitchContext, SwitchThumbRenderState};
+use crate::switch::{child_wiring::SwitchChildNode, SwitchContext, SwitchThumbStyleState};
 
 #[derive(IntoElement)]
 pub struct SwitchThumb {
     base: Div,
     children: Vec<AnyElement>,
     context: Option<SwitchContext>,
-    style_with_state: Option<Rc<dyn Fn(SwitchThumbRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(SwitchThumbStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for SwitchThumb {
@@ -69,7 +69,7 @@ impl SwitchThumb {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(SwitchThumbRenderState, Div) -> Div + 'static,
+        style: impl Fn(SwitchThumbStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

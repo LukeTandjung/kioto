@@ -11,7 +11,7 @@ use crate::{
     radio_group::{
         child_wiring::{RadioGroupChildNode, RadioGroupChildWiring, RadioGroupRadioChildNode},
         Move, RadioGroupActivateFocused, RadioGroupContext, RadioGroupRadioChild,
-        RadioGroupRadioRenderState, RadioGroupSelectDown, RadioGroupSelectLeft,
+        RadioGroupRadioStyleState, RadioGroupSelectDown, RadioGroupSelectLeft,
         RadioGroupSelectRight, RadioGroupSelectUp, RadioGroupValueChangeSource,
         RADIO_GROUP_KEY_CONTEXT,
     },
@@ -30,7 +30,7 @@ pub struct RadioGroupRadio<T: Clone + Eq + 'static> {
     required: bool,
     index: Option<usize>,
     focus_handle: Option<FocusHandle>,
-    style_with_state: Option<Rc<dyn Fn(RadioGroupRadioRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(RadioGroupRadioStyleState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for RadioGroupRadio<T> {
@@ -84,7 +84,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for RadioGroupRadio<T> {
                 })
             })
             .unwrap_or_else(|| {
-                RadioGroupRadioRenderState::new(
+                RadioGroupRadioStyleState::new(
                     false,
                     disabled,
                     read_only,
@@ -277,7 +277,7 @@ impl<T: Clone + Eq + 'static> RadioGroupRadio<T> {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(RadioGroupRadioRenderState, Div) -> Div + 'static,
+        style: impl Fn(RadioGroupRadioStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

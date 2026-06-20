@@ -5,8 +5,8 @@ pub mod context;
 mod layers;
 pub mod number;
 pub mod props;
-pub mod render_state;
 pub mod runtime;
+pub mod style_state;
 
 #[cfg(test)]
 mod tests;
@@ -28,14 +28,14 @@ pub use number::{
     NumberParseError,
 };
 pub use props::{NumberFieldProps, NumberFieldValueChangeHandler, NumberFieldValueCommitHandler};
-pub use render_state::{
-    NumberFieldDecrementRenderState, NumberFieldGroupRenderState, NumberFieldIncrementRenderState,
-    NumberFieldInputRenderState, NumberFieldRootRenderState, NumberFieldScrubAreaCursorRenderState,
-    NumberFieldScrubAreaRenderState,
-};
 pub use runtime::{
     NumberFieldChangeDetails, NumberFieldChangeReason, NumberFieldCommitDetails,
     NumberFieldCommitReason, NumberFieldRuntime, NumberFieldScrubDirection, NumberFieldStepAmount,
     NumberFieldStepDirection, NumberFieldUpdateOutcome, NumberFieldValueChange,
     NumberFieldValueCommit,
+};
+pub use style_state::{
+    NumberFieldDecrementStyleState, NumberFieldGroupStyleState, NumberFieldIncrementStyleState,
+    NumberFieldInputStyleState, NumberFieldRootStyleState, NumberFieldScrubAreaCursorStyleState,
+    NumberFieldScrubAreaStyleState,
 };

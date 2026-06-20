@@ -36,9 +36,9 @@ pub fn open_checkbox(
 
 Always call component/crate `init` before testing keyboard bindings.
 
-## Observe render state
+## Observe style state
 
-Store render-state snapshots from `style_with_state(...)`:
+Store style-state snapshots from `style_with_state(...)`:
 
 ```rust
 root.style_with_state(move |state, root| {

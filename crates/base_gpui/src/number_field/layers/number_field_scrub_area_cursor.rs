@@ -5,7 +5,7 @@ use gpui::{
     RenderOnce, StyleRefinement, Styled, Window,
 };
 
-use crate::number_field::{NumberFieldContext, NumberFieldScrubAreaCursorRenderState};
+use crate::number_field::{NumberFieldContext, NumberFieldScrubAreaCursorStyleState};
 
 #[derive(IntoElement)]
 pub struct NumberFieldScrubAreaCursor {
@@ -14,7 +14,7 @@ pub struct NumberFieldScrubAreaCursor {
     children: Vec<AnyElement>,
     context: Option<NumberFieldContext>,
     style_with_state:
-        Option<Rc<dyn Fn(NumberFieldScrubAreaCursorRenderState, Div) -> Div + 'static>>,
+        Option<Rc<dyn Fn(NumberFieldScrubAreaCursorStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for NumberFieldScrubAreaCursor {
@@ -43,9 +43,9 @@ impl RenderOnce for NumberFieldScrubAreaCursor {
         let id = self
             .id
             .unwrap_or_else(|| context.child_id("scrub-area-cursor"));
-        let render_state = context.read(cx, |runtime, props| runtime.scrub_cursor_state(props));
+        let style_state = context.read(cx, |runtime, props| runtime.scrub_cursor_state(props));
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -81,7 +81,7 @@ impl NumberFieldScrubAreaCursor {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(NumberFieldScrubAreaCursorRenderState, Div) -> Div + 'static,
+        style: impl Fn(NumberFieldScrubAreaCursorStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

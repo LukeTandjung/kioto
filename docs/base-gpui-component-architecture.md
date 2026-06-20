@@ -44,7 +44,7 @@ crates/base_gpui/src/<component>/
   runtime.rs        # ComponentRuntime + metadata structs + command enums/outcomes
   context.rs        # ComponentContext
   props.rs          # injected props/callbacks/config
-  render_state.rs   # render-state structs (one per part that draws)
+  style_state.rs    # style-state structs (one per part that draws)
   child.rs          # typed child enums
   child_wiring.rs   # optional private child traversal/indexing/context attachment
   layers/           # renderable GPUI parts only
@@ -75,11 +75,11 @@ fn move_highlight(&mut self, direction: Move, loop_focus: bool);
 fn set_bounds(&mut self, bounds: Vec<(usize, Bounds<Pixels>)>) -> bool;
 ```
 
-**Queries** — one method per part-that-draws, returning render-state structs:
+**Queries** — one method per part-that-draws, returning style-state structs:
 
 ```rust
-fn root_state(&self) -> ComponentRootRenderState;
-fn part_state(&self, value: Option<&T>, /* part-local facts */) -> ComponentPartRenderState;
+fn root_state(&self) -> ComponentRootStyleState;
+fn part_state(&self, value: Option<&T>, /* part-local facts */) -> ComponentPartStyleState;
 ```
 
 Rules:
@@ -129,7 +129,7 @@ things:
    (`context.update(cx, |m| m.move_highlight(...))`),
 2. call one query and feed the result to `style_with_state`.
 
-Parts never see runtime internals — render-state structs and commands only.
+Parts never see runtime internals — style-state structs and commands only.
 
 The root is the single mutation site outside event handlers:
 
@@ -175,9 +175,9 @@ Props hold stable public configuration and callbacks: orientation, behavior flag
 controlled callback handlers. Props never own runtime state or metadata — those
 belong to the runtime.
 
-## Render-state structs
+## Style-state structs
 
-Render-state structs are component-specific public API, modeling the same
+Style-state structs are component-specific public API, modeling the same
 information Base UI exposes through state-aware `className` / `style` / `render`
 callbacks, adapted to GPUI. They are the return types of runtime queries and the
 input to `style_with_state`:
@@ -194,7 +194,7 @@ Do not port DOM data attributes or CSS variable APIs.
 Translate Base UI DOM measurement into GPUI-native mechanisms
 (`Div::on_children_prepainted(...)`). Measured facts go into the runtime via a
 command (`set_bounds`) that returns whether anything changed, and come out through
-render-state queries.
+style-state queries.
 
 ## Keyboard dispatch
 
@@ -221,7 +221,7 @@ div()
 2. Every transition is computed inside the runtime, once. No sync-by-diffing, no
    shadow previous-value fields outside the runtime.
 3. Knowledge of child indexing lives only in component-local child wiring.
-4. Parts never see runtime internals — render-state structs and commands only.
+4. Parts never see runtime internals — style-state structs and commands only.
 5. The context never grows component vocabulary.
 
 ## Implementation checklist for a new component
@@ -231,7 +231,7 @@ div()
    is hard to write in pure component-domain language, the design is wrong — that
    knowledge belongs inside the runtime, not on its interface.
 2. `props.rs` — injected props/callbacks/config.
-3. `render_state.rs` — one render-state struct per part that draws.
+3. `style_state.rs` — one style-state struct per part that draws.
 4. `context.rs` — `read` / `update` / `select`, nothing else.
 5. `child.rs` — typed child enum(s); add private `child_wiring.rs` when traversal/indexing/context attachment needs an internal layer-wiring trait.
 6. `layers/` — root creates the context, wires children once, calls
@@ -252,4 +252,11 @@ div()
 - A small runtime (e.g. checkbox) is expected and fine — depth is about the
   interface-to-knowledge ratio, not line count.
 - Avoid shared generic primitives unless they describe a deep, repeated concept.
-- Avoid `utils/`; component code belongs under the component folder.
+- Keep component-specific code under the component folder. Truly shared, repeated
+  cross-component helpers may live under `utils/` as flat named files.
+- `mod.rs` files are barrel exports only: module declarations, re-exports, and
+  test module declarations. No structs, enums, traits, functions, type aliases,
+  constants/statics, impl blocks, or macros in `mod.rs`.
+- Do not add `runtime_control.rs` or similar trait-boundary files for normal
+  component behavior. Put behavior on inherent runtime methods unless there is a
+  concrete polymorphism boundary.

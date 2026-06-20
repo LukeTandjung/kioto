@@ -7,8 +7,8 @@ use gpui::{
 
 use crate::{
     radio_group::{
-        init, RadioGroupIndicator, RadioGroupIndicatorRenderState, RadioGroupRadio,
-        RadioGroupRadioRenderState, RadioGroupRoot, RadioGroupRootRenderState,
+        init, RadioGroupIndicator, RadioGroupIndicatorStyleState, RadioGroupRadio,
+        RadioGroupRadioStyleState, RadioGroupRoot, RadioGroupRootStyleState,
         RadioGroupValueChangeReason, RadioGroupValueChangeSource,
     },
     utils::direction::{DirectionProvider, TextDirection},
@@ -82,9 +82,9 @@ pub struct RadioGroupObservations {
     pub change_sources: Vec<RadioGroupValueChangeSource>,
     pub change_cancelable: Vec<bool>,
     pub change_canceled: Vec<bool>,
-    pub root_states: Vec<RadioGroupRootRenderState>,
-    pub radio_states: Vec<(RadioValue, RadioGroupRadioRenderState)>,
-    pub indicator_states: Vec<(RadioValue, RadioGroupIndicatorRenderState)>,
+    pub root_states: Vec<RadioGroupRootStyleState>,
+    pub radio_states: Vec<(RadioValue, RadioGroupRadioStyleState)>,
+    pub indicator_states: Vec<(RadioValue, RadioGroupIndicatorStyleState)>,
 }
 
 impl RadioGroupObservations {
@@ -118,19 +118,19 @@ impl RadioGroupObservations {
             .find_map(|(value, state)| state.focused.then_some(*value))
     }
 
-    pub fn radio_state(&self, expected: RadioValue) -> Option<RadioGroupRadioRenderState> {
+    pub fn radio_state(&self, expected: RadioValue) -> Option<RadioGroupRadioStyleState> {
         self.radio_states
             .iter()
             .find_map(|(value, state)| (*value == expected).then_some(*state))
     }
 
-    pub fn indicator_state(&self, expected: RadioValue) -> Option<RadioGroupIndicatorRenderState> {
+    pub fn indicator_state(&self, expected: RadioValue) -> Option<RadioGroupIndicatorStyleState> {
         self.indicator_states
             .iter()
             .find_map(|(value, state)| (*value == expected).then_some(*state))
     }
 
-    pub fn last_root_state(&self) -> RadioGroupRootRenderState {
+    pub fn last_root_state(&self) -> RadioGroupRootStyleState {
         self.root_states
             .last()
             .copied()

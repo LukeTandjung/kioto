@@ -30,7 +30,7 @@ Do not hard-code string or index values into the component model.
 - `.on_value_change(...)`
 - `.orientation(...)`
 
-Do not add orientation props or setters to `TabsList`, `TabsTab`, `TabsPanel`, or `TabsIndicator`. Those parts receive orientation through injected `TabsContext<T>` / `TabsProps<T>` when deriving render state or handling keyboard behavior.
+Do not add orientation props or setters to `TabsList`, `TabsTab`, `TabsPanel`, or `TabsIndicator`. Those parts receive orientation through injected `TabsContext<T>` / `TabsProps<T>` when deriving style state or handling keyboard behavior.
 
 Part-local props stay on their parts:
 
@@ -68,9 +68,8 @@ crates/base_gpui/src/tabs/
   child_wiring.rs     # private child traversal, indexing, and context attachment
   context.rs          # TabsContext: entity plumbing + controlled/uncontrolled rule
   props.rs            # TabsOrientation, TabsProps, callback type
-  render_state.rs     # render-state structs for all drawing parts
+  style_state.rs      # style-state structs for all drawing parts
   runtime.rs          # TabsRuntime: selected value, tab metadata, transitions, queries
-  runtime_control.rs  # private controlled-selection bridge trait
   layers/
     tabs_indicator.rs
     tabs_list.rs
@@ -201,7 +200,7 @@ Known GPUI caveat:
 - Keyboard actions require focus to be inside the relevant key context.
 - Be careful when moving actual GPUI focus during action dispatch; it can affect subsequent action routing.
 
-## Render-state styling
+## Style-state styling
 
 Tabs exposes state-aware styling through `style_with_state(...)` on:
 
@@ -211,13 +210,13 @@ Tabs exposes state-aware styling through `style_with_state(...)` on:
 - `TabsPanel<T>`
 - `TabsIndicator<T>`
 
-Render-state structs:
+Style-state structs:
 
-- `TabsRootRenderState`: orientation and activation direction.
-- `TabsListRenderState`: orientation and activation direction.
-- `TabsTabRenderState`: active, disabled, highlighted, and orientation.
-- `TabsPanelRenderState`: hidden, orientation, and activation direction.
-- `TabsIndicatorRenderState`: selected state, active tab position/size, orientation, and activation direction.
+- `TabsRootStyleState`: orientation and activation direction.
+- `TabsListStyleState`: orientation and activation direction.
+- `TabsTabStyleState`: active, disabled, highlighted, and orientation.
+- `TabsPanelStyleState`: hidden, orientation, and activation direction.
+- `TabsIndicatorStyleState`: selected state, active tab position/size, orientation, and activation direction.
 
 Do not add DOM-style data attributes or CSS variables unless they become useful GPUI API.
 
@@ -230,7 +229,7 @@ Important details:
 - `TabsList<T>` filters bounds through `TabsListChild<T>` so only tab child bounds enter runtime.
 - Bounds are registered through `TabsRuntime<T>` via `TabsContext<T>::update(...)`.
 - `TabsRuntime<T>` derives active tab position and size.
-- `TabsIndicator<T>` exposes those values through `TabsIndicatorRenderState`.
+- `TabsIndicator<T>` exposes those values through `TabsIndicatorStyleState`.
 
 Do not port Base UI indicator CSS variable names directly.
 
@@ -241,7 +240,7 @@ Panel behavior:
 - Panel is visible when its value equals selected value.
 - `keep_mounted = false`: inactive panels are omitted.
 - `keep_mounted = true`: inactive panels remain mounted but hidden.
-- Panels receive hidden/orientation/activation direction via `TabsPanelRenderState`.
+- Panels receive hidden/orientation/activation direction via `TabsPanelStyleState`.
 - Panels do not register metadata in runtime.
 
 ## Base UI differences / intentionally dropped web details

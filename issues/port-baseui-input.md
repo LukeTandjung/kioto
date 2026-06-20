@@ -17,7 +17,7 @@ What is still missing is a Base UI-style public `Input` component/module that us
 Port Base UI `Input` into GPUI-native API surface:
 
 - `Input`
-- `InputRenderState` or an equivalent state payload
+- `InputStyleState` or an equivalent state payload
 - `InputChangeReason`
 - `InputChangeDetails` if richer change details are added beyond the existing simple value callback
 
@@ -40,7 +40,7 @@ Current GPUI implementation / prerequisites:
 - `crates/base_gpui/src/primitives/input/mod.rs`
 - `crates/base_gpui/src/primitives/input/actions.rs`
 - `crates/base_gpui/src/primitives/input/props.rs`
-- `crates/base_gpui/src/primitives/input/render_state.rs`
+- `crates/base_gpui/src/primitives/input/style_state.rs`
 - `crates/base_gpui/src/primitives/input/runtime.rs`
 - `crates/base_gpui/src/primitives/input/layers/input.rs`
 - `crates/base_gpui/src/primitives/input/layers/text_element.rs`
@@ -53,7 +53,7 @@ Expected GPUI implementation files:
 ```text
 crates/base_gpui/src/input/mod.rs
 crates/base_gpui/src/input/props.rs                 # optional if wrapper props need named types
-crates/base_gpui/src/input/render_state.rs          # optional if not reusing primitive/FieldControl state directly
+crates/base_gpui/src/input/style_state.rs          # optional if not reusing primitive/FieldControl state directly
 crates/base_gpui/src/input/layers/mod.rs            # optional for consistency with other component modules
 crates/base_gpui/src/input/layers/input.rs          # optional thin wrapper around FieldControl
 crates/base_gpui/src/input/tests/
@@ -111,7 +111,7 @@ Base UI `Input.State` is the `FieldControlState`:
 - `filled`
 - `focused`
 
-GPUI `Input` should expose these as typed render-state fields rather than DOM data attributes. It may also expose useful GPUI-native input facts already available from the primitive, such as:
+GPUI `Input` should expose these as typed style-state fields rather than DOM data attributes. It may also expose useful GPUI-native input facts already available from the primitive, such as:
 
 - `value`
 - `read_only`
@@ -145,7 +145,7 @@ If details are added, use a Rust-native `InputChangeReason::None`; do not expose
 - Do not port the `render` prop. In Base UI this allows replacing `<input>` with `<textarea>`; in GPUI, multiline text input should be a separate `textarea`/multiline primitive issue.
 - Do not port `className`.
 - Do not port web `style` props.
-- Do not port DOM data attributes as attributes. Map them into typed render-state fields.
+- Do not port DOM data attributes as attributes. Map them into typed style-state fields.
 - Do not port DOM event objects, `preventDefault`, propagation flags, or browser cancellation APIs literally.
 - Do not port browser `ValidityState` objects. Use `FieldValidityData` / Rust-native validity flags.
 - Do not implement hidden DOM inputs, browser form submission, or `FormData`.
@@ -162,7 +162,7 @@ If details are added, use a Rust-native `InputChangeReason::None`; do not expose
 - [x] The primitive supports controlled and uncontrolled string values.
 - [x] The primitive supports placeholder text.
 - [x] The primitive supports disabled, read-only, required, auto-focus, and tab index metadata.
-- [x] The primitive supports `style_with_state(...)` with typed render state.
+- [x] The primitive supports `style_with_state(...)` with typed style state.
 - [x] The primitive exposes key bindings from `base_gpui::init(cx)`.
 - [x] `FieldControl` exists and composes the primitive input.
 - [x] `FieldControl` registers `FieldValue::Text(...)`, name, required, disabled, focused state, and focus handle metadata with `FieldRoot`.
@@ -187,7 +187,7 @@ If details are added, use a Rust-native `InputChangeReason::None`; do not expose
 - [x] Support `.required(bool)`, defaulting to `false`.
 - [x] Support `.auto_focus(bool)`, defaulting to `false`.
 - [x] Support `.tab_index(isize)` or the existing GPUI equivalent.
-- [x] Support `.style_with_state(...)` with a Base UI Input-shaped render state.
+- [x] Support `.style_with_state(...)` with a Base UI Input-shaped style state.
 - [x] Do not expose CSS class/data-attribute APIs.
 
 ### Architecture / implementation model
@@ -238,13 +238,13 @@ If details are added, use a Rust-native `InputChangeReason::None`; do not expose
 
 ### Styling/state exposure
 
-- [x] Add or re-export an `InputRenderState` that includes Base UI Input state: `disabled`, `touched`, `dirty`, `valid`, `filled`, and `focused`.
-- [x] Render state exposes `invalid` as `valid == Some(false)` or equivalent.
-- [x] Render state exposes the current input value or documents why value is intentionally omitted.
-- [x] Render state exposes `read_only`, `required`, `empty`, and `controlled` if those remain part of the underlying primitive state.
+- [x] Add or re-export an `InputStyleState` that includes Base UI Input state: `disabled`, `touched`, `dirty`, `valid`, `filled`, and `focused`.
+- [x] Style state exposes `invalid` as `valid == Some(false)` or equivalent.
+- [x] Style state exposes the current input value or documents why value is intentionally omitted.
+- [x] Style state exposes `read_only`, `required`, `empty`, and `controlled` if those remain part of the underlying primitive state.
 - [x] `style_with_state(...)` receives Field-derived state when rendered inside `FieldRoot`.
 - [x] `style_with_state(...)` still works outside `FieldRoot` with default field state values.
-- [x] Map Base UI Input data attributes (`disabled`, `valid`, `invalid`, `dirty`, `touched`, `filled`, `focused`) into typed render-state fields, not DOM attributes.
+- [x] Map Base UI Input data attributes (`disabled`, `valid`, `invalid`, `dirty`, `touched`, `filled`, `focused`) into typed style-state fields, not DOM attributes.
 - [x] The docs hero styling pattern can be recreated with GPUI builder methods: label text plus a bordered input with placeholder/focus styling.
 
 ### Accessibility follow-up

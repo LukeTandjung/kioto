@@ -3,7 +3,7 @@ use gpui::TestAppContext;
 use super::support::{click_checkbox, open_checkbox, read_observations, CheckboxTestConfig};
 
 #[gpui::test]
-fn indeterminate_state_takes_precedence_over_unchecked_render_state(cx: &mut TestAppContext) {
+fn indeterminate_state_takes_precedence_over_unchecked_style_state(cx: &mut TestAppContext) {
     let window = open_checkbox(
         cx,
         CheckboxTestConfig {

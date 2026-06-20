@@ -5,9 +5,7 @@ use gpui::{
     RenderOnce, StyleRefinement, Styled, Window,
 };
 
-use crate::tabs::{
-    child_wiring::TabsChildNode, TabsContext, TabsOrientation, TabsPanelRenderState,
-};
+use crate::tabs::{child_wiring::TabsChildNode, TabsContext, TabsOrientation, TabsPanelStyleState};
 
 #[derive(IntoElement)]
 pub struct TabsPanel<T: Clone + Eq + 'static> {
@@ -16,7 +14,7 @@ pub struct TabsPanel<T: Clone + Eq + 'static> {
     context: Option<TabsContext<T>>,
     value: Option<T>,
     keep_mounted: bool,
-    style_with_state: Option<Rc<dyn Fn(TabsPanelRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(TabsPanelStyleState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsPanel<T> {
@@ -63,7 +61,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
                 })
             })
             .unwrap_or_else(|| {
-                TabsPanelRenderState::new(true, TabsOrientation::Horizontal, Default::default())
+                TabsPanelStyleState::new(true, TabsOrientation::Horizontal, Default::default())
             });
         let active = !state.hidden;
         let hidden = state.hidden;
@@ -106,7 +104,7 @@ impl<T: Clone + Eq + 'static> TabsPanel<T> {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(TabsPanelRenderState, Div) -> Div + 'static,
+        style: impl Fn(TabsPanelStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

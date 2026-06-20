@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::field::{
-    context::current_field_context, FieldContext, FieldErrorMatch, FieldErrorRenderState,
+    context::current_field_context, FieldContext, FieldErrorMatch, FieldErrorStyleState,
     FieldValidityKey,
 };
 
@@ -16,7 +16,7 @@ pub struct FieldError {
     children: Vec<AnyElement>,
     context: Option<FieldContext>,
     matcher: FieldErrorMatch,
-    style_with_state: Option<Rc<dyn Fn(FieldErrorRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(FieldErrorStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for FieldError {
@@ -52,7 +52,7 @@ impl RenderOnce for FieldError {
                 context.read(cx, |runtime, props| {
                     let root = runtime.root_state(props);
                     let validity = runtime.validity_data(props);
-                    FieldErrorRenderState::new(
+                    FieldErrorStyleState::new(
                         root,
                         runtime.error_present(props, self.matcher),
                         validity.errors,
@@ -109,7 +109,7 @@ impl FieldError {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(FieldErrorRenderState, Div) -> Div + 'static,
+        style: impl Fn(FieldErrorStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

@@ -12,7 +12,7 @@ This is a follow-up prerequisite for full Form parity: Form should respect Field
 - Provide GPUI-native `FieldsetRoot` / `FieldsetLegend` or equivalent public API after inspecting Base UI source.
 - Provide ambient Fieldset context for descendant `FieldRoot` / controls.
 - Propagate disabled state to descendant fields and controls.
-- Expose typed render state and `style_with_state(...)` APIs.
+- Expose typed style state and `style_with_state(...)` APIs.
 - Do not port DOM `<fieldset>`, `<legend>`, browser form association, or `aria-*` literally.
 
 ## Acceptance Criteria

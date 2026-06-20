@@ -1,4 +1,4 @@
-use crate::switch::{SwitchProps, SwitchRootRenderState, SwitchThumbRenderState};
+use crate::switch::{SwitchProps, SwitchRootStyleState, SwitchThumbStyleState};
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum SwitchCheckedChangeReason {
@@ -134,9 +134,9 @@ impl SwitchRuntime {
         true
     }
 
-    /// Returns the render state for `SwitchRoot`.
-    pub fn root_state(&self, props: &SwitchProps) -> SwitchRootRenderState {
-        SwitchRootRenderState::new(
+    /// Returns the style state for `SwitchRoot`.
+    pub fn root_state(&self, props: &SwitchProps) -> SwitchRootStyleState {
+        SwitchRootStyleState::new(
             self.checked(),
             props.disabled(),
             props.read_only(),
@@ -145,9 +145,9 @@ impl SwitchRuntime {
         )
     }
 
-    /// Returns the render state for `SwitchThumb`.
-    pub fn thumb_state(&self, props: &SwitchProps) -> SwitchThumbRenderState {
-        SwitchThumbRenderState::new(self.root_state(props))
+    /// Returns the style state for `SwitchThumb`.
+    pub fn thumb_state(&self, props: &SwitchProps) -> SwitchThumbStyleState {
+        SwitchThumbStyleState::new(self.root_state(props))
     }
 }
 

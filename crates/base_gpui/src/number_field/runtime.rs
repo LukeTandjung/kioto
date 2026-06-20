@@ -2,10 +2,10 @@ use gpui::SharedString;
 
 use crate::number_field::{
     clamp_value, format_number, normalize_optional_value, option_values_equal, parse_number,
-    step_value, NumberFieldDecrementRenderState, NumberFieldGroupRenderState,
-    NumberFieldIncrementRenderState, NumberFieldInputRenderState, NumberFieldProps,
-    NumberFieldRootRenderState, NumberFieldScrubAreaCursorRenderState,
-    NumberFieldScrubAreaRenderState,
+    step_value, NumberFieldDecrementStyleState, NumberFieldGroupStyleState,
+    NumberFieldIncrementStyleState, NumberFieldInputStyleState, NumberFieldProps,
+    NumberFieldRootStyleState, NumberFieldScrubAreaCursorStyleState,
+    NumberFieldScrubAreaStyleState,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -503,7 +503,7 @@ impl NumberFieldRuntime {
         }
     }
 
-    pub fn root_state(&self, props: &NumberFieldProps) -> NumberFieldRootRenderState {
+    pub fn root_state(&self, props: &NumberFieldProps) -> NumberFieldRootStyleState {
         let valid = if props.disabled() {
             None
         } else if props.required() && self.value.is_none() && self.touched {
@@ -512,7 +512,7 @@ impl NumberFieldRuntime {
             Some(true)
         };
 
-        NumberFieldRootRenderState::new(
+        NumberFieldRootStyleState::new(
             self.value,
             self.input_value.clone(),
             props.disabled(),
@@ -527,28 +527,28 @@ impl NumberFieldRuntime {
         )
     }
 
-    pub fn input_state(&self, props: &NumberFieldProps) -> NumberFieldInputRenderState {
-        NumberFieldInputRenderState::new(self.root_state(props))
+    pub fn input_state(&self, props: &NumberFieldProps) -> NumberFieldInputStyleState {
+        NumberFieldInputStyleState::new(self.root_state(props))
     }
 
-    pub fn group_state(&self, props: &NumberFieldProps) -> NumberFieldGroupRenderState {
-        NumberFieldGroupRenderState::new(self.root_state(props))
+    pub fn group_state(&self, props: &NumberFieldProps) -> NumberFieldGroupStyleState {
+        NumberFieldGroupStyleState::new(self.root_state(props))
     }
 
-    pub fn increment_state(&self, props: &NumberFieldProps) -> NumberFieldIncrementRenderState {
-        NumberFieldIncrementRenderState::new(self.root_state(props), self.can_increment(props))
+    pub fn increment_state(&self, props: &NumberFieldProps) -> NumberFieldIncrementStyleState {
+        NumberFieldIncrementStyleState::new(self.root_state(props), self.can_increment(props))
     }
 
-    pub fn decrement_state(&self, props: &NumberFieldProps) -> NumberFieldDecrementRenderState {
-        NumberFieldDecrementRenderState::new(self.root_state(props), self.can_decrement(props))
+    pub fn decrement_state(&self, props: &NumberFieldProps) -> NumberFieldDecrementStyleState {
+        NumberFieldDecrementStyleState::new(self.root_state(props), self.can_decrement(props))
     }
 
     pub fn scrub_area_state(
         &self,
         props: &NumberFieldProps,
         direction: NumberFieldScrubDirection,
-    ) -> NumberFieldScrubAreaRenderState {
-        NumberFieldScrubAreaRenderState::new(
+    ) -> NumberFieldScrubAreaStyleState {
+        NumberFieldScrubAreaStyleState::new(
             self.root_state(props),
             direction == NumberFieldScrubDirection::Horizontal,
             direction == NumberFieldScrubDirection::Vertical,
@@ -558,8 +558,8 @@ impl NumberFieldRuntime {
     pub fn scrub_cursor_state(
         &self,
         props: &NumberFieldProps,
-    ) -> NumberFieldScrubAreaCursorRenderState {
-        NumberFieldScrubAreaCursorRenderState::new(self.root_state(props), self.scrubbing)
+    ) -> NumberFieldScrubAreaCursorStyleState {
+        NumberFieldScrubAreaCursorStyleState::new(self.root_state(props), self.scrubbing)
     }
 
     fn dirty(&self) -> bool {

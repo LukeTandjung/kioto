@@ -41,7 +41,7 @@ Current GPUI implementation:
 - `crates/base_gpui/src/switch/child_wiring.rs`
 - `crates/base_gpui/src/switch/context.rs`
 - `crates/base_gpui/src/switch/props.rs`
-- `crates/base_gpui/src/switch/render_state.rs`
+- `crates/base_gpui/src/switch/style_state.rs`
 - `crates/base_gpui/src/switch/runtime.rs`
 - `crates/base_gpui/src/switch/layers/mod.rs`
 - `crates/base_gpui/src/switch/layers/switch_root.rs`
@@ -63,7 +63,7 @@ Use `crates/base_gpui/src/checkbox/` as the closest implementation precedent, bu
 - Do not port arbitrary HTML attributes or DOM event props such as browser `onClick` objects.
 - Do not port SSR/hydration/prehydration APIs.
 - Do not port CSS variable APIs.
-- Do not port DOM data attributes as attributes; map them into typed render-state structs.
+- Do not port DOM data attributes as attributes; map them into typed style-state structs.
 - Do not port arbitrary DOM event objects. Use Rust-native change details when cancellation/source information is needed.
 - Do not write DOM ARIA attributes. Map accessibility through GPUI-native AccessKit APIs once available.
 
@@ -86,7 +86,7 @@ Use `crates/base_gpui/src/checkbox/` as the closest implementation precedent, bu
 - [x] Add `SwitchCheckedChangeReason::None`, matching Base UI's current single change reason.
 - [x] Add a source enum such as `SwitchCheckedChangeSource::{Pointer, Keyboard}` without exposing DOM event objects.
 - [x] Preserve form-related builder props only where useful for future GPUI field/form integration: `.name(...)`, `.value(...)`, `.form(...)`, and `.unchecked_value(...)`.
-- [x] `switch/mod.rs` exposes ergonomic barrel exports for component names, render states, context, props, runtime, actions, and child types.
+- [x] `switch/mod.rs` exposes ergonomic barrel exports for component names, style states, context, props, runtime, actions, and child types.
 
 ### Correctness / compile readiness
 
@@ -103,7 +103,7 @@ Use `crates/base_gpui/src/checkbox/` as the closest implementation precedent, bu
 - [x] Add `SwitchContext` as a thin injection/plumbing type with only `read(...)`, `update(...)`, and `toggle(...)`-style methods.
 - [x] Keep controlled/uncontrolled resolution in `SwitchContext::toggle(...)`, not in layers.
 - [x] Keep Switch behavior on `SwitchRuntime`; do not grow component vocabulary on `SwitchContext` beyond the value-changing method.
-- [x] Add `SwitchRootRenderState` and `SwitchThumbRenderState` in `render_state.rs`.
+- [x] Add `SwitchRootStyleState` and `SwitchThumbStyleState` in `style_state.rs`.
 - [x] Add renderable GPUI elements only under `switch/layers/`.
 - [x] Add typed child routing in `switch/child.rs` and private context attachment in `switch/child_wiring.rs`.
 - [x] Do not add a `utils/` folder for Switch.
@@ -115,10 +115,10 @@ Use `crates/base_gpui/src/checkbox/` as the closest implementation precedent, bu
 - [x] Uncontrolled Switch toggles internal checked state on valid user activation.
 - [x] Controlled Switch reflects the external `checked` value.
 - [x] Controlled Switch calls `on_checked_change` on valid user activation without mutating internal checked state as the source of truth.
-- [x] External controlled value changes update root and thumb render state.
+- [x] External controlled value changes update root and thumb style state.
 - [x] Disabled Switch ignores user activation and does not call `on_checked_change`.
 - [x] Read-only Switch ignores user activation and does not call `on_checked_change`.
-- [x] Required Switch exposes `required` in render state even if validation is a future field/form concern.
+- [x] Required Switch exposes `required` in style state even if validation is a future field/form concern.
 - [x] Re-rendering with changed props does not reset uncontrolled state except when the keyed root id changes.
 
 ### Change event behavior
@@ -146,7 +146,7 @@ Use `crates/base_gpui/src/checkbox/` as the closest implementation precedent, bu
 
 - [x] `SwitchRoot` owns a stable keyed `FocusHandle`.
 - [x] `SwitchRoot` is focusable when enabled.
-- [x] Focused state is synced into `SwitchRuntime` and exposed through render state.
+- [x] Focused state is synced into `SwitchRuntime` and exposed through style state.
 - [x] Switch uses GPUI actions/key dispatch and a `SWITCH_ROOT_KEY_CONTEXT` instead of raw DOM-style key handlers.
 - [x] Space toggles an enabled, non-read-only Switch when focused.
 - [x] Enter toggles an enabled, non-read-only Switch when focused.
@@ -164,12 +164,12 @@ Use `crates/base_gpui/src/checkbox/` as the closest implementation precedent, bu
 
 ### Styling/state exposure
 
-- [x] `SwitchRootRenderState` includes at least `checked`, `unchecked`, `disabled`, `read_only`, `required`, and `focused`.
-- [x] `SwitchThumbRenderState` includes the root render state or equivalent fields.
+- [x] `SwitchRootStyleState` includes at least `checked`, `unchecked`, `disabled`, `read_only`, `required`, and `focused`.
+- [x] `SwitchThumbStyleState` includes the root style state or equivalent fields.
 - [x] Expose state-aware styling through `style_with_state(...)` on root and thumb.
-- [x] Map Base UI state/data attributes (`checked`, `unchecked`, `disabled`, `readonly`, `required`, and focused/field states when available) into typed render-state fields, not DOM attributes.
+- [x] Map Base UI state/data attributes (`checked`, `unchecked`, `disabled`, `readonly`, `required`, and focused/field states when available) into typed style-state fields, not DOM attributes.
 - [x] Do not expose CSS variable names as the styling API.
-- [x] The docs hero styling pattern can be recreated with GPUI builder methods: root background changes when checked, thumb position/color changes when checked, and focus styling can use the focused render state.
+- [x] The docs hero styling pattern can be recreated with GPUI builder methods: root background changes when checked, thumb position/color changes when checked, and focus styling can use the focused style state.
 
 ### Accessibility follow-up
 
@@ -194,7 +194,7 @@ Add one behavior per file under `crates/base_gpui/src/switch/tests/`.
 - [x] Uncontrolled initial unchecked state.
 - [x] Uncontrolled `default_checked` initial checked state.
 - [x] Controlled checked state reflects external state.
-- [x] External controlled value changes update root and thumb render state.
+- [x] External controlled value changes update root and thumb style state.
 - [x] Click toggles unchecked to checked.
 - [x] Click toggles checked to unchecked.
 - [x] `on_checked_change` is called with the next checked value.
@@ -203,7 +203,7 @@ Add one behavior per file under `crates/base_gpui/src/switch/tests/`.
 - [x] Space toggles when focused.
 - [x] Enter toggles when focused.
 - [x] Disabled/read-only keyboard activation does not toggle.
-- [x] Focused state appears in `SwitchRootRenderState` when focused and clears on blur.
+- [x] Focused state appears in `SwitchRootStyleState` when focused and clears on blur.
 - [x] Thumb receives checked state for styling.
 - [x] Thumb receives unchecked state for styling.
 - [x] Thumb receives disabled/read-only/required state for styling.

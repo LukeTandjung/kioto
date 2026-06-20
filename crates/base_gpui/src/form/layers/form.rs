@@ -11,7 +11,7 @@ use crate::{
     form::{
         actions::{FormSubmitAction, FormValidateAction, FORM_KEY_CONTEXT},
         context::with_form_context,
-        FormContext, FormErrors, FormProps, FormRenderState, FormSubmitDetails, FormSubmitHandler,
+        FormContext, FormErrors, FormProps, FormStyleState, FormSubmitDetails, FormSubmitHandler,
         FormSubmitReason, FormValues,
     },
 };
@@ -24,7 +24,7 @@ pub struct Form {
     validation_mode: FieldValidationMode,
     errors: FormErrors,
     on_form_submit: Option<FormSubmitHandler>,
-    style_with_state: Option<Rc<dyn Fn(FormRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(FormStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for Form {
@@ -55,9 +55,9 @@ impl RenderOnce for Form {
             window,
             FormProps::new(self.validation_mode, self.errors, self.on_form_submit),
         );
-        let render_state = context.read(cx, |runtime, _props| runtime.root_state());
+        let style_state = context.read(cx, |runtime, _props| runtime.root_state());
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
         let submit_context = context.clone();
@@ -125,7 +125,7 @@ impl Form {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(FormRenderState, Div) -> Div + 'static,
+        style: impl Fn(FormStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

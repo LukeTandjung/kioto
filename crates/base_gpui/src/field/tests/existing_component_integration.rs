@@ -9,7 +9,7 @@ use crate::{
     checkbox::CheckboxRoot,
     field::{
         current_field_context, FieldContext, FieldItem, FieldRoot, FieldValidity,
-        FieldValidityRenderState,
+        FieldValidityStyleState,
     },
     radio_group::{RadioGroupRadio, RadioGroupRoot},
     switch::SwitchRoot,
@@ -198,7 +198,7 @@ enum RequiredIntegrationCase {
 
 #[derive(Clone, Default)]
 struct RequiredIntegrationObservations {
-    validity: Vec<FieldValidityRenderState>,
+    validity: Vec<FieldValidityStyleState>,
 }
 
 struct RequiredIntegrationView {

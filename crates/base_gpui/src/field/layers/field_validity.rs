@@ -5,14 +5,14 @@ use gpui::{
     Window,
 };
 
-use crate::field::{context::current_field_context, FieldContext, FieldValidityRenderState};
+use crate::field::{context::current_field_context, FieldContext, FieldValidityStyleState};
 
 #[derive(IntoElement)]
 pub struct FieldValidity {
     base: Div,
     children: Vec<AnyElement>,
     context: Option<FieldContext>,
-    style_with_state: Option<Rc<dyn Fn(FieldValidityRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(FieldValidityStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for FieldValidity {
@@ -45,7 +45,7 @@ impl RenderOnce for FieldValidity {
             .as_ref()
             .map(|context| {
                 context.read(cx, |runtime, props| {
-                    FieldValidityRenderState::new(
+                    FieldValidityStyleState::new(
                         runtime.root_state(props),
                         runtime.validity_data(props),
                     )
@@ -73,7 +73,7 @@ impl FieldValidity {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(FieldValidityRenderState, Div) -> Div + 'static,
+        style: impl Fn(FieldValidityStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

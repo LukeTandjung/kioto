@@ -4,8 +4,8 @@ mod child_wiring;
 pub mod context;
 pub mod layers;
 pub mod props;
-pub mod render_state;
 pub mod runtime;
+pub mod style_state;
 
 #[cfg(test)]
 mod tests;
@@ -15,8 +15,8 @@ pub use child::CheckboxChild;
 pub use context::CheckboxContext;
 pub use layers::{CheckboxIndicator, CheckboxRoot};
 pub use props::{CheckboxCheckedChangeHandler, CheckboxProps};
-pub use render_state::{CheckboxIndicatorRenderState, CheckboxRootRenderState};
 pub use runtime::{
     CheckboxCheckedChangeDetails, CheckboxCheckedChangeReason, CheckboxCheckedChangeSource,
     CheckboxRuntime, ToggleOutcome,
 };
+pub use style_state::{CheckboxIndicatorStyleState, CheckboxRootStyleState};

@@ -164,7 +164,7 @@ pub fn toggle(&self, window: &mut Window, cx: &mut App) {
 
 The callback fires after the entity update returns, not inside the `Entity::update(...)` closure.
 
-## Props vs runtime vs render state
+## Props vs runtime vs style state
 
 Keep these distinct:
 
@@ -172,9 +172,9 @@ Keep these distinct:
 |---|---|---|
 | Props | Current render config/callbacks | `disabled`, `orientation`, `on_change` |
 | Runtime | Internal value, metadata, derived transitions | checkbox `checked`, tabs selected value, tab bounds, focused flag |
-| Render state | Public styling snapshot | `checked`, `focused`, `active`, `hidden` |
+| Style state | Public styling snapshot | `checked`, `focused`, `active`, `hidden` |
 
-Render state is not persistent state. It is computed for styling/render decisions.
+Style state is not persistent state. It is computed for styling/render decisions.
 
 ## Related docs
 

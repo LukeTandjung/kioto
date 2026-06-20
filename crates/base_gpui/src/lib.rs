@@ -7,6 +7,8 @@ pub mod input;
 pub mod number_field;
 pub mod primitives;
 pub mod radio_group;
+pub mod select;
+pub mod separator;
 pub mod switch;
 pub mod tabs;
 pub mod utils;
@@ -19,6 +21,7 @@ pub fn init(cx: &mut gpui::App) {
     number_field::init(cx);
     primitives::input::init(cx);
     radio_group::init(cx);
+    select::init(cx);
     switch::init(cx);
     tabs::init(cx);
 }

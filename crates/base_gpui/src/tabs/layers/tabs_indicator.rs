@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::tabs::{
-    child_wiring::TabsChildNode, TabsContext, TabsIndicatorRenderState, TabsOrientation,
+    child_wiring::TabsChildNode, TabsContext, TabsIndicatorStyleState, TabsOrientation,
 };
 
 #[derive(IntoElement)]
@@ -14,7 +14,7 @@ pub struct TabsIndicator<T: Clone + Eq + 'static> {
     base: Div,
     children: Vec<AnyElement>,
     context: Option<TabsContext<T>>,
-    style_with_state: Option<Rc<dyn Fn(TabsIndicatorRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(TabsIndicatorStyleState, Div) -> Div + 'static>>,
     tab_value: PhantomData<T>,
 }
 
@@ -60,7 +60,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsIndicator<T> {
                 })
             })
             .unwrap_or_else(|| {
-                TabsIndicatorRenderState::new(
+                TabsIndicatorStyleState::new(
                     false,
                     None,
                     None,
@@ -97,7 +97,7 @@ impl<T: Clone + Eq + 'static> TabsIndicator<T> {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(TabsIndicatorRenderState, Div) -> Div + 'static,
+        style: impl Fn(TabsIndicatorStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

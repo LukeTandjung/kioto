@@ -9,7 +9,7 @@ use gpui::{
 use crate::{
     field::{
         child_wiring::wire_children, context::with_field_context, FieldChild, FieldContext,
-        FieldProps, FieldRootRenderState, FieldValidationHandler, FieldValidationMode,
+        FieldProps, FieldRootStyleState, FieldValidationHandler, FieldValidationMode,
         FieldValidationResult, FieldValue,
     },
     fieldset::current_fieldset_disabled,
@@ -29,7 +29,7 @@ pub struct FieldRoot {
     validation_mode: Option<FieldValidationMode>,
     validation_debounce: Option<Duration>,
     validate: Option<FieldValidationHandler>,
-    style_with_state: Option<Rc<dyn Fn(FieldRootRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(FieldRootStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for FieldRoot {
@@ -91,10 +91,10 @@ impl RenderOnce for FieldRoot {
             });
             context.set_form_external_errors(external_errors, cx);
         }
-        let render_state = context.read(cx, |runtime, props| runtime.root_state(props));
+        let style_state = context.read(cx, |runtime, props| runtime.root_state(props));
         let children = wire_children(self.children, context.clone());
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -178,7 +178,7 @@ impl FieldRoot {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(FieldRootRenderState, Div) -> Div + 'static,
+        style: impl Fn(FieldRootStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

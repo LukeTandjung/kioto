@@ -3,15 +3,15 @@ use std::{cell::RefCell, rc::Rc};
 use gpui::{div, prelude::*, px, size, IntoElement, Render, TestAppContext, WindowHandle};
 
 use crate::{
-    field::{FieldRoot, FieldRootRenderState},
+    field::{FieldRoot, FieldRootStyleState},
     form::{current_form_context, Form, FormContext},
     input::Input,
 };
 
 struct NamedValidationView {
     form_context: Rc<RefCell<Option<FormContext>>>,
-    email_states: Rc<RefCell<Vec<FieldRootRenderState>>>,
-    username_states: Rc<RefCell<Vec<FieldRootRenderState>>>,
+    email_states: Rc<RefCell<Vec<FieldRootStyleState>>>,
+    username_states: Rc<RefCell<Vec<FieldRootStyleState>>>,
 }
 
 impl NamedValidationView {
@@ -128,7 +128,7 @@ fn validate_field(
 fn last_states(
     cx: &mut TestAppContext,
     window: WindowHandle<NamedValidationView>,
-) -> (FieldRootRenderState, FieldRootRenderState) {
+) -> (FieldRootStyleState, FieldRootStyleState) {
     window
         .update(cx, |view, _window, cx| {
             cx.notify();

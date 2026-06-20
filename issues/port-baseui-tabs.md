@@ -193,7 +193,7 @@ Proposed GPUI/AccessKit mapping:
   - Add `.role(Role::Tab)`.
   - Add `.aria_selected(state.active)`.
   - Preserve focusability for disabled tabs if the current roving-focus model is updated to match Base UI exactly; our current behavior skips disabled tabs, so decide whether parity requires disabled tabs to be focusable-but-not-activatable.
-  - If GPUI exposes a disabled accessibility state in a future AccessKit API, set it from `TabsTabRenderState.disabled`; the initial AccessKit commit does not appear to expose a dedicated `aria_disabled(...)` helper.
+  - If GPUI exposes a disabled accessibility state in a future AccessKit API, set it from `TabsTabStyleState.disabled`; the initial AccessKit commit does not appear to expose a dedicated `aria_disabled(...)` helper.
   - If AccessKit/GPUI later supports relation properties, link the tab to its mounted panel equivalent to `aria-controls`.
 - `TabsPanel<T>`
   - Add `.role(Role::TabPanel)`.

@@ -4,8 +4,8 @@ mod child_wiring;
 pub mod context;
 pub mod layers;
 pub mod props;
-pub mod render_state;
 pub mod runtime;
+pub mod style_state;
 
 #[cfg(test)]
 mod tests;
@@ -15,8 +15,8 @@ pub use child::SwitchChild;
 pub use context::SwitchContext;
 pub use layers::{SwitchRoot, SwitchThumb};
 pub use props::{SwitchCheckedChangeHandler, SwitchProps};
-pub use render_state::{SwitchRootRenderState, SwitchThumbRenderState};
 pub use runtime::{
     SwitchCheckedChangeDetails, SwitchCheckedChangeReason, SwitchCheckedChangeSource,
     SwitchRuntime, SwitchToggleOutcome,
 };
+pub use style_state::{SwitchRootStyleState, SwitchThumbStyleState};

@@ -1,7 +1,7 @@
 use gpui::{FocusHandle, SharedString};
 
 use crate::field::{
-    FieldErrorMatch, FieldProps, FieldRootRenderState, FieldValidationMode, FieldValidityData,
+    FieldErrorMatch, FieldProps, FieldRootStyleState, FieldValidationMode, FieldValidityData,
     FieldValidityState, FieldValue,
 };
 
@@ -434,8 +434,8 @@ impl FieldRuntime {
         true
     }
 
-    /// Returns the root render state.
-    pub fn root_state(&self, props: &FieldProps) -> FieldRootRenderState {
+    /// Returns the root style state.
+    pub fn root_state(&self, props: &FieldProps) -> FieldRootStyleState {
         let disabled = props.disabled();
         let dirty = props.dirty().unwrap_or_else(|| self.dirty());
         let touched = props.touched().unwrap_or(self.touched);
@@ -446,7 +446,7 @@ impl FieldRuntime {
             .any(|control| control.registration.focused);
         let valid = self.validity_data(props).state.valid;
 
-        FieldRootRenderState::new(disabled, touched, dirty, valid, filled, focused)
+        FieldRootStyleState::new(disabled, touched, dirty, valid, filled, focused)
     }
 
     /// Returns current validity data combined with externally controlled invalid state.

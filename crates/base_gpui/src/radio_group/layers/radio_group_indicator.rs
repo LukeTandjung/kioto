@@ -6,17 +6,17 @@ use gpui::{
 };
 
 use crate::radio_group::{
-    child_wiring::RadioGroupRadioChildNode, RadioGroupIndicatorRenderState,
-    RadioGroupRadioRenderState,
+    child_wiring::RadioGroupRadioChildNode, RadioGroupIndicatorStyleState,
+    RadioGroupRadioStyleState,
 };
 
 #[derive(IntoElement)]
 pub struct RadioGroupIndicator {
     base: Div,
     children: Vec<AnyElement>,
-    radio_state: Option<RadioGroupRadioRenderState>,
+    radio_state: Option<RadioGroupRadioStyleState>,
     keep_mounted: bool,
-    style_with_state: Option<Rc<dyn Fn(RadioGroupIndicatorRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(RadioGroupIndicatorStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for RadioGroupIndicator {
@@ -46,7 +46,7 @@ impl Styled for RadioGroupIndicator {
 impl RenderOnce for RadioGroupIndicator {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let radio_state = self.radio_state.unwrap_or_default();
-        let state = RadioGroupIndicatorRenderState::new(
+        let state = RadioGroupIndicatorStyleState::new(
             radio_state,
             self.keep_mounted || radio_state.checked,
         );
@@ -65,7 +65,7 @@ impl RenderOnce for RadioGroupIndicator {
 }
 
 impl RadioGroupRadioChildNode for RadioGroupIndicator {
-    fn with_radio_state(mut self, state: RadioGroupRadioRenderState) -> Self {
+    fn with_radio_state(mut self, state: RadioGroupRadioStyleState) -> Self {
         self.radio_state = Some(state);
         self
     }
@@ -83,7 +83,7 @@ impl RadioGroupIndicator {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(RadioGroupIndicatorRenderState, Div) -> Div + 'static,
+        style: impl Fn(RadioGroupIndicatorStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

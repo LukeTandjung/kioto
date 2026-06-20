@@ -4,8 +4,8 @@ mod child_wiring;
 mod context;
 mod layers;
 mod props;
-mod render_state;
 mod runtime;
+mod style_state;
 
 #[cfg(test)]
 mod tests;
@@ -18,11 +18,11 @@ pub use child::{RadioGroupChild, RadioGroupRadioChild};
 pub use context::RadioGroupContext;
 pub use layers::{RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot};
 pub use props::{RadioGroupProps, RadioGroupValueChangeHandler};
-pub use render_state::{
-    RadioGroupIndicatorRenderState, RadioGroupRadioRenderState, RadioGroupRootRenderState,
-};
 pub use runtime::{
     Move, RadioGroupRadioMetadata, RadioGroupRuntime, RadioGroupSelectOutcome,
     RadioGroupSelectionTarget, RadioGroupValueChangeDetails, RadioGroupValueChangeReason,
     RadioGroupValueChangeSource,
+};
+pub use style_state::{
+    RadioGroupIndicatorStyleState, RadioGroupRadioStyleState, RadioGroupRootStyleState,
 };

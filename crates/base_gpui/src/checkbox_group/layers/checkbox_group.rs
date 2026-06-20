@@ -9,11 +9,11 @@ use gpui::{
 use crate::{
     checkbox_group::{
         context::with_checkbox_group_context, CheckboxGroupContext, CheckboxGroupProps,
-        CheckboxGroupRenderState, CheckboxGroupValueChangeDetails, CheckboxGroupValueChangeHandler,
+        CheckboxGroupStyleState, CheckboxGroupValueChangeDetails, CheckboxGroupValueChangeHandler,
     },
     field::{
         current_field_context, current_field_item_disabled, FieldContext, FieldControlRegistration,
-        FieldRootRenderState,
+        FieldRootStyleState,
     },
     fieldset::current_fieldset_disabled,
 };
@@ -28,7 +28,7 @@ pub struct CheckboxGroup {
     all_values: Vec<SharedString>,
     disabled: bool,
     on_value_change: Option<CheckboxGroupValueChangeHandler>,
-    style_with_state: Option<Rc<dyn Fn(CheckboxGroupRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(CheckboxGroupStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for CheckboxGroup {
@@ -78,11 +78,11 @@ impl RenderOnce for CheckboxGroup {
             self.default_value,
             CheckboxGroupProps::new(disabled, self.all_values, self.on_value_change),
         );
-        let render_state = context.read(cx, |runtime, props| {
-            checkbox_group_render_state(runtime, props, field_state)
+        let style_state = context.read(cx, |runtime, props| {
+            checkbox_group_style_state(runtime, props, field_state)
         });
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -157,19 +157,19 @@ impl CheckboxGroup {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(CheckboxGroupRenderState, Div) -> Div + 'static,
+        style: impl Fn(CheckboxGroupStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self
     }
 }
 
-fn checkbox_group_render_state(
+fn checkbox_group_style_state(
     runtime: &crate::checkbox_group::CheckboxGroupRuntime,
     props: &CheckboxGroupProps,
-    field_state: FieldRootRenderState,
-) -> CheckboxGroupRenderState {
-    CheckboxGroupRenderState::new(
+    field_state: FieldRootStyleState,
+) -> CheckboxGroupStyleState {
+    CheckboxGroupStyleState::new(
         props.disabled(),
         field_state.touched,
         field_state.dirty,

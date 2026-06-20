@@ -10,7 +10,7 @@ use crate::{
     fieldset::current_fieldset_disabled,
     radio_group::{
         child_wiring::wire_children, RadioGroupChild, RadioGroupContext, RadioGroupProps,
-        RadioGroupRootRenderState, RadioGroupValueChangeDetails, RadioGroupValueChangeHandler,
+        RadioGroupRootStyleState, RadioGroupValueChangeDetails, RadioGroupValueChangeHandler,
     },
 };
 
@@ -27,7 +27,7 @@ pub struct RadioGroupRoot<T: Clone + Eq + 'static> {
     read_only: bool,
     required: bool,
     on_value_change: Option<RadioGroupValueChangeHandler<T>>,
-    style_with_state: Option<Rc<dyn Fn(RadioGroupRootRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(RadioGroupRootStyleState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for RadioGroupRoot<T> {
@@ -99,17 +99,17 @@ impl<T: Clone + Eq + 'static> RenderOnce for RadioGroupRoot<T> {
             focus_handle.focus(window, cx);
         }
 
-        let render_state = context.read(cx, |runtime, props| runtime.root_state(props));
+        let style_state = context.read(cx, |runtime, props| runtime.root_state(props));
         if let Some(field_context) = field_context.as_ref() {
-            let value = match render_state.filled {
+            let value = match style_state.filled {
                 true => FieldValue::Present,
                 false => FieldValue::Empty,
             };
             let mut registration = FieldControlRegistration::new(id.to_string())
                 .value(value)
-                .disabled(render_state.disabled)
-                .focused(render_state.focused)
-                .required(render_state.required);
+                .disabled(style_state.disabled)
+                .focused(style_state.focused)
+                .required(style_state.required);
             if let Some(focus_handle) =
                 context.read(cx, |runtime, _| runtime.highlighted_focus_handle())
             {
@@ -122,7 +122,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for RadioGroupRoot<T> {
         }
 
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -199,7 +199,7 @@ impl<T: Clone + Eq + 'static> RadioGroupRoot<T> {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(RadioGroupRootRenderState, Div) -> Div + 'static,
+        style: impl Fn(RadioGroupRootStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

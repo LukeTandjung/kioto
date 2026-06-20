@@ -3,10 +3,10 @@ use std::{cell::RefCell, rc::Rc};
 use gpui::{div, prelude::*, px, size, IntoElement, Render, TestAppContext, WindowHandle};
 
 use crate::{
-    field::{FieldRoot, FieldRootRenderState},
-    fieldset::{FieldsetLegend, FieldsetLegendRenderState, FieldsetRoot, FieldsetRootRenderState},
-    input::{Input, InputRenderState},
-    switch::{SwitchRoot, SwitchRootRenderState},
+    field::{FieldRoot, FieldRootStyleState},
+    fieldset::{FieldsetLegend, FieldsetLegendStyleState, FieldsetRoot, FieldsetRootStyleState},
+    input::{Input, InputStyleState},
+    switch::{SwitchRoot, SwitchRootStyleState},
 };
 
 #[derive(Clone, Debug, Default)]
@@ -17,11 +17,11 @@ struct FieldsetTestConfig {
 
 #[derive(Clone, Default)]
 struct FieldsetObservations {
-    root_states: Vec<FieldsetRootRenderState>,
-    legend_states: Vec<FieldsetLegendRenderState>,
-    field_states: Vec<FieldRootRenderState>,
-    input_states: Vec<InputRenderState>,
-    switch_states: Vec<SwitchRootRenderState>,
+    root_states: Vec<FieldsetRootStyleState>,
+    legend_states: Vec<FieldsetLegendStyleState>,
+    field_states: Vec<FieldRootStyleState>,
+    input_states: Vec<InputStyleState>,
+    switch_states: Vec<SwitchRootStyleState>,
 }
 
 impl FieldsetObservations {

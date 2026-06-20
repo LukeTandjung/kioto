@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::field::{
     context::current_field_context, item_context::current_field_item_disabled, FieldContext,
-    FieldDescriptionRenderState,
+    FieldDescriptionStyleState,
 };
 
 #[derive(IntoElement)]
@@ -15,7 +15,7 @@ pub struct FieldDescription {
     base: Div,
     children: Vec<AnyElement>,
     context: Option<FieldContext>,
-    style_with_state: Option<Rc<dyn Fn(FieldDescriptionRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(FieldDescriptionStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for FieldDescription {
@@ -54,7 +54,7 @@ impl RenderOnce for FieldDescription {
             .map(|context| context.read(cx, |runtime, props| runtime.root_state(props)))
             .unwrap_or_default();
         let state =
-            FieldDescriptionRenderState::new(root_state, root_state.disabled || item_disabled);
+            FieldDescriptionStyleState::new(root_state, root_state.disabled || item_disabled);
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
@@ -76,7 +76,7 @@ impl FieldDescription {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(FieldDescriptionRenderState, Div) -> Div + 'static,
+        style: impl Fn(FieldDescriptionStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

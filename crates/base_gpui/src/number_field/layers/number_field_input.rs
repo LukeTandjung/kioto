@@ -3,7 +3,7 @@ use std::rc::Rc;
 use gpui::{App, Div, ElementId, IntoElement, RenderOnce, StyleRefinement, Styled, Window};
 
 use crate::{
-    number_field::{NumberFieldContext, NumberFieldInputRenderState, NumberFieldStepDirection},
+    number_field::{NumberFieldContext, NumberFieldInputStyleState, NumberFieldStepDirection},
     primitives::input::{input, Input},
 };
 
@@ -12,7 +12,7 @@ pub struct NumberFieldInput {
     id: Option<ElementId>,
     input: Input,
     context: Option<NumberFieldContext>,
-    style_with_state: Option<Rc<dyn Fn(NumberFieldInputRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(NumberFieldInputStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for NumberFieldInput {
@@ -38,18 +38,18 @@ impl RenderOnce for NumberFieldInput {
             .context
             .expect("NumberFieldInput must be rendered inside NumberFieldRoot");
         let id = self.id.unwrap_or_else(|| context.child_id("input"));
-        let render_state = context.read(cx, |runtime, props| runtime.input_state(props));
-        let input_value = render_state.root.input_value.clone();
-        let disabled = render_state.root.disabled;
-        let read_only = render_state.root.read_only;
-        let required = render_state.root.required;
+        let style_state = context.read(cx, |runtime, props| runtime.input_state(props));
+        let input_value = style_state.root.input_value.clone();
+        let disabled = style_state.root.disabled;
+        let read_only = style_state.root.read_only;
+        let required = style_state.root.required;
         let focus_handle = context.focus_handle();
         let change_context = context.clone();
         let focus_context = context.clone();
         let home_context = context.clone();
         let end_context = context.clone();
         let style_with_state = self.style_with_state;
-        let number_state = render_state.clone();
+        let number_state = style_state.clone();
 
         self.input
             .id(id)
@@ -61,7 +61,7 @@ impl RenderOnce for NumberFieldInput {
             .on_value_change_with_context(move |value, window, cx| {
                 change_context.input_changed(value, window, cx);
             })
-            .on_render_state(move |state, window, cx| {
+            .on_style_state(move |state, window, cx| {
                 focus_context.sync_focus(state.focused, window, cx);
             })
             .on_home(move |_value, window, cx| {
@@ -111,7 +111,7 @@ impl NumberFieldInput {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(NumberFieldInputRenderState, Div) -> Div + 'static,
+        style: impl Fn(NumberFieldInputStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

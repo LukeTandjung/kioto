@@ -6,14 +6,14 @@ use gpui::{
 };
 
 use crate::{
-    field::{FieldRoot, FieldRootRenderState},
+    field::{FieldRoot, FieldRootStyleState},
     form::{current_form_context, Form, FormContext, FormSubmitReason, FormValues},
     switch::{SwitchRoot, SwitchThumb},
 };
 
 struct UnnamedSwitchFormView {
     form_context: Rc<RefCell<Option<FormContext>>>,
-    field_states: Rc<RefCell<Vec<FieldRootRenderState>>>,
+    field_states: Rc<RefCell<Vec<FieldRootStyleState>>>,
     submissions: Rc<RefCell<Vec<FormValues>>>,
 }
 
@@ -125,7 +125,7 @@ fn click_switch(cx: &mut TestAppContext, window: WindowHandle<UnnamedSwitchFormV
 fn last_field_state(
     cx: &mut TestAppContext,
     window: WindowHandle<UnnamedSwitchFormView>,
-) -> FieldRootRenderState {
+) -> FieldRootStyleState {
     window
         .update(cx, |view, _window, cx| {
             cx.notify();

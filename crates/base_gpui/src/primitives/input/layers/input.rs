@@ -7,13 +7,13 @@ use gpui::{
 };
 
 use crate::primitives::input::{
-    InputBoundaryHandler, InputEnterHandler, InputRenderState, InputRuntime,
+    InputBoundaryHandler, InputEnterHandler, InputRuntime, InputStyleState,
     InputValueChangeHandler, INPUT_KEY_CONTEXT,
 };
 
 use super::InputTextElement;
 
-type InputRenderStateHandler = Rc<dyn Fn(InputRenderState, &mut Window, &mut App) + 'static>;
+type InputStyleStateHandler = Rc<dyn Fn(InputStyleState, &mut Window, &mut App) + 'static>;
 
 #[derive(IntoElement)]
 pub struct Input {
@@ -32,9 +32,9 @@ pub struct Input {
     on_enter: Option<InputEnterHandler>,
     on_home: Option<InputBoundaryHandler>,
     on_end: Option<InputBoundaryHandler>,
-    on_render_state: Option<InputRenderStateHandler>,
+    on_style_state: Option<InputStyleStateHandler>,
     focus_handle: Option<FocusHandle>,
-    style_with_state: Option<Rc<dyn Fn(InputRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(InputStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for Input {
@@ -55,7 +55,7 @@ impl Default for Input {
             on_enter: None,
             on_home: None,
             on_end: None,
-            on_render_state: None,
+            on_style_state: None,
             focus_handle: None,
             style_with_state: None,
         }
@@ -114,13 +114,13 @@ impl RenderOnce for Input {
             *auto_focus_done.as_mut(cx) = true;
         }
 
-        let render_state = state.read(cx).render_state(window, None);
-        if let Some(on_render_state) = self.on_render_state.as_ref() {
-            on_render_state(render_state.clone(), window, cx);
+        let style_state = state.read(cx).style_state(window, None);
+        if let Some(on_style_state) = self.on_style_state.as_ref() {
+            on_style_state(style_state.clone(), window, cx);
         }
 
         let base = match self.style_with_state {
-            Some(style) => style(render_state, self.base),
+            Some(style) => style(style_state, self.base),
             None => self.base,
         };
 
@@ -255,11 +255,11 @@ impl Input {
         self
     }
 
-    pub fn on_render_state(
+    pub fn on_style_state(
         mut self,
-        on_render_state: impl Fn(InputRenderState, &mut Window, &mut App) + 'static,
+        on_style_state: impl Fn(InputStyleState, &mut Window, &mut App) + 'static,
     ) -> Self {
-        self.on_render_state = Some(Rc::new(on_render_state));
+        self.on_style_state = Some(Rc::new(on_style_state));
         self
     }
 
@@ -270,7 +270,7 @@ impl Input {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(InputRenderState, Div) -> Div + 'static,
+        style: impl Fn(InputStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

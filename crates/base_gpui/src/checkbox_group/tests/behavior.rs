@@ -6,8 +6,8 @@ use gpui::{
 };
 
 use crate::{
-    checkbox::{CheckboxRoot, CheckboxRootRenderState},
-    checkbox_group::{CheckboxGroup, CheckboxGroupRenderState},
+    checkbox::{CheckboxRoot, CheckboxRootStyleState},
+    checkbox_group::{CheckboxGroup, CheckboxGroupStyleState},
 };
 
 #[derive(Clone, Debug)]
@@ -53,8 +53,8 @@ impl Default for CheckboxGroupTestConfig {
 
 #[derive(Clone, Debug, Default)]
 struct CheckboxGroupObservations {
-    group_states: Vec<CheckboxGroupRenderState>,
-    checkbox_states: Vec<(SharedString, CheckboxRootRenderState)>,
+    group_states: Vec<CheckboxGroupStyleState>,
+    checkbox_states: Vec<(SharedString, CheckboxRootStyleState)>,
     group_changes: Vec<Vec<SharedString>>,
     nested_group_changes: Vec<Vec<SharedString>>,
     child_changes: Vec<(SharedString, bool)>,
@@ -66,7 +66,7 @@ impl CheckboxGroupObservations {
         self.checkbox_states.clear();
     }
 
-    fn checkbox_state(&self, value: &str) -> CheckboxRootRenderState {
+    fn checkbox_state(&self, value: &str) -> CheckboxRootStyleState {
         self.checkbox_states
             .iter()
             .rev()
@@ -75,7 +75,7 @@ impl CheckboxGroupObservations {
             .unwrap_or_else(|| panic!("checkbox state for {value} should be observed"))
     }
 
-    fn group_state(&self) -> CheckboxGroupRenderState {
+    fn group_state(&self) -> CheckboxGroupStyleState {
         self.group_states
             .last()
             .copied()

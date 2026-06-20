@@ -59,7 +59,7 @@ crates/base_gpui/src/form/mod.rs
 crates/base_gpui/src/form/actions.rs
 crates/base_gpui/src/form/context.rs
 crates/base_gpui/src/form/props.rs
-crates/base_gpui/src/form/render_state.rs
+crates/base_gpui/src/form/style_state.rs
 crates/base_gpui/src/form/runtime.rs
 crates/base_gpui/src/form/value.rs
 crates/base_gpui/src/form/layers/mod.rs
@@ -145,7 +145,7 @@ Base UI `Form::errors` maps field names to one or many messages. GPUI should rep
 BTreeMap<SharedString, Vec<SharedString>>
 ```
 
-External errors should feed the corresponding Field validity/error render state, not mutate browser validity APIs.
+External errors should feed the corresponding Field validity/error style state, not mutate browser validity APIs.
 
 ### Submit behavior
 
@@ -303,8 +303,8 @@ Async validation can be supported later if needed. Base UI does not let pending 
 
 ### Styling/state exposure
 
-- [x] Add `FormRenderState` even if initially empty, matching Base UI's empty `Form.State` while preserving `style_with_state(...)` extensibility.
-- [x] `Form::style_with_state(...)` works with `FormRenderState`.
+- [x] Add `FormStyleState` even if initially empty, matching Base UI's empty `Form.State` while preserving `style_with_state(...)` extensibility.
+- [x] `Form::style_with_state(...)` works with `FormStyleState`.
 - [x] Do not expose DOM data attributes as the styling API.
 - [x] Do not expose CSS variable names as the styling API.
 - [x] The docs hero pattern can be recreated with GPUI builder methods: form, fields, labels, inputs, errors, and submit trigger layout.
@@ -340,7 +340,7 @@ Add behavior tests under `crates/base_gpui/src/form/tests/` where practical.
 - [x] `on_form_submit` does not run when the form is invalid.
 - [x] Number Field contributes its value to `FormValues` according to the implemented value model.
 - [x] Checkbox/Switch/Radio Group contribute values according to the implemented value model.
-- [x] `Form::style_with_state(...)` receives render state.
+- [x] `Form::style_with_state(...)` receives style state.
 - [x] Form demo compiles.
 - [x] `cargo check -p base_gpui` passes.
 - [x] `cargo test -p base_gpui form` passes.

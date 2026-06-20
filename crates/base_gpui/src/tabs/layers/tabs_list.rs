@@ -7,9 +7,9 @@ use gpui::{
 
 use crate::tabs::{
     child_wiring::{TabsChildNode, TabsChildWiring},
-    Move, TabsActivateHighlighted, TabsContext, TabsListChild, TabsListRenderState,
-    TabsOrientation, TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft,
-    TabsSelectRight, TabsSelectUp, TABS_LIST_KEY_CONTEXT,
+    Move, TabsActivateHighlighted, TabsContext, TabsListChild, TabsListStyleState, TabsOrientation,
+    TabsSelectDown, TabsSelectFirst, TabsSelectLast, TabsSelectLeft, TabsSelectRight, TabsSelectUp,
+    TABS_LIST_KEY_CONTEXT,
 };
 
 #[derive(IntoElement)]
@@ -19,7 +19,7 @@ pub struct TabsList<T: Clone + Eq + 'static> {
     context: Option<TabsContext<T>>,
     activate_on_focus: bool,
     loop_focus: bool,
-    style_with_state: Option<Rc<dyn Fn(TabsListRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(TabsListStyleState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsList<T> {
@@ -44,7 +44,7 @@ impl<T: Clone + Eq + 'static> Styled for TabsList<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let context = self.context;
-        let (render_state, orientation) = context
+        let (style_state, orientation) = context
             .as_ref()
             .map(|context| {
                 context.read(_cx, |runtime, props| {
@@ -69,10 +69,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsList<T> {
         let activate_on_focus = self.activate_on_focus;
         let loop_focus = self.loop_focus;
 
-        let base = match (self.style_with_state, render_state) {
-            (Some(style_with_state), Some(render_state)) => {
-                style_with_state(render_state, self.base)
-            }
+        let base = match (self.style_with_state, style_state) {
+            (Some(style_with_state), Some(style_state)) => style_with_state(style_state, self.base),
             _ => self.base,
         };
 
@@ -261,7 +259,7 @@ impl<T: Clone + Eq + 'static> TabsList<T> {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(TabsListRenderState, Div) -> Div + 'static,
+        style: impl Fn(TabsListStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

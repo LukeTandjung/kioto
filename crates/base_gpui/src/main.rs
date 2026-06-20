@@ -10,6 +10,11 @@ use base_gpui::{
         NumberFieldRoot,
     },
     radio_group::{RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot},
+    select::{
+        SelectIcon, SelectItem, SelectItemIndicator, SelectItemText, SelectList, SelectPopup,
+        SelectPortal, SelectPositioner, SelectRoot, SelectSeparator, SelectTrigger, SelectValue,
+    },
+    separator::{Separator, SeparatorOrientation},
     switch::{SwitchRoot, SwitchThumb},
     tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab},
     utils::direction::{DirectionProvider, TextDirection},
@@ -95,6 +100,26 @@ impl Render for ComponentGallery {
                                 fieldset_demo(),
                             ))
                             .child(component_card(
+                                "Separator",
+                                "Shared horizontal and vertical visual dividers.",
+                                separator_demo(),
+                            ))
+                            .child(component_card(
+                                "Select",
+                                "Trigger, value, popup/list, item labels, and indicator state.",
+                                select_demo(),
+                            ))
+                            .child(component_card(
+                                "Field + Select",
+                                "Required Field registration with a serialized Select value.",
+                                field_select_demo(),
+                            ))
+                            .child(component_card(
+                                "Multiple Select",
+                                "Ordered multi-value toggling with item indicators.",
+                                multiple_select_demo(),
+                            ))
+                            .child(component_card(
                                 "Number Field",
                                 "Text editing, stepping, min/max, and formatted numeric value.",
                                 number_field_demo(),
@@ -165,6 +190,234 @@ fn component_card(
                 ),
         )
         .child(content)
+}
+
+fn separator_demo() -> impl IntoElement {
+    div()
+        .flex()
+        .flex_col()
+        .gap_3()
+        .child(
+            Separator::new()
+                .horizontal()
+                .bg(rgb(0xd1d5db))
+                .style_with_state(|state, separator| match state.orientation {
+                    SeparatorOrientation::Horizontal => separator.w_full().h(px(1.0)),
+                    SeparatorOrientation::Vertical => separator.w(px(1.0)).h(px(20.0)),
+                }),
+        )
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap_3()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("Home")
+                .child("Pricing")
+                .child("Blog")
+                .child(
+                    Separator::new()
+                        .vertical()
+                        .bg(rgb(0x9ca3af))
+                        .style_with_state(|state, separator| match state.orientation {
+                            SeparatorOrientation::Horizontal => separator.w_full().h(px(1.0)),
+                            SeparatorOrientation::Vertical => separator.w(px(1.0)).h(px(20.0)),
+                        }),
+                )
+                .child("Log in")
+                .child("Sign up"),
+        )
+}
+
+fn select_demo() -> impl IntoElement {
+    SelectRoot::<&'static str>::new()
+        .id("gallery-select")
+        .default_value(Some("apple"))
+        .item_to_string_value(|value| (*value).into())
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(select_trigger())
+        .child(
+            SelectPortal::<&'static str>::new().child(
+                SelectPositioner::new().side_offset(px(4.0)).child(
+                    SelectPopup::new()
+                        .w(px(220.0))
+                        .rounded_md()
+                        .border_1()
+                        .border_color(rgb(0xd1d5db))
+                        .bg(rgb(0xffffff))
+                        .shadow_lg()
+                        .p_1()
+                        .child(
+                            SelectList::new()
+                                .flex()
+                                .flex_col()
+                                .gap_1()
+                                .child(select_item("apple", "Apple"))
+                                .child(select_item("banana", "Banana"))
+                                .child(
+                                    SelectSeparator::new()
+                                        .horizontal()
+                                        .my_1()
+                                        .h(px(1.0))
+                                        .bg(rgb(0xe5e7eb)),
+                                )
+                                .child(select_item("orange", "Orange")),
+                        ),
+                ),
+            ),
+        )
+}
+
+fn field_select_demo() -> impl IntoElement {
+    FieldRoot::new()
+        .id("gallery-field-select")
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            FieldLabel::new()
+                .text_size(px(13.0))
+                .child("Favorite fruit"),
+        )
+        .child_any(
+            SelectRoot::<&'static str>::new()
+                .id("gallery-field-select-control")
+                .name("fruit")
+                .required(true)
+                .default_value(None)
+                .item_to_string_value(|value| (*value).into())
+                .child(select_trigger())
+                .child(
+                    SelectPortal::<&'static str>::new().child(
+                        SelectPositioner::new().side_offset(px(4.0)).child(
+                            SelectPopup::new()
+                                .w(px(220.0))
+                                .rounded_md()
+                                .border_1()
+                                .border_color(rgb(0xd1d5db))
+                                .bg(rgb(0xffffff))
+                                .shadow_lg()
+                                .p_1()
+                                .child(
+                                    SelectList::new()
+                                        .flex()
+                                        .flex_col()
+                                        .gap_1()
+                                        .child(select_item("apple", "Apple"))
+                                        .child(select_item("banana", "Banana"))
+                                        .child(select_item("orange", "Orange")),
+                                ),
+                        ),
+                    ),
+                ),
+        )
+        .child(
+            FieldDescription::new()
+                .text_size(px(12.0))
+                .child("Pick one value."),
+        )
+        .child(
+            FieldError::new()
+                .text_size(px(12.0))
+                .text_color(rgb(0xb91c1c)),
+        )
+}
+
+fn multiple_select_demo() -> impl IntoElement {
+    SelectRoot::<&'static str>::new()
+        .id("gallery-multiple-select")
+        .multiple(true)
+        .default_values(vec!["apple", "orange"])
+        .item_to_string_value(|value| (*value).into())
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(select_trigger())
+        .child(
+            SelectPortal::<&'static str>::new().child(
+                SelectPositioner::new().side_offset(px(4.0)).child(
+                    SelectPopup::new()
+                        .w(px(220.0))
+                        .rounded_md()
+                        .border_1()
+                        .border_color(rgb(0xd1d5db))
+                        .bg(rgb(0xffffff))
+                        .shadow_lg()
+                        .p_1()
+                        .child(
+                            SelectList::new()
+                                .flex()
+                                .flex_col()
+                                .gap_1()
+                                .child(select_item("apple", "Apple"))
+                                .child(select_item("banana", "Banana"))
+                                .child(select_item("orange", "Orange")),
+                        ),
+                ),
+            ),
+        )
+}
+
+fn select_trigger() -> SelectTrigger<&'static str> {
+    SelectTrigger::new()
+        .w_full()
+        .h(px(34.0))
+        .px_2()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .bg(rgb(0xffffff))
+        .flex()
+        .items_center()
+        .justify_between()
+        .child(
+            SelectValue::new()
+                .placeholder("Select a fruit")
+                .text_size(px(13.0))
+                .text_color(rgb(0x111827)),
+        )
+        .child(
+            SelectIcon::new()
+                .text_size(px(12.0))
+                .text_color(rgb(0x6b7280)),
+        )
+}
+
+fn select_item(value: &'static str, label: &'static str) -> SelectItem<&'static str> {
+    SelectItem::new()
+        .id(format!("gallery-select-item-{value}"))
+        .value(value)
+        .label(label)
+        .px_2()
+        .py_1()
+        .rounded_sm()
+        .flex()
+        .items_center()
+        .gap_2()
+        .style_with_state(|state, item| {
+            if state.highlighted {
+                item.bg(rgb(0xf3f4f6))
+            } else {
+                item
+            }
+        })
+        .child(
+            SelectItemIndicator::new()
+                .keep_mounted(true)
+                .w(px(14.0))
+                .text_size(px(12.0))
+                .style_with_state(|state, indicator| {
+                    if state.selected {
+                        indicator.text_color(rgb(0x2563eb))
+                    } else {
+                        indicator.text_color(rgb(0xffffff))
+                    }
+                }),
+        )
+        .child(SelectItemText::new().text(label).text_size(px(13.0)))
 }
 
 fn tabs_demo() -> impl IntoElement {
@@ -807,4 +1060,18 @@ fn main() {
 
         cx.activate(true);
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use gpui::{px, size, TestAppContext};
+
+    use super::ComponentGallery;
+
+    #[gpui::test]
+    fn component_gallery_renders_without_panics(cx: &mut TestAppContext) {
+        cx.update(base_gpui::init);
+        cx.open_window(size(px(1040.0), px(760.0)), |_, _| ComponentGallery);
+        cx.run_until_parked();
+    }
 }

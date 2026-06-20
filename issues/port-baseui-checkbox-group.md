@@ -30,7 +30,7 @@ Port the Checkbox Group component family from Base UI into GPUI-native component
 Update existing related GPUI components where required:
 
 - `CheckboxRoot`
-- `CheckboxIndicator` only if parent/indeterminate render-state wiring needs adjustment
+- `CheckboxIndicator` only if parent/indeterminate style-state wiring needs adjustment
 - `FieldRoot` / `FieldRuntime` validation and value model to support multi-checkbox required validation
 - `FieldValue::List(Vec<SharedString>)` and `FormValue::List(Vec<SharedString>)` for ordered checkbox group values
 
@@ -63,7 +63,7 @@ Expected GPUI implementation files:
 - `crates/base_gpui/src/checkbox_group/mod.rs`
 - `crates/base_gpui/src/checkbox_group/context.rs`
 - `crates/base_gpui/src/checkbox_group/props.rs`
-- `crates/base_gpui/src/checkbox_group/render_state.rs`
+- `crates/base_gpui/src/checkbox_group/style_state.rs`
 - `crates/base_gpui/src/checkbox_group/runtime.rs`
 - `crates/base_gpui/src/checkbox_group/child.rs`
 - `crates/base_gpui/src/checkbox_group/child_wiring.rs` if typed child/context wiring is needed
@@ -81,7 +81,7 @@ Expected GPUI implementation files:
 - Do not port browser `FormData` mechanics literally; use GPUI `FormValues` / `FieldValue` instead.
 - Do not port DOM refs or `HTMLButtonElement` registration; use GPUI focus handles and component metadata registration.
 - Do not port DOM `aria-controls`, `aria-labelledby`, `aria-describedby`, `role="group"`, or generated DOM ids literally.
-- Do not port DOM data attributes as attributes; map `data-disabled` and field validity state into typed render-state fields.
+- Do not port DOM data attributes as attributes; map `data-disabled` and field validity state into typed style-state fields.
 - Do not port arbitrary browser `Event` objects. Use Rust-native change detail structs with source/reason/cancel state where needed.
 - Do not port CSS variable APIs.
 - Do not add a generic shared primitive unless Checkbox Group genuinely reveals repeated deep knowledge.
@@ -151,7 +151,7 @@ Expected GPUI implementation files:
 - [x] Uncontrolled Checkbox Group initializes from `default_value`.
 - [x] Omitted `default_value` initializes to an empty list.
 - [x] Controlled Checkbox Group reflects external `value`.
-- [x] External controlled value changes update child and parent render states.
+- [x] External controlled value changes update child and parent style states.
 - [x] Toggling an unchecked child appends its value to the current ordered group value.
 - [x] Toggling a checked child removes its value while preserving the order of remaining values.
 - [x] Re-selecting an already-present value does not create duplicate entries.
@@ -162,9 +162,9 @@ Expected GPUI implementation files:
 ### Parent checkbox behavior
 
 - [x] A `CheckboxRoot::parent(true)` inside a group uses group parent state instead of local checked state when `all_values` is present.
-- [x] Parent render state is checked when every value in `all_values` is selected.
-- [x] Parent render state is indeterminate when some but not all values in `all_values` are selected.
-- [x] Parent render state is unchecked when no values in `all_values` are selected.
+- [x] Parent style state is checked when every value in `all_values` is selected.
+- [x] Parent style state is indeterminate when some but not all values in `all_values` are selected.
+- [x] Parent style state is unchecked when no values in `all_values` are selected.
 - [x] Clicking parent from all-off selects all enabled values from `all_values`.
 - [x] Clicking parent from all-on clears all enabled values.
 - [x] Clicking parent from mixed state first selects all enabled values.
@@ -201,7 +201,7 @@ Expected GPUI implementation files:
 - [x] Disabled required children are ignored for required validation.
 - [x] Required validation remains correct when a checked child unmounts and another required child remains unchecked.
 - [x] Custom validation errors clear when the group becomes valid and return when the group becomes invalid again.
-- [x] Group render state reflects field state: `touched`, `dirty`, `valid`, `invalid`, `filled`, `focused`, and `disabled`.
+- [x] Group style state reflects field state: `touched`, `dirty`, `valid`, `invalid`, `filled`, `focused`, and `disabled`.
 - [x] Group changes clear matching external form/server errors for the owning field without clearing sibling errors.
 - [x] Form submit focuses the first enabled non-parent checkbox when the group field is invalid.
 
@@ -217,19 +217,19 @@ Expected GPUI implementation files:
 
 ### Styling/state exposure
 
-- [x] Add `CheckboxGroupRenderState` with disabled and field-derived state.
+- [x] Add `CheckboxGroupStyleState` with disabled and field-derived state.
 - [x] Expose state-aware styling through `CheckboxGroup::style_with_state(...)`.
-- [x] Map Base UI `data-disabled` into `CheckboxGroupRenderState::disabled`.
+- [x] Map Base UI `data-disabled` into `CheckboxGroupStyleState::disabled`.
 - [x] Do not expose DOM data attributes, CSS class names, CSS variables, or web `style` APIs.
-- [x] Parent checkbox indeterminate/checked state is exposed through existing `CheckboxRootRenderState`.
-- [x] Child checkbox checked/disabled/read-only/required/indeterminate/focused state remains available through existing Checkbox render-state APIs.
+- [x] Parent checkbox indeterminate/checked state is exposed through existing `CheckboxRootStyleState`.
+- [x] Child checkbox checked/disabled/read-only/required/indeterminate/focused state remains available through existing Checkbox style-state APIs.
 
 ### Keyboard/focus behavior
 
 - [x] Child checkboxes keep standalone Checkbox keyboard semantics inside a group: Space toggles, Enter does not toggle.
 - [x] Parent checkbox uses the same keyboard semantics as child checkboxes.
 - [x] Disabled/read-only grouped checkboxes do not toggle from keyboard activation.
-- [x] Focused state contributes to both child checkbox render state and group/field focused state.
+- [x] Focused state contributes to both child checkbox style state and group/field focused state.
 - [x] Label-driven focus/click behavior already provided by `FieldLabel` continues to work for grouped checkboxes.
 - [x] Use GPUI actions/key contexts; do not add DOM-style keydown logic.
 
@@ -265,7 +265,7 @@ Add behavior tests under `crates/base_gpui/src/checkbox_group/tests/`.
 - [x] Disabled group activation does not call change handlers.
 - [x] Individual disabled child is not toggled by parent all-on/all-off.
 - [x] Checked disabled child remains checked through parent toggles.
-- [x] Parent checked/unchecked/indeterminate render state is correct.
+- [x] Parent checked/unchecked/indeterminate style state is correct.
 - [x] Parent all-on/all-off/mixed snapshot cycle is correct.
 - [x] Parent changes do not call child change handlers.
 - [x] Nested groups isolate state.
@@ -279,6 +279,6 @@ Add behavior tests under `crates/base_gpui/src/checkbox_group/tests/`.
 - [x] Form submit collects selected list values.
 - [x] Parent checkbox is excluded from Form values.
 - [x] Disabled/fieldset-disabled groups are skipped by Form validation and values.
-- [x] `style_with_state(...)` receives correct Checkbox Group render state.
+- [x] `style_with_state(...)` receives correct Checkbox Group style state.
 - [x] Existing `cargo test -p base_gpui checkbox` coverage remains green.
 - [x] Existing `cargo test -p base_gpui field form` coverage remains green.

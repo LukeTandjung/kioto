@@ -8,8 +8,8 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::primitives::input::{
     InputBackspace, InputBoundaryHandler, InputCopy, InputCut, InputDelete, InputEnd, InputEnter,
-    InputEnterHandler, InputHome, InputLeft, InputPaste, InputRenderState, InputRight,
-    InputSelectAll, InputSelectLeft, InputSelectRight, InputValueChangeHandler,
+    InputEnterHandler, InputHome, InputLeft, InputPaste, InputRight, InputSelectAll,
+    InputSelectLeft, InputSelectRight, InputStyleState, InputValueChangeHandler,
 };
 
 pub struct InputRuntime {
@@ -122,8 +122,8 @@ impl InputRuntime {
         self.focus_handle.is_focused(window)
     }
 
-    pub fn render_state(&self, window: &Window, valid: Option<bool>) -> InputRenderState {
-        InputRenderState::new(
+    pub fn style_state(&self, window: &Window, valid: Option<bool>) -> InputStyleState {
+        InputStyleState::new(
             self.value.clone(),
             self.disabled,
             self.read_only,

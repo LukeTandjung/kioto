@@ -140,7 +140,7 @@ fn blur_after_typing_commits_value(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
-fn render_states_expose_common_flags(cx: &mut TestAppContext) {
+fn style_states_expose_common_flags(cx: &mut TestAppContext) {
     let window = open_number_field(
         cx,
         NumberFieldTestConfig {

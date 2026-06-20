@@ -8,10 +8,10 @@ use gpui::{
 
 use crate::field::{
     current_field_context, current_field_item_disabled, FieldContext, FieldControlRegistration,
-    FieldDescription, FieldDescriptionRenderState, FieldError, FieldErrorRenderState, FieldItem,
-    FieldItemRenderState, FieldLabel, FieldLabelRenderState, FieldRoot, FieldRootRenderState,
+    FieldDescription, FieldDescriptionStyleState, FieldError, FieldErrorStyleState, FieldItem,
+    FieldItemStyleState, FieldLabel, FieldLabelStyleState, FieldRoot, FieldRootStyleState,
     FieldValidationMode, FieldValidationResult, FieldValidity, FieldValidityKey,
-    FieldValidityRenderState, FieldValue,
+    FieldValidityStyleState, FieldValue,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -66,12 +66,12 @@ impl Default for FieldTestConfig {
 
 #[derive(Clone, Default)]
 pub struct FieldObservations {
-    pub root_states: Vec<FieldRootRenderState>,
-    pub item_states: Vec<FieldItemRenderState>,
-    pub label_states: Vec<FieldLabelRenderState>,
-    pub description_states: Vec<FieldDescriptionRenderState>,
-    pub error_states: Vec<FieldErrorRenderState>,
-    pub validity_states: Vec<FieldValidityRenderState>,
+    pub root_states: Vec<FieldRootStyleState>,
+    pub item_states: Vec<FieldItemStyleState>,
+    pub label_states: Vec<FieldLabelStyleState>,
+    pub description_states: Vec<FieldDescriptionStyleState>,
+    pub error_states: Vec<FieldErrorStyleState>,
+    pub validity_states: Vec<FieldValidityStyleState>,
     pub control_disabled: Vec<bool>,
     pub control_focused: Vec<bool>,
 }
@@ -88,39 +88,39 @@ impl FieldObservations {
         self.control_focused.clear();
     }
 
-    pub fn root_state(&self) -> FieldRootRenderState {
+    pub fn root_state(&self) -> FieldRootStyleState {
         self.root_states
             .last()
             .copied()
             .expect("field root state should be observed")
     }
 
-    pub fn label_state(&self) -> FieldLabelRenderState {
+    pub fn label_state(&self) -> FieldLabelStyleState {
         self.label_states
             .last()
             .copied()
             .expect("field label state should be observed")
     }
 
-    pub fn description_state(&self) -> FieldDescriptionRenderState {
+    pub fn description_state(&self) -> FieldDescriptionStyleState {
         self.description_states
             .last()
             .copied()
             .expect("field description state should be observed")
     }
 
-    pub fn item_state(&self) -> FieldItemRenderState {
+    pub fn item_state(&self) -> FieldItemStyleState {
         self.item_states
             .last()
             .copied()
             .expect("field item state should be observed")
     }
 
-    pub fn error_state(&self) -> Option<FieldErrorRenderState> {
+    pub fn error_state(&self) -> Option<FieldErrorStyleState> {
         self.error_states.last().cloned()
     }
 
-    pub fn validity_state(&self) -> FieldValidityRenderState {
+    pub fn validity_state(&self) -> FieldValidityStyleState {
         self.validity_states
             .last()
             .cloned()

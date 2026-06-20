@@ -76,7 +76,7 @@ Expected GPUI implementation files:
 - `crates/base_gpui/src/field/context.rs`
 - `crates/base_gpui/src/field/item_context.rs`
 - `crates/base_gpui/src/field/props.rs`
-- `crates/base_gpui/src/field/render_state.rs`
+- `crates/base_gpui/src/field/style_state.rs`
 - `crates/base_gpui/src/field/runtime.rs`
 - `crates/base_gpui/src/field/validation.rs`
 - `crates/base_gpui/src/field/layers/mod.rs`
@@ -101,7 +101,7 @@ Use the runtime/context/layers pattern from `docs/base-gpui-component-architectu
 - Do not port SSR/hydration/prehydration logic.
 - Do not port native label tag warnings (`nativeLabel`) literally.
 - Do not port HTML `aria-describedby`, `aria-labelledby`, `htmlFor`, or generated DOM IDs as public API.
-- Do not port transition DOM data attributes literally; represent transition/presence as typed render state if transition support exists, otherwise track as a follow-up.
+- Do not port transition DOM data attributes literally; represent transition/presence as typed style state if transition support exists, otherwise track as a follow-up.
 - Do not implement a fake text input just to satisfy `Field.Control` anatomy.
 
 ## Acceptance Criteria
@@ -123,7 +123,7 @@ Use the runtime/context/layers pattern from `docs/base-gpui-component-architectu
 - [x] Support `FieldError::match_(...)` or equivalent because `match` is a Rust keyword.
 - [x] Support `FieldError` default matching behavior: show when the field is invalid and no specific validity key is requested.
 - [x] Support `FieldError::match_always(true)` or `FieldErrorMatch::Always` for Base UI `match={true}` behavior.
-- [x] Support `FieldValidity` as a GPUI builder that exposes the current validity data through a callback/render-state API.
+- [x] Support `FieldValidity` as a GPUI builder that exposes the current validity data through a callback/style-state API.
 - [x] Add a field-aware control registration API for compound controls, without requiring a text input.
 - [x] Do not add `FieldControl` as a DOM/text input until a GPUI-native text input primitive exists.
 - [x] Re-export ergonomic Field names from `field/mod.rs`.
@@ -145,7 +145,7 @@ Use the runtime/context/layers pattern from `docs/base-gpui-component-architectu
 - [x] Keep validation and field-state transitions on `FieldRuntime`, not in layers.
 - [x] Keep controlled/uncontrolled dirty/touched/invalid resolution in root/context, not in leaf parts.
 - [x] Add `FieldItemContext` for item-local disabled state.
-- [x] Add `FieldRootRenderState`, `FieldItemRenderState`, `FieldLabelRenderState`, `FieldDescriptionRenderState`, `FieldErrorRenderState`, and `FieldValidityRenderState` or equivalent validity payload type.
+- [x] Add `FieldRootStyleState`, `FieldItemStyleState`, `FieldLabelStyleState`, `FieldDescriptionStyleState`, `FieldErrorStyleState`, and `FieldValidityStyleState` or equivalent validity payload type.
 - [x] Add renderable GPUI elements only under `field/layers/`.
 - [x] Add typed child routing in `field/child.rs` and private context/registration wiring in `field/child_wiring.rs`.
 - [ ] Register field-aware control metadata before descendant state queries so initial filled/focused/disabled/valid states are correct.
@@ -154,7 +154,7 @@ Use the runtime/context/layers pattern from `docs/base-gpui-component-architectu
 
 ### Field state model
 
-- [x] `FieldRootRenderState` exposes `disabled`, `touched`, `dirty`, `valid: Option<bool>` or equivalent tri-state, `filled`, and `focused`.
+- [x] `FieldRootStyleState` exposes `disabled`, `touched`, `dirty`, `valid: Option<bool>` or equivalent tri-state, `filled`, and `focused`.
 - [x] Default root state is `disabled=false`, `touched=false`, `dirty=false`, `valid=None`, `filled=false`, `focused=false`.
 - [x] `disabled=true` on `FieldRoot` marks root and descendants disabled.
 - [x] Root disabled state takes precedence over item/control disabled state.
@@ -182,9 +182,9 @@ Use the runtime/context/layers pattern from `docs/base-gpui-component-architectu
 
 ### Label / description / error behavior
 
-- [x] `FieldLabel` receives field render state and supports `style_with_state(...)`.
-- [x] `FieldDescription` receives field render state and supports `style_with_state(...)`.
-- [x] `FieldError` receives field render state plus error presence/transition state and supports `style_with_state(...)`.
+- [x] `FieldLabel` receives field style state and supports `style_with_state(...)`.
+- [x] `FieldDescription` receives field style state and supports `style_with_state(...)`.
+- [x] `FieldError` receives field style state plus error presence/transition state and supports `style_with_state(...)`.
 - [x] `FieldLabel` can be clicked to focus the registered field control when a focus handle is available.
 - [x] `FieldDescription` registers as descriptive text/message metadata for future accessibility integration.
 - [x] `FieldError` registers as descriptive text/message metadata only while present.
@@ -201,7 +201,7 @@ Use the runtime/context/layers pattern from `docs/base-gpui-component-architectu
 - [x] `OnChange` validates when the registered control value changes.
 - [x] Validation callbacks receive the current field value and known form values if a Form context exists; otherwise pass an empty form-values map or omit the argument with a documented Rust-native API.
 - [x] Validation can return no error, one error, or multiple errors.
-- [x] Validation result updates `FieldValidityData` / validity render state.
+- [x] Validation result updates `FieldValidityData` / validity style state.
 - [x] Validation result updates `FieldError` presence.
 - [x] Async validation is either supported with stale-result cancellation or explicitly left as a follow-up.
 - [x] Debounced validation is either supported through GPUI timers/tasks or explicitly left as a follow-up.
@@ -219,7 +219,7 @@ Follow-up: async validation and actual timer-backed debounce behavior are intent
 - [x] `FieldError` with a specific match renders only when that validity flag is true.
 - [x] `FieldError` with match always renders regardless of current field validity.
 - [x] Disabled fields do not render validation errors by default.
-- [x] `FieldErrorRenderState` exposes `present` and the current error message(s) in a GPUI-native way.
+- [x] `FieldErrorStyleState` exposes `present` and the current error message(s) in a GPUI-native way.
 - [x] `FieldValidity` exposes validity data, current error, errors list, value, initial value, and transition/presence status if supported.
 - [x] If transition support exists in `base_gpui`, expose a GPUI-native transition status for errors/validity; otherwise track transition behavior as a follow-up.
 
@@ -228,7 +228,7 @@ Follow-up: `base_gpui` does not currently have shared transition/presence infras
 ### FieldItem behavior
 
 - [x] `FieldItem` merges root disabled state with item-local disabled state.
-- [x] `FieldItem` exposes the merged disabled state through render state.
+- [x] `FieldItem` exposes the merged disabled state through style state.
 - [x] `FieldItem` can wrap a field-aware Checkbox and disable that checkbox through field context.
 - [x] `FieldItem` can wrap a field-aware RadioGroup radio and disable that radio through field context.
 - [x] `FieldItem` label/description descendants receive item-disabled state.
@@ -249,7 +249,7 @@ Follow-up: `base_gpui` does not currently have shared transition/presence infras
 ### Styling/state exposure
 
 - [x] All Field parts expose state-aware styling through `style_with_state(...)`.
-- [x] Map Base UI Field data attributes (`disabled`, `valid`, `invalid`, `dirty`, `touched`, `filled`, `focused`, and error transition status) into typed render-state fields, not DOM attributes.
+- [x] Map Base UI Field data attributes (`disabled`, `valid`, `invalid`, `dirty`, `touched`, `filled`, `focused`, and error transition status) into typed style-state fields, not DOM attributes.
 - [x] Do not expose CSS variable names as the styling API.
 - [x] The docs hero styling pattern can be recreated with GPUI builder methods: label, control-like component, error, and description reflect field state.
 

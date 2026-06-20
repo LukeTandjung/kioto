@@ -1,8 +1,8 @@
 mod layers;
-pub mod render_state;
+pub mod style_state;
 
 #[cfg(test)]
 mod tests;
 
 pub use layers::Input;
-pub use render_state::InputRenderState;
+pub use style_state::InputStyleState;

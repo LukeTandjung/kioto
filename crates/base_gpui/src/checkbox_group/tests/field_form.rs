@@ -6,10 +6,10 @@ use gpui::{
 };
 
 use crate::{
-    checkbox::{CheckboxRoot, CheckboxRootRenderState},
+    checkbox::{CheckboxRoot, CheckboxRootStyleState},
     checkbox_group::CheckboxGroup,
     field::{
-        FieldLabel, FieldRoot, FieldRootRenderState, FieldValidationMode, FieldValidationResult,
+        FieldLabel, FieldRoot, FieldRootStyleState, FieldValidationMode, FieldValidationResult,
         FieldValue,
     },
     fieldset::FieldsetRoot,
@@ -57,10 +57,10 @@ impl Default for CheckboxGroupFormConfig {
 struct CheckboxGroupFormView {
     config: CheckboxGroupFormConfig,
     form_context: Rc<RefCell<Option<FormContext>>>,
-    field_states: Rc<RefCell<Vec<FieldRootRenderState>>>,
+    field_states: Rc<RefCell<Vec<FieldRootStyleState>>>,
     submissions: Rc<RefCell<Vec<FormValues>>>,
     validate_values: Rc<RefCell<Vec<FieldValue>>>,
-    checkbox_states: Rc<RefCell<Vec<(SharedString, CheckboxRootRenderState)>>>,
+    checkbox_states: Rc<RefCell<Vec<(SharedString, CheckboxRootStyleState)>>>,
 }
 
 impl CheckboxGroupFormView {
@@ -203,7 +203,7 @@ fn checkbox(
     value: &'static str,
     required: bool,
     disabled: bool,
-    observations: Rc<RefCell<Vec<(SharedString, CheckboxRootRenderState)>>>,
+    observations: Rc<RefCell<Vec<(SharedString, CheckboxRootStyleState)>>>,
 ) -> impl IntoElement {
     CheckboxRoot::new()
         .id(format!("checkbox-{value}"))
@@ -316,7 +316,7 @@ fn update_config(
 fn last_field_state(
     cx: &mut TestAppContext,
     window: WindowHandle<CheckboxGroupFormView>,
-) -> FieldRootRenderState {
+) -> FieldRootStyleState {
     window
         .update(cx, |view, _window, cx| {
             cx.notify();
@@ -353,7 +353,7 @@ fn checkbox_state(
     cx: &mut TestAppContext,
     window: WindowHandle<CheckboxGroupFormView>,
     value: &str,
-) -> CheckboxRootRenderState {
+) -> CheckboxRootStyleState {
     window
         .update(cx, |view, _window, cx| {
             cx.notify();

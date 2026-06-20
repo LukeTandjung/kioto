@@ -150,7 +150,7 @@ Current `Field` has the right metadata shape for a text input:
 
 However, text input exposes a current limitation more sharply than checkbox/switch/radio:
 
-- `FieldRoot` derives root render state before descendant controls register for the frame.
+- `FieldRoot` derives root style state before descendant controls register for the frame.
 - Descendant parts can query field state before a later sibling control has registered.
 - For text input, this can create stale/one-frame-late `filled`, `focused`, `dirty`, and error state.
 
@@ -173,7 +173,7 @@ crates/base_gpui/src/input/
   runtime.rs        # text, selection, IME range, dirty/focused metadata, layout cache
   context.rs        # thin wrapper around Entity<InputRuntime> + props
   props.rs          # value/default_value/name/disabled/read_only/required/callbacks
-  render_state.rs   # InputRootRenderState / InputTextRenderState if needed
+  style_state.rs   # InputRootStyleState / InputTextStyleState if needed
   layers/
     input_root.rs   # public builder/chrome + field registration
     text_element.rs # custom Element for text layout/painting/platform input
@@ -288,4 +288,4 @@ Acceptance highlights:
 - label click focuses the input inside `FieldRoot`;
 - `FieldRoot` sees `filled`, `dirty`, `focused`, `touched`, and `FieldValue::Text` correctly;
 - `OnChange` and `OnBlur` validation work for text values;
-- disabled/read-only state prevents editing and is reflected in render state.
+- disabled/read-only state prevents editing and is reflected in style state.

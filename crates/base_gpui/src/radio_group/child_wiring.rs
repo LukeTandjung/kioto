@@ -2,7 +2,7 @@ use gpui::{App, FocusHandle, Window};
 
 use crate::radio_group::{
     RadioGroupChild, RadioGroupContext, RadioGroupRadioChild, RadioGroupRadioMetadata,
-    RadioGroupRadioRenderState,
+    RadioGroupRadioStyleState,
 };
 
 pub struct WiredRadioGroupChildren<T: Clone + Eq + 'static> {
@@ -26,7 +26,7 @@ pub trait RadioGroupChildNode<T: Clone + Eq + 'static>: Sized {
 }
 
 pub trait RadioGroupRadioChildNode: Sized {
-    fn with_radio_state(self, state: RadioGroupRadioRenderState) -> Self;
+    fn with_radio_state(self, state: RadioGroupRadioStyleState) -> Self;
 }
 
 pub struct RadioGroupChildWiring<T: Clone + Eq + 'static> {
@@ -120,7 +120,7 @@ impl<T: Clone + Eq + 'static> RadioGroupChildNode<T> for RadioGroupChild<T> {
 }
 
 impl RadioGroupRadioChildNode for RadioGroupRadioChild {
-    fn with_radio_state(self, state: RadioGroupRadioRenderState) -> Self {
+    fn with_radio_state(self, state: RadioGroupRadioStyleState) -> Self {
         match self {
             Self::Indicator(indicator) => Self::Indicator(indicator.with_radio_state(state)),
         }

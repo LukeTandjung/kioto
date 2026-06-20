@@ -9,7 +9,7 @@ use gpui::{
 use crate::{
     checkbox::{
         child_wiring::CheckboxChildNode, CheckboxCheckedChangeHandler, CheckboxCheckedChangeSource,
-        CheckboxChild, CheckboxContext, CheckboxProps, CheckboxRootRenderState, CheckboxToggle,
+        CheckboxChild, CheckboxContext, CheckboxProps, CheckboxRootStyleState, CheckboxToggle,
         CHECKBOX_ROOT_KEY_CONTEXT,
     },
     checkbox_group::{current_checkbox_group_context, CheckboxGroupChildMetadata},
@@ -36,7 +36,7 @@ pub struct CheckboxRoot {
     read_only: bool,
     required: bool,
     on_checked_change: Option<CheckboxCheckedChangeHandler>,
-    style_with_state: Option<Rc<dyn Fn(CheckboxRootRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(CheckboxRootStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for CheckboxRoot {
@@ -137,27 +137,27 @@ impl RenderOnce for CheckboxRoot {
             runtime.sync_focused(focus_handle.is_focused(window));
         });
 
-        let render_state = context.read(cx, |runtime, props| runtime.root_state(props));
-        let disabled = render_state.disabled;
+        let style_state = context.read(cx, |runtime, props| runtime.root_state(props));
+        let disabled = style_state.disabled;
         let focused = focus_handle.is_focused(window);
         if let Some(group_context) = group_context.as_ref() {
             group_context.register_checkbox(
                 CheckboxGroupChildMetadata::new(id.to_string())
                     .maybe_value(value.clone())
                     .disabled(disabled)
-                    .required(render_state.required)
+                    .required(style_state.required)
                     .parent(parent)
-                    .checked(render_state.checked)
+                    .checked(style_state.checked)
                     .focused(focused)
                     .focus_handle(focus_handle.clone()),
                 cx,
             );
         } else if let Some(field_context) = field_context.as_ref() {
             let mut registration = FieldControlRegistration::new(id.to_string())
-                .value(FieldValue::Bool(render_state.checked))
+                .value(FieldValue::Bool(style_state.checked))
                 .disabled(disabled)
                 .focused(focused)
-                .required(render_state.required)
+                .required(style_state.required)
                 .focus_handle(focus_handle.clone());
             if let Some(name) = name {
                 registration = registration.name(name);
@@ -166,7 +166,7 @@ impl RenderOnce for CheckboxRoot {
         }
 
         let base = match self.style_with_state {
-            Some(style) => style(render_state, self.base),
+            Some(style) => style(style_state, self.base),
             None => self.base,
         };
 
@@ -330,7 +330,7 @@ impl CheckboxRoot {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(CheckboxRootRenderState, Div) -> Div + 'static,
+        style: impl Fn(CheckboxRootStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::number_field::{
     NumberFieldChangeReason, NumberFieldCommitReason, NumberFieldContext,
-    NumberFieldIncrementRenderState, NumberFieldStepAmount, NumberFieldStepDirection,
+    NumberFieldIncrementStyleState, NumberFieldStepAmount, NumberFieldStepDirection,
 };
 
 #[derive(IntoElement)]
@@ -16,7 +16,7 @@ pub struct NumberFieldIncrement {
     base: Div,
     children: Vec<AnyElement>,
     context: Option<NumberFieldContext>,
-    style_with_state: Option<Rc<dyn Fn(NumberFieldIncrementRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(NumberFieldIncrementStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for NumberFieldIncrement {
@@ -43,10 +43,10 @@ impl RenderOnce for NumberFieldIncrement {
             .context
             .expect("NumberFieldIncrement must be rendered inside NumberFieldRoot");
         let id = self.id.unwrap_or_else(|| context.child_id("increment"));
-        let render_state = context.read(cx, |runtime, props| runtime.increment_state(props));
+        let style_state = context.read(cx, |runtime, props| runtime.increment_state(props));
         let click_context = context.clone();
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -97,7 +97,7 @@ impl NumberFieldIncrement {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(NumberFieldIncrementRenderState, Div) -> Div + 'static,
+        style: impl Fn(NumberFieldIncrementStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

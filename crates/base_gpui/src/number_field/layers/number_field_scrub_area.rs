@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::number_field::{
-    NumberFieldContext, NumberFieldScrubAreaRenderState, NumberFieldScrubDirection,
+    NumberFieldContext, NumberFieldScrubAreaStyleState, NumberFieldScrubDirection,
 };
 
 #[derive(IntoElement)]
@@ -17,7 +17,7 @@ pub struct NumberFieldScrubArea {
     context: Option<NumberFieldContext>,
     direction: NumberFieldScrubDirection,
     pixel_sensitivity: f64,
-    style_with_state: Option<Rc<dyn Fn(NumberFieldScrubAreaRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(NumberFieldScrubAreaStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for NumberFieldScrubArea {
@@ -46,7 +46,7 @@ impl RenderOnce for NumberFieldScrubArea {
             .context
             .expect("NumberFieldScrubArea must be rendered inside NumberFieldRoot");
         let id = self.id.unwrap_or_else(|| context.child_id("scrub-area"));
-        let render_state = context.read(cx, |runtime, props| {
+        let style_state = context.read(cx, |runtime, props| {
             runtime.scrub_area_state(props, self.direction)
         });
         let last_position: Entity<Option<Point<gpui::Pixels>>> = window.use_keyed_state(
@@ -63,7 +63,7 @@ impl RenderOnce for NumberFieldScrubArea {
         let direction = self.direction;
         let pixel_sensitivity = self.pixel_sensitivity;
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -135,7 +135,7 @@ impl NumberFieldScrubArea {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(NumberFieldScrubAreaRenderState, Div) -> Div + 'static,
+        style: impl Fn(NumberFieldScrubAreaStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

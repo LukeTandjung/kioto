@@ -8,15 +8,15 @@ use gpui::{
 use crate::{
     field::{
         FieldError, FieldItem, FieldLabel, FieldRoot, FieldValidationMode, FieldValidity,
-        FieldValidityRenderState,
+        FieldValidityStyleState,
     },
     number_field::{
         NumberFieldChangeReason, NumberFieldCommitReason, NumberFieldDecrement,
-        NumberFieldDecrementRenderState, NumberFieldGroup, NumberFieldGroupRenderState,
-        NumberFieldIncrement, NumberFieldIncrementRenderState, NumberFieldInput,
-        NumberFieldInputRenderState, NumberFieldRoot, NumberFieldRootRenderState,
-        NumberFieldScrubArea, NumberFieldScrubAreaCursor, NumberFieldScrubAreaCursorRenderState,
-        NumberFieldScrubAreaRenderState, NumberFieldScrubDirection,
+        NumberFieldDecrementStyleState, NumberFieldGroup, NumberFieldGroupStyleState,
+        NumberFieldIncrement, NumberFieldIncrementStyleState, NumberFieldInput,
+        NumberFieldInputStyleState, NumberFieldRoot, NumberFieldRootStyleState,
+        NumberFieldScrubArea, NumberFieldScrubAreaCursor, NumberFieldScrubAreaCursorStyleState,
+        NumberFieldScrubAreaStyleState, NumberFieldScrubDirection,
     },
 };
 
@@ -77,14 +77,14 @@ pub struct NumberFieldObservations {
     pub change_reasons: Vec<NumberFieldChangeReason>,
     pub committed_values: Vec<Option<f64>>,
     pub commit_reasons: Vec<NumberFieldCommitReason>,
-    pub root_states: Vec<NumberFieldRootRenderState>,
-    pub input_states: Vec<NumberFieldInputRenderState>,
-    pub group_states: Vec<NumberFieldGroupRenderState>,
-    pub increment_states: Vec<NumberFieldIncrementRenderState>,
-    pub decrement_states: Vec<NumberFieldDecrementRenderState>,
-    pub scrub_area_states: Vec<NumberFieldScrubAreaRenderState>,
-    pub scrub_cursor_states: Vec<NumberFieldScrubAreaCursorRenderState>,
-    pub field_validity_states: Vec<FieldValidityRenderState>,
+    pub root_states: Vec<NumberFieldRootStyleState>,
+    pub input_states: Vec<NumberFieldInputStyleState>,
+    pub group_states: Vec<NumberFieldGroupStyleState>,
+    pub increment_states: Vec<NumberFieldIncrementStyleState>,
+    pub decrement_states: Vec<NumberFieldDecrementStyleState>,
+    pub scrub_area_states: Vec<NumberFieldScrubAreaStyleState>,
+    pub scrub_cursor_states: Vec<NumberFieldScrubAreaCursorStyleState>,
+    pub field_validity_states: Vec<FieldValidityStyleState>,
 }
 
 impl NumberFieldObservations {
@@ -99,28 +99,28 @@ impl NumberFieldObservations {
         self.field_validity_states.clear();
     }
 
-    pub fn last_root_state(&self) -> NumberFieldRootRenderState {
+    pub fn last_root_state(&self) -> NumberFieldRootStyleState {
         self.root_states
             .last()
             .cloned()
             .expect("number field root state should be observed")
     }
 
-    pub fn last_input_state(&self) -> NumberFieldInputRenderState {
+    pub fn last_input_state(&self) -> NumberFieldInputStyleState {
         self.input_states
             .last()
             .cloned()
             .expect("number field input state should be observed")
     }
 
-    pub fn last_increment_state(&self) -> NumberFieldIncrementRenderState {
+    pub fn last_increment_state(&self) -> NumberFieldIncrementStyleState {
         self.increment_states
             .last()
             .cloned()
             .expect("number field increment state should be observed")
     }
 
-    pub fn last_decrement_state(&self) -> NumberFieldDecrementRenderState {
+    pub fn last_decrement_state(&self) -> NumberFieldDecrementStyleState {
         self.decrement_states
             .last()
             .cloned()

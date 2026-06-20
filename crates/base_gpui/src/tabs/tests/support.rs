@@ -6,8 +6,8 @@ use gpui::{
 };
 
 use crate::tabs::{
-    init, TabsIndicator, TabsIndicatorRenderState, TabsList, TabsOrientation, TabsPanel,
-    TabsPanelRenderState, TabsRoot, TabsTab, TabsTabRenderState,
+    init, TabsIndicator, TabsIndicatorStyleState, TabsList, TabsOrientation, TabsPanel,
+    TabsPanelStyleState, TabsRoot, TabsTab, TabsTabStyleState,
 };
 
 pub type TabValue = &'static str;
@@ -58,9 +58,9 @@ impl Default for TabsTestConfig {
 #[derive(Clone, Default)]
 pub struct TabsObservations {
     pub value_changes: Vec<Option<TabValue>>,
-    pub tab_states: Vec<(TabValue, TabsTabRenderState)>,
-    pub panel_states: Vec<(TabValue, TabsPanelRenderState)>,
-    pub indicator_states: Vec<TabsIndicatorRenderState>,
+    pub tab_states: Vec<(TabValue, TabsTabStyleState)>,
+    pub panel_states: Vec<(TabValue, TabsPanelStyleState)>,
+    pub indicator_states: Vec<TabsIndicatorStyleState>,
 }
 
 impl TabsObservations {
@@ -82,19 +82,19 @@ impl TabsObservations {
             .find_map(|(value, state)| state.highlighted.then_some(*value))
     }
 
-    pub fn tab_state(&self, expected: TabValue) -> Option<TabsTabRenderState> {
+    pub fn tab_state(&self, expected: TabValue) -> Option<TabsTabStyleState> {
         self.tab_states
             .iter()
             .find_map(|(value, state)| (*value == expected).then_some(*state))
     }
 
-    pub fn panel_state(&self, expected: TabValue) -> Option<TabsPanelRenderState> {
+    pub fn panel_state(&self, expected: TabValue) -> Option<TabsPanelStyleState> {
         self.panel_states
             .iter()
             .find_map(|(value, state)| (*value == expected).then_some(*state))
     }
 
-    pub fn last_indicator_state(&self) -> Option<TabsIndicatorRenderState> {
+    pub fn last_indicator_state(&self) -> Option<TabsIndicatorStyleState> {
         self.indicator_states.last().copied()
     }
 }

@@ -1,8 +1,8 @@
 use gpui::{Bounds, FocusHandle, Pixels};
 
 use crate::tabs::{
-    runtime_control::TabsRuntimeControl, TabsIndicatorRenderState, TabsListRenderState,
-    TabsOrientation, TabsPanelRenderState, TabsRootRenderState, TabsTabRenderState,
+    TabsIndicatorStyleState, TabsListStyleState, TabsOrientation, TabsPanelStyleState,
+    TabsRootStyleState, TabsTabStyleState,
 };
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -238,12 +238,34 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         self.select_from(current, value, orientation, true)
     }
 
-    pub fn root_state(&self, orientation: TabsOrientation) -> TabsRootRenderState {
-        TabsRootRenderState::new(orientation, self.activation_direction)
+    pub fn select_from(
+        &mut self,
+        current: Option<T>,
+        value: Option<T>,
+        orientation: TabsOrientation,
+        commit: bool,
+    ) -> SelectOutcome<T> {
+        let changed = current != value;
+
+        self.activation_direction =
+            self.direction_between(current.as_ref(), value.as_ref(), orientation);
+        self.highlighted_tab_index = self.highlight_for_value(value.as_ref());
+
+        if commit {
+            self.selected = value.clone();
+        } else {
+            self.selected = current;
+        }
+
+        SelectOutcome::new(changed, value)
     }
 
-    pub fn list_state(&self, orientation: TabsOrientation) -> TabsListRenderState {
-        TabsListRenderState::new(orientation, self.activation_direction)
+    pub fn root_state(&self, orientation: TabsOrientation) -> TabsRootStyleState {
+        TabsRootStyleState::new(orientation, self.activation_direction)
+    }
+
+    pub fn list_state(&self, orientation: TabsOrientation) -> TabsListStyleState {
+        TabsListStyleState::new(orientation, self.activation_direction)
     }
 
     pub fn tab_state(
@@ -252,13 +274,13 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         disabled: bool,
         index: Option<usize>,
         orientation: TabsOrientation,
-    ) -> TabsTabRenderState {
+    ) -> TabsTabStyleState {
         let active = match (value, self.selected.as_ref()) {
             (Some(value), Some(selected)) => value == selected,
             _ => false,
         };
 
-        TabsTabRenderState::new(
+        TabsTabStyleState::new(
             active,
             disabled,
             self.highlighted_tab_index == index,
@@ -270,19 +292,19 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         &self,
         value: Option<&T>,
         orientation: TabsOrientation,
-    ) -> TabsPanelRenderState {
+    ) -> TabsPanelStyleState {
         let active = match (value, self.selected.as_ref()) {
             (Some(value), Some(selected)) => value == selected,
             _ => false,
         };
 
-        TabsPanelRenderState::new(!active, orientation, self.activation_direction)
+        TabsPanelStyleState::new(!active, orientation, self.activation_direction)
     }
 
-    pub fn indicator_state(&self, orientation: TabsOrientation) -> TabsIndicatorRenderState {
+    pub fn indicator_state(&self, orientation: TabsOrientation) -> TabsIndicatorStyleState {
         let selected = self.selected.as_ref();
 
-        TabsIndicatorRenderState::new(
+        TabsIndicatorStyleState::new(
             selected.is_some(),
             self.active_tab_position(selected),
             self.active_tab_size(selected),
@@ -461,30 +483,6 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
                     (origin.0.min(bounds.left()), origin.1.min(bounds.top()))
                 }),
         )
-    }
-}
-
-impl<T: Clone + Eq + 'static> TabsRuntimeControl<T> for TabsRuntime<T> {
-    fn select_from(
-        &mut self,
-        current: Option<T>,
-        value: Option<T>,
-        orientation: TabsOrientation,
-        commit: bool,
-    ) -> SelectOutcome<T> {
-        let changed = current != value;
-
-        self.activation_direction =
-            self.direction_between(current.as_ref(), value.as_ref(), orientation);
-        self.highlighted_tab_index = self.highlight_for_value(value.as_ref());
-
-        if commit {
-            self.selected = value.clone();
-        } else {
-            self.selected = current;
-        }
-
-        SelectOutcome::new(changed, value)
     }
 }
 

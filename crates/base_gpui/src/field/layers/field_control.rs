@@ -11,7 +11,7 @@ use crate::{
         FieldControlRegistration, FieldValue,
     },
     fieldset::current_fieldset_disabled,
-    primitives::input::{input, Input, InputRenderState},
+    primitives::input::{input, Input, InputStyleState},
 };
 
 #[derive(IntoElement)]
@@ -22,7 +22,7 @@ pub struct FieldControl {
     name: Option<SharedString>,
     disabled: bool,
     required: bool,
-    style_with_state: Option<Rc<dyn Fn(InputRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(InputStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for FieldControl {
@@ -75,7 +75,7 @@ impl RenderOnce for FieldControl {
         self.input
             .disabled(disabled)
             .focus_handle(focus_handle)
-            .on_render_state(move |state, _window, cx| {
+            .on_style_state(move |state, _window, cx| {
                 if let Some(context) = registration_context.as_ref() {
                     let mut registration = FieldControlRegistration::new(registration_id.clone())
                         .value(FieldValue::Text(state.value.clone()))
@@ -181,7 +181,7 @@ impl FieldControl {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(InputRenderState, Div) -> Div + 'static,
+        style: impl Fn(InputStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

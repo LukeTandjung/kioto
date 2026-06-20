@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::field::{
     context::current_field_context, item_context::current_field_item_disabled, FieldContext,
-    FieldLabelRenderState,
+    FieldLabelStyleState,
 };
 
 #[derive(IntoElement)]
@@ -15,7 +15,7 @@ pub struct FieldLabel {
     base: Div,
     children: Vec<AnyElement>,
     context: Option<FieldContext>,
-    style_with_state: Option<Rc<dyn Fn(FieldLabelRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(FieldLabelStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for FieldLabel {
@@ -53,7 +53,7 @@ impl RenderOnce for FieldLabel {
             .as_ref()
             .map(|context| context.read(cx, |runtime, props| runtime.root_state(props)))
             .unwrap_or_default();
-        let state = FieldLabelRenderState::new(root_state, root_state.disabled || item_disabled);
+        let state = FieldLabelStyleState::new(root_state, root_state.disabled || item_disabled);
         let focus_context = context.clone();
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
@@ -86,7 +86,7 @@ impl FieldLabel {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(FieldLabelRenderState, Div) -> Div + 'static,
+        style: impl Fn(FieldLabelStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

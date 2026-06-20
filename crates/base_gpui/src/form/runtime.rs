@@ -2,7 +2,7 @@ use std::{collections::BTreeSet, rc::Rc};
 
 use gpui::{App, FocusHandle, SharedString, Window};
 
-use crate::form::{FormErrors, FormRenderState, FormValue, FormValues};
+use crate::form::{FormErrors, FormStyleState, FormValue, FormValues};
 
 pub type FormFieldValidationHandler =
     Rc<dyn Fn(&mut Window, &mut App) -> FormFieldSnapshot + 'static>;
@@ -353,9 +353,9 @@ impl FormRuntime {
         }
     }
 
-    /// Returns the form render state.
-    pub fn root_state(&self) -> FormRenderState {
-        FormRenderState
+    /// Returns the form style state.
+    pub fn root_state(&self) -> FormStyleState {
+        FormStyleState
     }
 
     pub fn registered_field_count(&self) -> usize {

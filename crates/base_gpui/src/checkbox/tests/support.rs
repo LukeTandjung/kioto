@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::checkbox::{
-    init, CheckboxIndicator, CheckboxIndicatorRenderState, CheckboxRoot, CheckboxRootRenderState,
+    init, CheckboxIndicator, CheckboxIndicatorStyleState, CheckboxRoot, CheckboxRootStyleState,
 };
 
 #[derive(Clone, Copy, Default)]
@@ -24,8 +24,8 @@ pub struct CheckboxTestConfig {
 #[derive(Clone, Default)]
 pub struct CheckboxObservations {
     pub value_changes: Vec<bool>,
-    pub root_states: Vec<CheckboxRootRenderState>,
-    pub indicator_states: Vec<CheckboxIndicatorRenderState>,
+    pub root_states: Vec<CheckboxRootStyleState>,
+    pub indicator_states: Vec<CheckboxIndicatorStyleState>,
 }
 
 impl CheckboxObservations {
@@ -34,14 +34,14 @@ impl CheckboxObservations {
         self.indicator_states.clear();
     }
 
-    pub fn last_root_state(&self) -> CheckboxRootRenderState {
+    pub fn last_root_state(&self) -> CheckboxRootStyleState {
         self.root_states
             .last()
             .copied()
             .expect("checkbox root state should be observed")
     }
 
-    pub fn last_indicator_state(&self) -> Option<CheckboxIndicatorRenderState> {
+    pub fn last_indicator_state(&self) -> Option<CheckboxIndicatorStyleState> {
         self.indicator_states.last().copied()
     }
 }

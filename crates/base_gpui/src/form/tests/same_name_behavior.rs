@@ -3,15 +3,15 @@ use std::{cell::RefCell, rc::Rc};
 use gpui::{div, prelude::*, px, size, IntoElement, Render, TestAppContext, WindowHandle};
 
 use crate::{
-    field::{FieldRoot, FieldRootRenderState},
+    field::{FieldRoot, FieldRootStyleState},
     form::{current_form_context, Form, FormContext, FormSubmitReason},
     input::Input,
 };
 
 struct SameNameView {
     form_context: Rc<RefCell<Option<FormContext>>>,
-    empty_states: Rc<RefCell<Vec<FieldRootRenderState>>>,
-    filled_states: Rc<RefCell<Vec<FieldRootRenderState>>>,
+    empty_states: Rc<RefCell<Vec<FieldRootStyleState>>>,
+    filled_states: Rc<RefCell<Vec<FieldRootStyleState>>>,
 }
 
 impl SameNameView {
@@ -123,7 +123,7 @@ fn submit(cx: &mut TestAppContext, window: WindowHandle<SameNameView>) {
 fn states(
     cx: &mut TestAppContext,
     window: WindowHandle<SameNameView>,
-) -> (FieldRootRenderState, FieldRootRenderState) {
+) -> (FieldRootStyleState, FieldRootStyleState) {
     window
         .update(cx, |view, _window, cx| {
             cx.notify();

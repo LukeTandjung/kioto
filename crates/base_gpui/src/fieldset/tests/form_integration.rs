@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use gpui::{div, prelude::*, px, size, IntoElement, Render, TestAppContext, WindowHandle};
 
 use crate::{
-    field::{FieldRoot, FieldRootRenderState},
+    field::{FieldRoot, FieldRootStyleState},
     fieldset::FieldsetRoot,
     form::{current_form_context, Form, FormContext, FormSubmitReason, FormValues},
     input::Input,
@@ -25,7 +25,7 @@ impl Default for FieldsetFormConfig {
 struct FieldsetFormView {
     config: FieldsetFormConfig,
     form_context: Rc<RefCell<Option<FormContext>>>,
-    field_states: Rc<RefCell<Vec<FieldRootRenderState>>>,
+    field_states: Rc<RefCell<Vec<FieldRootStyleState>>>,
     submissions: Rc<RefCell<Vec<FormValues>>>,
 }
 
@@ -149,7 +149,7 @@ fn update_config(
 fn last_field_state(
     cx: &mut TestAppContext,
     window: WindowHandle<FieldsetFormView>,
-) -> FieldRootRenderState {
+) -> FieldRootStyleState {
     window
         .update(cx, |view, _window, cx| {
             cx.notify();

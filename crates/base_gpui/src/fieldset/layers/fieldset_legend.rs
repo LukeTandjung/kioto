@@ -5,14 +5,14 @@ use gpui::{
     Window,
 };
 
-use crate::fieldset::{current_fieldset_context, FieldsetContext, FieldsetLegendRenderState};
+use crate::fieldset::{current_fieldset_context, FieldsetContext, FieldsetLegendStyleState};
 
 #[derive(IntoElement)]
 pub struct FieldsetLegend {
     base: Div,
     children: Vec<AnyElement>,
     context: Option<FieldsetContext>,
-    style_with_state: Option<Rc<dyn Fn(FieldsetLegendRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(FieldsetLegendStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for FieldsetLegend {
@@ -66,7 +66,7 @@ impl FieldsetLegend {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(FieldsetLegendRenderState, Div) -> Div + 'static,
+        style: impl Fn(FieldsetLegendStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

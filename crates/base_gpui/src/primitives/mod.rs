@@ -1,3 +1,3 @@
 pub mod input;
 
-pub use input::{input, Input, InputRenderState};
+pub use input::{input, Input, InputStyleState};

@@ -8,9 +8,9 @@ use gpui::{
 use crate::{
     field::{
         FieldError, FieldItem, FieldLabel, FieldRoot, FieldValidationMode, FieldValidity,
-        FieldValidityRenderState,
+        FieldValidityStyleState,
     },
-    input::{Input, InputRenderState},
+    input::{Input, InputStyleState},
 };
 
 #[derive(Clone, Debug)]
@@ -48,10 +48,10 @@ impl Default for InputTestConfig {
 
 #[derive(Clone, Default)]
 pub struct InputObservations {
-    pub states: Vec<InputRenderState>,
+    pub states: Vec<InputStyleState>,
     pub value_changes: Vec<SharedString>,
     pub enter_values: Vec<SharedString>,
-    pub field_validity_states: Vec<FieldValidityRenderState>,
+    pub field_validity_states: Vec<FieldValidityStyleState>,
 }
 
 impl InputObservations {
@@ -60,7 +60,7 @@ impl InputObservations {
         self.field_validity_states.clear();
     }
 
-    pub fn last_state(&self) -> InputRenderState {
+    pub fn last_state(&self) -> InputStyleState {
         self.states
             .last()
             .cloned()

@@ -6,14 +6,14 @@ use gpui::{
 
 use crate::{
     field::{current_field_context, FieldContext, FieldControl},
-    input::InputRenderState,
+    input::InputStyleState,
 };
 
 #[derive(IntoElement)]
 pub struct Input {
     control: FieldControl,
     context: Option<FieldContext>,
-    style_with_state: Option<Rc<dyn Fn(InputRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(InputStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for Input {
@@ -42,7 +42,7 @@ impl RenderOnce for Input {
 
         self.control
             .style_with_state(move |primitive_state, input| {
-                let state = InputRenderState::new(primitive_state, field_state);
+                let state = InputStyleState::new(primitive_state, field_state);
 
                 match style_with_state.as_ref() {
                     Some(style_with_state) => style_with_state(state, input),
@@ -125,7 +125,7 @@ impl Input {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(InputRenderState, Div) -> Div + 'static,
+        style: impl Fn(InputStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

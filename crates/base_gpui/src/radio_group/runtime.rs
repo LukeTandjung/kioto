@@ -1,8 +1,8 @@
 use gpui::FocusHandle;
 
 use crate::radio_group::{
-    RadioGroupIndicatorRenderState, RadioGroupProps, RadioGroupRadioRenderState,
-    RadioGroupRootRenderState,
+    RadioGroupIndicatorStyleState, RadioGroupProps, RadioGroupRadioStyleState,
+    RadioGroupRootStyleState,
 };
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -318,9 +318,9 @@ impl<T: Clone + Eq + 'static> RadioGroupRuntime<T> {
         changed
     }
 
-    /// Returns the render state for `RadioGroupRoot`.
-    pub fn root_state(&self, props: &RadioGroupProps<T>) -> RadioGroupRootRenderState {
-        RadioGroupRootRenderState::new(
+    /// Returns the style state for `RadioGroupRoot`.
+    pub fn root_state(&self, props: &RadioGroupProps<T>) -> RadioGroupRootStyleState {
+        RadioGroupRootStyleState::new(
             props.disabled(),
             props.read_only(),
             props.required(),
@@ -329,7 +329,7 @@ impl<T: Clone + Eq + 'static> RadioGroupRuntime<T> {
         )
     }
 
-    /// Returns the render state for `RadioGroupRadio`.
+    /// Returns the style state for `RadioGroupRadio`.
     pub fn radio_state(
         &self,
         value: Option<&T>,
@@ -338,7 +338,7 @@ impl<T: Clone + Eq + 'static> RadioGroupRuntime<T> {
         required: bool,
         index: Option<usize>,
         props: &RadioGroupProps<T>,
-    ) -> RadioGroupRadioRenderState {
+    ) -> RadioGroupRadioStyleState {
         let checked = match (value, self.selected.as_ref()) {
             (Some(value), Some(selected)) => value == selected,
             _ => false,
@@ -350,7 +350,7 @@ impl<T: Clone + Eq + 'static> RadioGroupRuntime<T> {
         let highlighted = self.highlighted_radio_index == index;
         let tab_stop = highlighted && !disabled;
 
-        RadioGroupRadioRenderState::new(
+        RadioGroupRadioStyleState::new(
             checked,
             disabled,
             read_only,
@@ -361,13 +361,13 @@ impl<T: Clone + Eq + 'static> RadioGroupRuntime<T> {
         )
     }
 
-    /// Returns the render state for `RadioGroupIndicator`.
+    /// Returns the style state for `RadioGroupIndicator`.
     pub fn indicator_state(
         &self,
-        radio: RadioGroupRadioRenderState,
+        radio: RadioGroupRadioStyleState,
         keep_mounted: bool,
-    ) -> RadioGroupIndicatorRenderState {
-        RadioGroupIndicatorRenderState::new(radio, keep_mounted || radio.checked)
+    ) -> RadioGroupIndicatorStyleState {
+        RadioGroupIndicatorStyleState::new(radio, keep_mounted || radio.checked)
     }
 
     fn sync_highlight_with_selected(&mut self) {

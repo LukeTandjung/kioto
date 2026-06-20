@@ -13,7 +13,7 @@ use crate::{
     fieldset::current_fieldset_disabled,
     switch::{
         child_wiring::SwitchChildNode, SwitchCheckedChangeDetails, SwitchCheckedChangeHandler,
-        SwitchCheckedChangeSource, SwitchChild, SwitchContext, SwitchProps, SwitchRootRenderState,
+        SwitchCheckedChangeSource, SwitchChild, SwitchContext, SwitchProps, SwitchRootStyleState,
         SwitchToggle, SWITCH_ROOT_KEY_CONTEXT,
     },
 };
@@ -33,7 +33,7 @@ pub struct SwitchRoot {
     read_only: bool,
     required: bool,
     on_checked_change: Option<SwitchCheckedChangeHandler>,
-    style_with_state: Option<Rc<dyn Fn(SwitchRootRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(SwitchRootStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for SwitchRoot {
@@ -103,14 +103,14 @@ impl RenderOnce for SwitchRoot {
             runtime.sync_focused(focus_handle.is_focused(window));
         });
 
-        let render_state = context.read(cx, |runtime, props| runtime.root_state(props));
-        let disabled = render_state.disabled;
+        let style_state = context.read(cx, |runtime, props| runtime.root_state(props));
+        let disabled = style_state.disabled;
         if let Some(field_context) = field_context.as_ref() {
             let mut registration = FieldControlRegistration::new(id.to_string())
-                .value(FieldValue::Bool(render_state.checked))
+                .value(FieldValue::Bool(style_state.checked))
                 .disabled(disabled)
                 .focused(focus_handle.is_focused(window))
-                .required(render_state.required)
+                .required(style_state.required)
                 .focus_handle(focus_handle.clone());
             if let Some(name) = name {
                 registration = registration.name(name);
@@ -119,7 +119,7 @@ impl RenderOnce for SwitchRoot {
         }
 
         let base = match self.style_with_state {
-            Some(style) => style(render_state, self.base),
+            Some(style) => style(style_state, self.base),
             None => self.base,
         };
 
@@ -228,7 +228,7 @@ impl SwitchRoot {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(SwitchRootRenderState, Div) -> Div + 'static,
+        style: impl Fn(SwitchRootStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

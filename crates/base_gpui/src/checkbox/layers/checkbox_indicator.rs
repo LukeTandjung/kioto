@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::checkbox::{
-    child_wiring::CheckboxChildNode, CheckboxContext, CheckboxIndicatorRenderState,
+    child_wiring::CheckboxChildNode, CheckboxContext, CheckboxIndicatorStyleState,
 };
 
 #[derive(IntoElement)]
@@ -15,7 +15,7 @@ pub struct CheckboxIndicator {
     children: Vec<AnyElement>,
     context: Option<CheckboxContext>,
     keep_mounted: bool,
-    style_with_state: Option<Rc<dyn Fn(CheckboxIndicatorRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(CheckboxIndicatorStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for CheckboxIndicator {
@@ -50,7 +50,7 @@ impl RenderOnce for CheckboxIndicator {
             })
         });
         let state = state.unwrap_or_else(|| {
-            CheckboxIndicatorRenderState::new(Default::default(), self.keep_mounted)
+            CheckboxIndicatorStyleState::new(Default::default(), self.keep_mounted)
         });
 
         if !state.present {
@@ -82,7 +82,7 @@ impl CheckboxIndicator {
     }
     pub fn style_with_state(
         mut self,
-        style: impl Fn(CheckboxIndicatorRenderState, Div) -> Div + 'static,
+        style: impl Fn(CheckboxIndicatorStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

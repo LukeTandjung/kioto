@@ -15,7 +15,7 @@ use crate::{
         child_wiring::wire_children, format_number, NumberFieldChangeDetails,
         NumberFieldChangeReason, NumberFieldChild, NumberFieldCommitDetails,
         NumberFieldCommitReason, NumberFieldContext, NumberFieldMax, NumberFieldMin,
-        NumberFieldProps, NumberFieldRootRenderState, NumberFieldStep, NumberFieldStepAmount,
+        NumberFieldProps, NumberFieldRootStyleState, NumberFieldStep, NumberFieldStepAmount,
         NumberFieldStepDirection, NumberFieldStepDown, NumberFieldStepDownLarge,
         NumberFieldStepDownSmall, NumberFieldStepUp, NumberFieldStepUpLarge,
         NumberFieldStepUpSmall, NumberFieldValueChangeHandler, NumberFieldValueCommitHandler,
@@ -46,7 +46,7 @@ pub struct NumberFieldRoot {
     required: bool,
     on_value_change: Option<NumberFieldValueChangeHandler>,
     on_value_committed: Option<NumberFieldValueCommitHandler>,
-    style_with_state: Option<Rc<dyn Fn(NumberFieldRootRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(NumberFieldRootStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for NumberFieldRoot {
@@ -132,22 +132,22 @@ impl RenderOnce for NumberFieldRoot {
         );
         context.sync_focus(focus_handle.is_focused(window), window, cx);
 
-        let mut render_state = context.read(cx, |runtime, props| runtime.root_state(props));
+        let mut style_state = context.read(cx, |runtime, props| runtime.root_state(props));
         if let Some(field_valid) = field_valid {
-            render_state.valid = Some(field_valid);
-            render_state.invalid = !field_valid;
+            style_state.valid = Some(field_valid);
+            style_state.invalid = !field_valid;
         }
 
         if let Some(field_context) = field_context.as_ref() {
-            let field_value = match render_state.value {
+            let field_value = match style_state.value {
                 Some(value) => FieldValue::Text(format_number(Some(value))),
                 None => FieldValue::Empty,
             };
             let mut registration = FieldControlRegistration::new(id.to_string())
                 .value(field_value)
-                .disabled(render_state.disabled)
-                .focused(render_state.focused)
-                .required(render_state.required)
+                .disabled(style_state.disabled)
+                .focused(style_state.focused)
+                .required(style_state.required)
                 .focus_handle(focus_handle.clone());
             if let Some(name) = name {
                 registration = registration.name(name);
@@ -156,7 +156,7 @@ impl RenderOnce for NumberFieldRoot {
         }
 
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -404,7 +404,7 @@ impl NumberFieldRoot {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(NumberFieldRootRenderState, Div) -> Div + 'static,
+        style: impl Fn(NumberFieldRootStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

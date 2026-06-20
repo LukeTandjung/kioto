@@ -5,5 +5,9 @@
 //! keyboard navigation, and future direction-aware components should consume the same primitive.
 
 pub mod direction;
+pub mod overlay;
+pub mod presence;
 
 pub use direction::{current_direction, DirectionProvider, HorizontalDirection, TextDirection};
+pub use overlay::{modal_backdrop, OverlayDismissHandler};
+pub use presence::PresenceState;

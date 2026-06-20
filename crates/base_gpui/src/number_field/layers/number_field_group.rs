@@ -6,7 +6,7 @@ use gpui::{
 
 use crate::number_field::{
     child_wiring::wire_group_children, NumberFieldContext, NumberFieldGroupChild,
-    NumberFieldGroupRenderState,
+    NumberFieldGroupStyleState,
 };
 
 #[derive(IntoElement)]
@@ -14,7 +14,7 @@ pub struct NumberFieldGroup {
     base: Div,
     children: Vec<NumberFieldGroupChild>,
     context: Option<NumberFieldContext>,
-    style_with_state: Option<Rc<dyn Fn(NumberFieldGroupRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(NumberFieldGroupStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for NumberFieldGroup {
@@ -39,9 +39,9 @@ impl RenderOnce for NumberFieldGroup {
         let context = self
             .context
             .expect("NumberFieldGroup must be rendered inside NumberFieldRoot");
-        let render_state = context.read(cx, |runtime, props| runtime.group_state(props));
+        let style_state = context.read(cx, |runtime, props| runtime.group_state(props));
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -80,7 +80,7 @@ impl NumberFieldGroup {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(NumberFieldGroupRenderState, Div) -> Div + 'static,
+        style: impl Fn(NumberFieldGroupStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

@@ -55,7 +55,7 @@ Expected GPUI implementation files:
 - `crates/base_gpui/src/radio_group/child_wiring.rs`
 - `crates/base_gpui/src/radio_group/context.rs`
 - `crates/base_gpui/src/radio_group/props.rs`
-- `crates/base_gpui/src/radio_group/render_state.rs`
+- `crates/base_gpui/src/radio_group/style_state.rs`
 - `crates/base_gpui/src/radio_group/runtime.rs`
 - `crates/base_gpui/src/radio_group/layers/mod.rs`
 - `crates/base_gpui/src/radio_group/layers/radio_group_root.rs`
@@ -79,7 +79,7 @@ Use `crates/base_gpui/src/tabs/` for registration, roving-focus, child-wiring, a
 - Do not port arbitrary HTML attributes or DOM event props.
 - Do not port SSR/hydration/prehydration APIs.
 - Do not port CSS variable APIs.
-- Do not port DOM data attributes as attributes; map them into typed render-state structs.
+- Do not port DOM data attributes as attributes; map them into typed style-state structs.
 - Do not port arbitrary DOM event objects. Use Rust-native change details for cancellation, reason, and source information.
 - Do not write DOM ARIA attributes. Map accessibility through GPUI-native AccessKit APIs once available.
 
@@ -109,7 +109,7 @@ Use `crates/base_gpui/src/tabs/` for registration, roving-focus, child-wiring, a
 - [x] Add `RadioGroupIndicator::keep_mounted(bool)`, defaulting to `false`.
 - [x] Preserve form-related builder props only where useful for future GPUI field/form integration: `.name(...)` and `.form(...)`.
 - [x] Consume the shared ambient direction primitive from `issues/port-baseui-direction-provider.md` instead of adding a one-off Radio Group `.direction(...)` builder.
-- [x] `radio_group/mod.rs` exposes ergonomic barrel exports for component names, render states, context, props, runtime, actions, and child types.
+- [x] `radio_group/mod.rs` exposes ergonomic barrel exports for component names, style states, context, props, runtime, actions, and child types.
 
 ### Correctness / compile readiness
 
@@ -126,10 +126,10 @@ Use `crates/base_gpui/src/tabs/` for registration, roving-focus, child-wiring, a
 - [x] Add `RadioGroupContext<T>` as a thin injection/plumbing type with only `read(...)`, `update(...)`, and `select(...)`-style methods.
 - [x] Keep controlled/uncontrolled resolution in `RadioGroupContext<T>::select(...)`, not in layers.
 - [x] Keep Radio Group behavior on `RadioGroupRuntime<T>`; do not grow component vocabulary on `RadioGroupContext<T>` beyond value-changing methods.
-- [x] Add `RadioGroupRootRenderState`, `RadioGroupRadioRenderState`, and `RadioGroupIndicatorRenderState` in `render_state.rs`.
+- [x] Add `RadioGroupRootStyleState`, `RadioGroupRadioStyleState`, and `RadioGroupIndicatorStyleState` in `style_state.rs`.
 - [x] Add renderable GPUI elements only under `radio_group/layers/`.
 - [x] Add typed child routing in `radio_group/child.rs` and private context/registration wiring in `radio_group/child_wiring.rs`.
-- [x] Pre-register radio metadata before root reconciliation/render state queries so initial selected/focused states are correct.
+- [x] Pre-register radio metadata before root reconciliation/style state queries so initial selected/focused states are correct.
 - [x] Store radio metadata in source order: value, disabled, read-only, required, index, and focus handle.
 - [x] Do not add a `utils/` folder for Radio Group.
 - [x] Do not add new generic primitives unless they hide a repeated deep concept across components.
@@ -142,7 +142,7 @@ Use `crates/base_gpui/src/tabs/` for registration, roving-focus, child-wiring, a
 - [x] Controlled Radio Group reflects the external `value`.
 - [x] Controlled Radio Group supports externally controlled `None` as no selected radio.
 - [x] Controlled Radio Group calls `on_value_change` on valid user selection without mutating internal selected value as the source of truth.
-- [x] External controlled value changes update group, radio, and indicator render state.
+- [x] External controlled value changes update group, radio, and indicator style state.
 - [x] `None` means no radio is selected.
 - [x] A radio value of `T = Option<U>` supports Base UI-style null values as `Some(None)`, distinct from no selection.
 - [x] If the selected value does not match any mounted radio, no radio is checked and the selected value is otherwise preserved.
@@ -192,7 +192,7 @@ Use `crates/base_gpui/src/tabs/` for registration, roving-focus, child-wiring, a
 - [x] Space selects the focused enabled, non-read-only radio exactly once.
 - [x] Space should not double-fire if GPUI exposes both key-down and key-up style dispatch.
 - [x] Enter does not select a radio.
-- [x] Keyboard navigation marks the group as touched/focused if those render-state fields are tracked.
+- [x] Keyboard navigation marks the group as touched/focused if those style-state fields are tracked.
 - [x] After tabbing away and back, focus returns to the current roving tab stop rather than always resetting to the first radio.
 
 ### Radio behavior
@@ -210,17 +210,17 @@ Use `crates/base_gpui/src/tabs/` for registration, roving-focus, child-wiring, a
 - [x] `RadioGroupIndicator` renders when its parent radio is checked.
 - [x] `RadioGroupIndicator` does not render when its parent radio is unchecked by default.
 - [x] `RadioGroupIndicator` supports `keep_mounted` so it remains rendered when unchecked.
-- [x] Indicator render state includes its parent radio state.
-- [x] Indicator render state exposes whether it is present.
+- [x] Indicator style state includes its parent radio state.
+- [x] Indicator style state exposes whether it is present.
 - [x] If transition support exists in `base_gpui`, expose a GPUI-native transition status; otherwise track transition behavior as a follow-up rather than porting DOM animation attributes.
 
 ### Styling/state exposure
 
-- [x] `RadioGroupRootRenderState` includes at least `disabled`, `read_only`, `required`, and focused/touched/dirty/filled/valid fields when those concepts exist in `base_gpui`.
-- [x] `RadioGroupRadioRenderState` includes at least `checked`, `unchecked`, `disabled`, `read_only`, `required`, `focused`, and tab-stop/highlighted facts.
-- [x] `RadioGroupIndicatorRenderState` includes the parent radio render state and indicator presence.
+- [x] `RadioGroupRootStyleState` includes at least `disabled`, `read_only`, `required`, and focused/touched/dirty/filled/valid fields when those concepts exist in `base_gpui`.
+- [x] `RadioGroupRadioStyleState` includes at least `checked`, `unchecked`, `disabled`, `read_only`, `required`, `focused`, and tab-stop/highlighted facts.
+- [x] `RadioGroupIndicatorStyleState` includes the parent radio style state and indicator presence.
 - [x] Expose state-aware styling through `style_with_state(...)` on root, radio, and indicator.
-- [x] Map Base UI state/data attributes (`checked`, `unchecked`, `disabled`, `readonly`, `required`, transition status, and field validity states when available) into typed render-state fields, not DOM attributes.
+- [x] Map Base UI state/data attributes (`checked`, `unchecked`, `disabled`, `readonly`, `required`, transition status, and field validity states when available) into typed style-state fields, not DOM attributes.
 - [x] Do not expose CSS variable names as the styling API.
 - [x] The docs hero styling pattern can be recreated with GPUI builder methods: checked radio changes background/text color and indicator visibility follows checked state.
 
@@ -249,7 +249,7 @@ Add one behavior per file under `crates/base_gpui/src/radio_group/tests/`.
 - [x] Uncontrolled `default_value` initial selected state.
 - [x] Controlled selected state reflects external value.
 - [x] Controlled `None` value clears selection.
-- [x] External controlled value changes update radio and indicator render state.
+- [x] External controlled value changes update radio and indicator style state.
 - [x] `T = Option<U>` can distinguish no selection from a selected null-like value.
 - [x] Click selects an unchecked radio.
 - [x] Clicking the already selected radio is a no-op.

@@ -6,8 +6,8 @@ use gpui::{
 };
 
 use crate::switch::{
-    init, SwitchCheckedChangeReason, SwitchCheckedChangeSource, SwitchRoot, SwitchRootRenderState,
-    SwitchThumb, SwitchThumbRenderState,
+    init, SwitchCheckedChangeReason, SwitchCheckedChangeSource, SwitchRoot, SwitchRootStyleState,
+    SwitchThumb, SwitchThumbStyleState,
 };
 
 #[derive(Clone, Copy, Default)]
@@ -28,8 +28,8 @@ pub struct SwitchObservations {
     pub change_sources: Vec<SwitchCheckedChangeSource>,
     pub change_cancelable: Vec<bool>,
     pub change_canceled: Vec<bool>,
-    pub root_states: Vec<SwitchRootRenderState>,
-    pub thumb_states: Vec<SwitchThumbRenderState>,
+    pub root_states: Vec<SwitchRootStyleState>,
+    pub thumb_states: Vec<SwitchThumbStyleState>,
 }
 
 impl SwitchObservations {
@@ -38,14 +38,14 @@ impl SwitchObservations {
         self.thumb_states.clear();
     }
 
-    pub fn last_root_state(&self) -> SwitchRootRenderState {
+    pub fn last_root_state(&self) -> SwitchRootStyleState {
         self.root_states
             .last()
             .copied()
             .expect("switch root state should be observed")
     }
 
-    pub fn last_thumb_state(&self) -> Option<SwitchThumbRenderState> {
+    pub fn last_thumb_state(&self) -> Option<SwitchThumbStyleState> {
         self.thumb_states.last().copied()
     }
 }

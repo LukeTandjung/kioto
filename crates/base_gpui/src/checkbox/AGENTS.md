@@ -42,7 +42,7 @@ Behavior:
 - Uncontrolled mode: caller omits `.checked(...)`; interactions call `on_checked_change(...)` and mutate runtime checked state.
 - `default_checked(...)` initializes uncontrolled checked state.
 - `disabled` and `read_only` prevent toggling and prevent callbacks.
-- `indeterminate` affects render state and indicator presence, but activating an indeterminate checkbox does not clear `indeterminate` by itself.
+- `indeterminate` affects style state and indicator presence, but activating an indeterminate checkbox does not clear `indeterminate` by itself.
 
 ## File layout
 
@@ -55,7 +55,7 @@ crates/base_gpui/src/checkbox/
   child_wiring.rs     # private child context attachment
   context.rs          # CheckboxContext: entity plumbing + controlled/uncontrolled rule
   props.rs            # CheckboxProps and callback type
-  render_state.rs     # root and indicator render-state structs
+  style_state.rs      # root and indicator style-state structs
   runtime.rs          # CheckboxRuntime: checked value, focus state, commands, queries
   layers/
     checkbox_indicator.rs
@@ -120,19 +120,19 @@ Focus behavior:
 
 - `CheckboxRoot` owns the stable keyed `FocusHandle`.
 - Root render syncs `focus_handle.is_focused(window)` into `CheckboxRuntime`.
-- Focus state is exposed through `CheckboxRootRenderState`.
+- Focus state is exposed through `CheckboxRootStyleState`.
 
-## Render-state styling
+## Style-state styling
 
 Checkbox exposes state-aware styling through `style_with_state(...)` on:
 
 - `CheckboxRoot`
 - `CheckboxIndicator`
 
-Render-state structs:
+Style-state structs:
 
-- `CheckboxRootRenderState`: checked, unchecked, disabled, read-only, required, indeterminate, and focused.
-- `CheckboxIndicatorRenderState`: root render state and indicator presence.
+- `CheckboxRootStyleState`: checked, unchecked, disabled, read-only, required, indeterminate, and focused.
+- `CheckboxIndicatorStyleState`: root style state and indicator presence.
 
 Indicator presence is true when:
 
@@ -152,4 +152,4 @@ Do not port:
 - SSR/hydration/prehydration scripts,
 - DOM data attributes.
 
-Translate behavior into GPUI-native runtime, focus handles, render state, and actions.
+Translate behavior into GPUI-native runtime, focus handles, style state, and actions.

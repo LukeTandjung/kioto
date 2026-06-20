@@ -4,9 +4,8 @@ mod child_wiring;
 pub mod context;
 pub mod layers;
 pub mod props;
-pub mod render_state;
 pub mod runtime;
-mod runtime_control;
+pub mod style_state;
 
 #[cfg(test)]
 mod tests;
@@ -19,11 +18,11 @@ pub use child::{TabsChild, TabsListChild};
 pub use context::TabsContext;
 pub use layers::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab};
 pub use props::{TabsOrientation, TabsProps, TabsValueChangeHandler};
-pub use render_state::{
-    TabsIndicatorRenderState, TabsListRenderState, TabsPanelRenderState, TabsRootRenderState,
-    TabsTabRenderState,
-};
 pub use runtime::{
     Move, SelectOutcome, TabsActivationDirection, TabsRuntime, TabsTabMetadata, TabsTabPosition,
     TabsTabSize,
+};
+pub use style_state::{
+    TabsIndicatorStyleState, TabsListStyleState, TabsPanelStyleState, TabsRootStyleState,
+    TabsTabStyleState,
 };

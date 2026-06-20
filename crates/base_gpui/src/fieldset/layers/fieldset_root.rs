@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::fieldset::{
     child_wiring::wire_children, context::with_fieldset_context, current_fieldset_disabled,
-    FieldsetChild, FieldsetContext, FieldsetProps, FieldsetRootRenderState,
+    FieldsetChild, FieldsetContext, FieldsetProps, FieldsetRootStyleState,
 };
 
 #[derive(IntoElement)]
@@ -16,7 +16,7 @@ pub struct FieldsetRoot {
     base: Div,
     children: Vec<FieldsetChild>,
     disabled: bool,
-    style_with_state: Option<Rc<dyn Fn(FieldsetRootRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(FieldsetRootStyleState, Div) -> Div + 'static>>,
 }
 
 impl Default for FieldsetRoot {
@@ -42,10 +42,10 @@ impl RenderOnce for FieldsetRoot {
         let disabled = self.disabled || current_fieldset_disabled();
         let context =
             FieldsetContext::new(self.id.clone(), cx, window, FieldsetProps::new(disabled));
-        let render_state = context.read(cx, |runtime, props| runtime.root_state(props));
+        let style_state = context.read(cx, |runtime, props| runtime.root_state(props));
         let children = wire_children(self.children, context.clone());
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(render_state, self.base),
+            Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
@@ -92,7 +92,7 @@ impl FieldsetRoot {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(FieldsetRootRenderState, Div) -> Div + 'static,
+        style: impl Fn(FieldsetRootStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

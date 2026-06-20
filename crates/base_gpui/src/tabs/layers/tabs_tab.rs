@@ -8,7 +8,7 @@ use gpui::{
 
 use crate::tabs::{
     child_wiring::{TabsChildNode, TabsChildWiring},
-    TabsContext, TabsOrientation, TabsTabRenderState,
+    TabsContext, TabsOrientation, TabsTabStyleState,
 };
 
 #[derive(IntoElement)]
@@ -21,7 +21,7 @@ pub struct TabsTab<T: Clone + Eq + 'static> {
     disabled: bool,
     index: Option<usize>,
     focus_handle: Option<FocusHandle>,
-    style_with_state: Option<Rc<dyn Fn(TabsTabRenderState, Div) -> Div + 'static>>,
+    style_with_state: Option<Rc<dyn Fn(TabsTabStyleState, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for TabsTab<T> {
@@ -76,7 +76,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
                 })
             })
             .unwrap_or_else(|| {
-                TabsTabRenderState::new(false, disabled, false, TabsOrientation::Horizontal)
+                TabsTabStyleState::new(false, disabled, false, TabsOrientation::Horizontal)
             });
         let active = state.active;
         let highlighted = state.highlighted;
@@ -137,7 +137,7 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
 
     pub fn style_with_state(
         mut self,
-        style: impl Fn(TabsTabRenderState, Div) -> Div + 'static,
+        style: impl Fn(TabsTabStyleState, Div) -> Div + 'static,
     ) -> Self {
         self.style_with_state = Some(Rc::new(style));
         self

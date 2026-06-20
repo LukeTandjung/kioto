@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{App, ElementId, Entity, Window};
 
-use crate::tabs::{runtime_control::TabsRuntimeControl, TabsProps, TabsRuntime};
+use crate::tabs::{TabsProps, TabsRuntime};
 
 pub struct TabsContext<T: Clone + Eq + 'static> {
     runtime: Entity<TabsRuntime<T>>,

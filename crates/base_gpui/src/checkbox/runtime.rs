@@ -1,4 +1,4 @@
-use crate::checkbox::{CheckboxIndicatorRenderState, CheckboxProps, CheckboxRootRenderState};
+use crate::checkbox::{CheckboxIndicatorStyleState, CheckboxProps, CheckboxRootStyleState};
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum CheckboxCheckedChangeReason {
@@ -128,8 +128,8 @@ impl CheckboxRuntime {
         true
     }
 
-    pub fn root_state(&self, props: &CheckboxProps) -> CheckboxRootRenderState {
-        CheckboxRootRenderState::new(
+    pub fn root_state(&self, props: &CheckboxProps) -> CheckboxRootStyleState {
+        CheckboxRootStyleState::new(
             self.checked(),
             props.disabled(),
             props.read_only(),
@@ -143,8 +143,8 @@ impl CheckboxRuntime {
         &self,
         keep_mounted: bool,
         props: &CheckboxProps,
-    ) -> CheckboxIndicatorRenderState {
-        CheckboxIndicatorRenderState::new(self.root_state(props), keep_mounted)
+    ) -> CheckboxIndicatorStyleState {
+        CheckboxIndicatorStyleState::new(self.root_state(props), keep_mounted)
     }
 }
 

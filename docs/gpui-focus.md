@@ -43,7 +43,7 @@ Notes:
 let focused = focus_handle.is_focused(window);
 ```
 
-If styling needs focus state, sync it into runtime/render state:
+If styling needs focus state, sync it into runtime/style state:
 
 ```rust
 context.update(cx, |runtime| {

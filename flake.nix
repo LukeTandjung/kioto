@@ -64,6 +64,7 @@
             rust-analyzer
             cargo-watch
             ast-grep
+            pre-commit
             yazi
             rustfmt
           ];
@@ -83,6 +84,7 @@
             fi
 
             echo "Rust development shell active! (rustc ${pkgs.rustc.version})"
+            echo "Run 'pre-commit install --hook-type pre-commit --hook-type pre-push' once to enable local checks."
           '';
         };
       });
