@@ -2,6 +2,7 @@ use gpui::{AnyElement, IntoElement};
 
 use crate::{
     field::{FieldControl, FieldDescription, FieldError, FieldItem, FieldLabel, FieldValidity},
+    input::Input,
     number_field::NumberFieldRoot,
 };
 
@@ -9,6 +10,7 @@ pub enum FieldChild {
     Item(FieldItem),
     Label(FieldLabel),
     Control(FieldControl),
+    Input(Input),
     Description(FieldDescription),
     Error(FieldError),
     Validity(FieldValidity),
@@ -24,6 +26,7 @@ impl IntoElement for FieldChild {
             Self::Item(item) => item.into_any_element(),
             Self::Label(label) => label.into_any_element(),
             Self::Control(control) => control.into_any_element(),
+            Self::Input(input) => input.into_any_element(),
             Self::Description(description) => description.into_any_element(),
             Self::Error(error) => error.into_any_element(),
             Self::Validity(validity) => validity.into_any_element(),
@@ -48,6 +51,12 @@ impl From<FieldLabel> for FieldChild {
 impl From<FieldControl> for FieldChild {
     fn from(value: FieldControl) -> Self {
         Self::Control(value)
+    }
+}
+
+impl From<Input> for FieldChild {
+    fn from(value: Input) -> Self {
+        Self::Input(value)
     }
 }
 
@@ -78,6 +87,7 @@ impl From<NumberFieldRoot> for FieldChild {
 pub enum FieldItemChild {
     Label(FieldLabel),
     Control(FieldControl),
+    Input(Input),
     Description(FieldDescription),
     Error(FieldError),
     Validity(FieldValidity),
@@ -92,6 +102,7 @@ impl IntoElement for FieldItemChild {
         match self {
             Self::Label(label) => label.into_any_element(),
             Self::Control(control) => control.into_any_element(),
+            Self::Input(input) => input.into_any_element(),
             Self::Description(description) => description.into_any_element(),
             Self::Error(error) => error.into_any_element(),
             Self::Validity(validity) => validity.into_any_element(),
@@ -110,6 +121,12 @@ impl From<FieldLabel> for FieldItemChild {
 impl From<FieldControl> for FieldItemChild {
     fn from(value: FieldControl) -> Self {
         Self::Control(value)
+    }
+}
+
+impl From<Input> for FieldItemChild {
+    fn from(value: Input) -> Self {
+        Self::Input(value)
     }
 }
 

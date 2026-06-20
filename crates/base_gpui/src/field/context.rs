@@ -2,9 +2,12 @@ use std::{cell::RefCell, rc::Rc};
 
 use gpui::{App, ElementId, Entity, Window};
 
-use crate::field::{
-    FieldControlRegistration, FieldProps, FieldRuntime, FieldValidationMode, FieldValidationResult,
-    FieldValidityData, FieldValidityState,
+use crate::{
+    field::{
+        FieldControlRegistration, FieldProps, FieldRuntime, FieldValidationMode,
+        FieldValidationResult, FieldValidityData, FieldValidityState,
+    },
+    form::FormContext,
 };
 
 thread_local! {
@@ -35,6 +38,7 @@ pub fn with_field_context<Output>(context: FieldContext, f: impl FnOnce() -> Out
 pub struct FieldContext {
     runtime: Entity<FieldRuntime>,
     props: Rc<FieldProps>,
+    form_context: Option<FormContext>,
 }
 
 impl Clone for FieldContext {
@@ -42,6 +46,7 @@ impl Clone for FieldContext {
         Self {
             runtime: self.runtime.clone(),
             props: Rc::clone(&self.props),
+            form_context: self.form_context.clone(),
         }
     }
 }
@@ -52,12 +57,14 @@ impl FieldContext {
         cx: &mut App,
         window: &mut Window,
         props: FieldProps,
+        form_context: Option<FormContext>,
     ) -> Self {
         let runtime = window.use_keyed_state(id, cx, |_, _| FieldRuntime::new());
 
         Self {
             runtime,
             props: Rc::new(props),
+            form_context,
         }
     }
 
@@ -109,7 +116,13 @@ impl FieldContext {
 
     pub fn register_control(&self, registration: FieldControlRegistration, cx: &mut App) {
         let props = Rc::clone(&self.props);
-        self.runtime.update(cx, |runtime, cx| {
+        let form_context = self.form_context.clone();
+        let form_submit_attempted = form_context
+            .as_ref()
+            .map(|context| context.submit_attempted(cx))
+            .unwrap_or(false);
+        let changed_name = self.runtime.update(cx, |runtime, cx| {
+            let had_control = runtime.has_registered_controls();
             let previous_value = runtime.value();
             let changed = runtime.register_control(registration);
             let value_changed = previous_value != runtime.value();
@@ -118,11 +131,25 @@ impl FieldContext {
                 cx.notify();
             }
 
-            if value_changed && props.validation_mode() == FieldValidationMode::OnChange {
+            let should_validate = props.validation_mode() == FieldValidationMode::OnChange
+                || (props.validation_mode() == FieldValidationMode::OnSubmit
+                    && form_submit_attempted);
+
+            if value_changed && should_validate {
                 runtime.request_validation();
                 cx.notify();
             }
+
+            if value_changed && had_control {
+                runtime.effective_name(props.as_ref())
+            } else {
+                None
+            }
         });
+
+        if let (Some(form_context), Some(name)) = (form_context, changed_name) {
+            form_context.clear_external_error(name, cx);
+        }
     }
 
     pub fn register_label(&self, cx: &mut App) {
@@ -138,6 +165,14 @@ impl FieldContext {
     pub fn register_error(&self, cx: &mut App) {
         self.runtime
             .update(cx, |runtime, _cx| runtime.register_error());
+    }
+
+    pub fn set_form_external_errors(&self, errors: Vec<gpui::SharedString>, cx: &mut App) {
+        self.runtime.update(cx, |runtime, cx| {
+            if runtime.set_form_external_errors(errors) {
+                cx.notify();
+            }
+        });
     }
 
     pub fn mark_touched(&self, window: &mut Window, cx: &mut App) {

@@ -3,6 +3,7 @@ use crate::{
         FieldChild, FieldContext, FieldControl, FieldDescription, FieldError, FieldItem,
         FieldItemChild, FieldLabel, FieldValidity,
     },
+    input::Input,
     number_field::NumberFieldRoot,
 };
 
@@ -33,6 +34,7 @@ impl FieldChildNode for FieldChild {
             Self::Item(item) => Self::Item(item.with_field_context(context)),
             Self::Label(label) => Self::Label(label.with_field_context(context)),
             Self::Control(control) => Self::Control(control.with_field_context(context)),
+            Self::Input(input) => Self::Input(input.with_field_context(context)),
             Self::Description(description) => {
                 Self::Description(description.with_field_context(context))
             }
@@ -51,6 +53,7 @@ impl FieldChildNode for FieldItemChild {
         match self {
             Self::Label(label) => Self::Label(label.with_field_context(context)),
             Self::Control(control) => Self::Control(control.with_field_context(context)),
+            Self::Input(input) => Self::Input(input.with_field_context(context)),
             Self::Description(description) => {
                 Self::Description(description.with_field_context(context))
             }
@@ -77,6 +80,12 @@ impl FieldChildNode for FieldLabel {
 }
 
 impl FieldChildNode for FieldControl {
+    fn with_field_context(self, context: FieldContext) -> Self {
+        self.with_field_context(context)
+    }
+}
+
+impl FieldChildNode for Input {
     fn with_field_context(self, context: FieldContext) -> Self {
         self.with_field_context(context)
     }

@@ -125,6 +125,7 @@ pub struct FieldRuntime {
     error_count: usize,
     needs_validation: bool,
     needs_refresh: bool,
+    form_external_errors: Vec<SharedString>,
 }
 
 impl Default for FieldRuntime {
@@ -140,6 +141,7 @@ impl Default for FieldRuntime {
             error_count: 0,
             needs_validation: false,
             needs_refresh: false,
+            form_external_errors: Vec::new(),
         }
     }
 }
@@ -260,6 +262,11 @@ impl FieldRuntime {
             .any(|control| control.registration.disabled)
     }
 
+    /// Returns whether any controls are currently registered.
+    pub fn has_registered_controls(&self) -> bool {
+        !self.controls.is_empty()
+    }
+
     /// Returns whether any enabled registered control is required.
     pub fn required(&self) -> bool {
         self.controls
@@ -275,6 +282,33 @@ impl FieldRuntime {
     /// Returns whether any registered control has diverged from its initial value.
     pub fn dirty(&self) -> bool {
         self.controls.iter().any(RegisteredControl::dirty)
+    }
+
+    /// Returns the effective field name from root props or the representative registered control.
+    pub fn effective_name(&self, props: &FieldProps) -> Option<SharedString> {
+        props.name().cloned().or_else(|| {
+            self.controls
+                .iter()
+                .find(|control| {
+                    !control.registration.disabled && control.registration.name.is_some()
+                })
+                .or_else(|| {
+                    self.controls
+                        .iter()
+                        .find(|control| control.registration.name.is_some())
+                })
+                .and_then(|control| control.registration.name.clone())
+        })
+    }
+
+    /// Returns whether this field should be skipped by form validation and value collection.
+    pub fn disabled_for_form(&self, props: &FieldProps) -> bool {
+        props.disabled()
+            || (!self.controls.is_empty()
+                && self
+                    .controls
+                    .iter()
+                    .all(|control| control.registration.disabled))
     }
 
     /// Returns the current representative field value.
@@ -358,6 +392,17 @@ impl FieldRuntime {
         changed
     }
 
+    /// Replaces form-level external error messages for this field.
+    pub fn set_form_external_errors(&mut self, errors: Vec<SharedString>) -> bool {
+        if self.form_external_errors == errors {
+            return false;
+        }
+
+        self.form_external_errors = errors;
+        self.needs_refresh = true;
+        true
+    }
+
     /// Commits externally produced validation data.
     pub fn set_validity_data(&mut self, validity_data: FieldValidityData) -> bool {
         if self.validity_data == validity_data {
@@ -379,11 +424,7 @@ impl FieldRuntime {
             .controls
             .iter()
             .any(|control| control.registration.focused);
-        let valid = match (disabled, props.invalid()) {
-            (true, _) => None,
-            (false, Some(true)) => Some(false),
-            (false, _) => self.validity_data.state.valid,
-        };
+        let valid = self.validity_data(props).state.valid;
 
         FieldRootRenderState::new(disabled, touched, dirty, valid, filled, focused)
     }
@@ -393,6 +434,15 @@ impl FieldRuntime {
         let mut data = self.validity_data.clone();
         data.value = self.value();
         data.initial_value = self.initial_value();
+
+        if !props.disabled() && !self.form_external_errors.is_empty() {
+            let mut errors = self.form_external_errors.clone();
+            errors.extend(data.errors);
+            data.state.custom_error = true;
+            data.state.valid = Some(false);
+            data.error = errors.first().cloned().unwrap_or_default();
+            data.errors = errors;
+        }
 
         if props.disabled() {
             data.state.valid = None;

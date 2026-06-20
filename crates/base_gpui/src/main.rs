@@ -1,11 +1,12 @@
 use base_gpui::{
     checkbox::{CheckboxIndicator, CheckboxRoot},
-    field::{FieldControl, FieldDescription, FieldError, FieldLabel, FieldRoot},
+    field::{FieldDescription, FieldError, FieldLabel, FieldRoot},
+    form::Form,
+    input::Input,
     number_field::{
         NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput,
         NumberFieldRoot,
     },
-    primitives::input::input,
     radio_group::{RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot},
     switch::{SwitchRoot, SwitchThumb},
     tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab},
@@ -17,605 +18,564 @@ use gpui::{
 };
 use gpui_platform::application;
 
-struct TabsTest;
+struct ComponentGallery;
 
-impl Render for TabsTest {
+impl Render for ComponentGallery {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         div()
+            .id("component-gallery-scroll")
             .size_full()
-            .flex()
-            .items_center()
-            .justify_center()
+            .overflow_y_scroll()
             .bg(rgb(0xf3f4f6))
             .child(
                 div()
-                    .w(px(320.0))
-                    .rounded_lg()
-                    .border_1()
-                    .border_color(rgb(0xd1d5db))
-                    .bg(rgb(0xffffff))
-                    .p_4()
-                    .shadow_lg()
+                    .w_full()
+                    .p(px(24.0))
                     .flex()
                     .flex_col()
                     .gap_5()
                     .child(
-                        TabsRoot::<&'static str>::new()
-                            .id("test-tabs")
-                            .default_value(None)
-                            .flex()
-                            .flex_col()
-                            .gap_3()
-                            .child(
-                                TabsList::new()
-                                    .relative()
-                                    .flex()
-                                    .gap_2()
-                                    .child(
-                                        TabsTab::new()
-                                            .id("overview-tab")
-                                            .value("overview")
-                                            .px_3()
-                                            .py_2()
-                                            .rounded_md()
-                                            .style_with_state(|state, tab| {
-                                                if state.active {
-                                                    tab.bg(rgb(0xe5e7eb))
-                                                } else if state.highlighted {
-                                                    tab.bg(rgb(0xf3f4f6))
-                                                } else {
-                                                    tab
-                                                }
-                                            })
-                                            .child("Overview"),
-                                    )
-                                    .child(
-                                        TabsTab::new()
-                                            .id("projects-tab")
-                                            .value("projects")
-                                            .px_3()
-                                            .py_2()
-                                            .rounded_md()
-                                            .style_with_state(|state, tab| {
-                                                if state.active {
-                                                    tab.bg(rgb(0xe5e7eb))
-                                                } else if state.highlighted {
-                                                    tab.bg(rgb(0xf3f4f6))
-                                                } else {
-                                                    tab
-                                                }
-                                            })
-                                            .child("Projects"),
-                                    )
-                                    .child(
-                                        TabsTab::new()
-                                            .id("account-tab")
-                                            .value("account")
-                                            .px_3()
-                                            .py_2()
-                                            .rounded_md()
-                                            .style_with_state(|state, tab| {
-                                                if state.active {
-                                                    tab.bg(rgb(0xe5e7eb))
-                                                } else if state.highlighted {
-                                                    tab.bg(rgb(0xf3f4f6))
-                                                } else {
-                                                    tab
-                                                }
-                                            })
-                                            .child("Account"),
-                                    )
-                                    .child(
-                                        TabsIndicator::new()
-                                            .absolute()
-                                            .h(px(2.0))
-                                            .rounded_full()
-                                            .style_with_state(|state, indicator| {
-                                                let indicator = match state.active_tab_position {
-                                                    Some(position) => indicator
-                                                        .left(position.left)
-                                                        .top(position.bottom - px(2.0)),
-                                                    None => indicator,
-                                                };
-                                                let indicator = match state.active_tab_size {
-                                                    Some(size) => indicator.w(size.width),
-                                                    None => indicator,
-                                                };
-
-                                                if state.selected {
-                                                    indicator.bg(rgb(0x111827))
-                                                } else {
-                                                    indicator
-                                                }
-                                            }),
-                                    ),
-                            )
-                            .child(
-                                TabsPanel::new()
-                                    .value("overview")
-                                    .min_h(px(96.0))
-                                    .rounded_md()
-                                    .border_1()
-                                    .border_color(rgb(0xe5e7eb))
-                                    .p_4()
-                                    .child("Workspace stats and activity."),
-                            )
-                            .child(
-                                TabsPanel::new()
-                                    .value("projects")
-                                    .min_h(px(96.0))
-                                    .rounded_md()
-                                    .border_1()
-                                    .border_color(rgb(0xe5e7eb))
-                                    .p_4()
-                                    .child("Milestones and deadlines."),
-                            )
-                            .child(
-                                TabsPanel::new()
-                                    .value("account")
-                                    .min_h(px(96.0))
-                                    .rounded_md()
-                                    .border_1()
-                                    .border_color(rgb(0xe5e7eb))
-                                    .p_4()
-                                    .child("Profile and preferences."),
-                            ),
-                    )
-                    .child(
-                        div().flex().flex_col().gap_3().child("Switch").child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_2()
-                                .child(
-                                    SwitchRoot::new()
-                                        .id("example-switch")
-                                        .default_checked(true)
-                                        .w(px(36.0))
-                                        .h(px(20.0))
-                                        .rounded_full()
-                                        .border_1()
-                                        .p(px(2.0))
-                                        .style_with_state(|state, root| {
-                                            let root = if state.checked {
-                                                root.bg(rgb(0x111827)).border_color(rgb(0x111827))
-                                            } else {
-                                                root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
-                                            };
-
-                                            if state.focused {
-                                                root.shadow_md()
-                                            } else {
-                                                root
-                                            }
-                                        })
-                                        .child(
-                                            SwitchThumb::new()
-                                                .size(px(14.0))
-                                                .rounded_full()
-                                                .style_with_state(|state, thumb| {
-                                                    let thumb = if state.root.checked {
-                                                        thumb.ml(px(16.0)).bg(rgb(0xffffff))
-                                                    } else {
-                                                        thumb.bg(rgb(0x111827))
-                                                    };
-
-                                                    if state.root.disabled || state.root.read_only {
-                                                        thumb.opacity(0.5)
-                                                    } else {
-                                                        thumb
-                                                    }
-                                                }),
-                                        ),
-                                )
-                                .child("Notifications"),
-                        ),
-                    )
-                    .child(
-                        FieldRoot::new()
-                            .id("example-field")
-                            .invalid(true)
+                        div()
                             .flex()
                             .flex_col()
                             .gap_2()
                             .child(
-                                FieldLabel::new()
-                                    .text_size(px(13.0))
-                                    .text_color(rgb(0x374151))
-                                    .child("Field-wrapped switch"),
-                            )
-                            .child_any(
-                                SwitchRoot::new()
-                                    .id("field-switch")
-                                    .default_checked(false)
-                                    .w(px(36.0))
-                                    .h(px(20.0))
-                                    .rounded_full()
-                                    .border_1()
-                                    .p(px(2.0))
-                                    .style_with_state(|state, root| {
-                                        if state.checked {
-                                            root.bg(rgb(0x111827)).border_color(rgb(0x111827))
-                                        } else {
-                                            root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
-                                        }
-                                    })
-                                    .child(
-                                        SwitchThumb::new()
-                                            .size(px(14.0))
-                                            .rounded_full()
-                                            .style_with_state(|state, thumb| {
-                                                if state.root.checked {
-                                                    thumb.ml(px(16.0)).bg(rgb(0xffffff))
-                                                } else {
-                                                    thumb.bg(rgb(0x111827))
-                                                }
-                                            }),
-                                    ),
+                                div()
+                                    .text_size(px(24.0))
+                                    .text_color(rgb(0x111827))
+                                    .child("base_gpui component gallery"),
                             )
                             .child(
-                                FieldError::new()
-                                    .text_color(rgb(0xdc2626))
-                                    .text_size(px(12.0))
-                                    .child("This field is marked invalid."),
-                            )
-                            .child(
-                                FieldDescription::new()
-                                    .text_color(rgb(0x6b7280))
-                                    .text_size(px(12.0))
-                                    .child("Labels can focus the registered control."),
-                            ),
-                    )
-                    .child(
-                        div().flex().flex_col().gap_2().child("Plain input").child(
-                            input()
-                                .id("example-plain-input")
-                                .name("plain")
-                                .default_value("Hello GPUI")
-                                .placeholder("Type here")
-                                .w_full()
-                                .h(px(32.0))
-                                .rounded_md()
-                                .border_1()
-                                .border_color(rgb(0xd1d5db))
-                                .px_2()
-                                .style_with_state(|state, input| {
-                                    if state.focused {
-                                        input.border_color(rgb(0x2563eb))
-                                    } else {
-                                        input
-                                    }
-                                }),
-                        ),
-                    )
-                    .child(
-                        FieldRoot::new()
-                            .id("example-input-field")
-                            .validation_mode(base_gpui::field::FieldValidationMode::OnBlur)
-                            .flex()
-                            .flex_col()
-                            .gap_2()
-                            .child(
-                                FieldLabel::new()
-                                    .text_size(px(13.0))
-                                    .text_color(rgb(0x374151))
-                                    .child("Email"),
-                            )
-                            .child(
-                                FieldControl::new()
-                                    .id("example-email-input")
-                                    .name("email")
-                                    .required(true)
-                                    .placeholder("hello@example.com")
-                                    .w_full()
-                                    .h(px(32.0))
-                                    .rounded_md()
-                                    .border_1()
-                                    .px_2()
-                                    .style_with_state(|state, input| {
-                                        let input = if state.invalid {
-                                            input.border_color(rgb(0xdc2626))
-                                        } else if state.focused {
-                                            input.border_color(rgb(0x2563eb))
-                                        } else {
-                                            input.border_color(rgb(0xd1d5db))
-                                        };
-
-                                        if state.disabled || state.read_only {
-                                            input.opacity(0.5)
-                                        } else {
-                                            input
-                                        }
-                                    }),
-                            )
-                            .child(
-                                FieldError::new()
-                                    .text_color(rgb(0xdc2626))
-                                    .text_size(px(12.0))
-                                    .child("Email is required."),
-                            )
-                            .child(
-                                FieldDescription::new()
-                                    .text_color(rgb(0x6b7280))
-                                    .text_size(px(12.0))
-                                    .child("A reusable GPUI input primitive inside Field."),
-                            ),
-                    )
-                    .child(
-                        div().flex().flex_col().gap_2().child("Number Field").child(
-                            NumberFieldRoot::new()
-                                .id("example-number-field")
-                                .default_value(Some(2.0))
-                                .min(0.0)
-                                .max(10.0)
-                                .step(0.5)
-                                .flex()
-                                .flex_col()
-                                .gap_2()
-                                .child(
-                                    NumberFieldGroup::new()
-                                        .flex()
-                                        .items_center()
-                                        .gap_1()
-                                        .child(
-                                            NumberFieldDecrement::new()
-                                                .size(px(28.0))
-                                                .rounded_md()
-                                                .border_1()
-                                                .border_color(rgb(0xd1d5db))
-                                                .flex()
-                                                .items_center()
-                                                .justify_center()
-                                                .style_with_state(|state, decrement| {
-                                                    if state.can_decrement {
-                                                        decrement.bg(rgb(0xffffff))
-                                                    } else {
-                                                        decrement.bg(rgb(0xf3f4f6)).opacity(0.5)
-                                                    }
-                                                })
-                                                .child("−"),
-                                        )
-                                        .child(
-                                            NumberFieldInput::new()
-                                                .w(px(120.0))
-                                                .h(px(32.0))
-                                                .rounded_md()
-                                                .border_1()
-                                                .px_2()
-                                                .style_with_state(|state, input| {
-                                                    let input = if state.root.focused {
-                                                        input.border_color(rgb(0x2563eb))
-                                                    } else {
-                                                        input.border_color(rgb(0xd1d5db))
-                                                    };
-
-                                                    if state.root.disabled || state.root.read_only {
-                                                        input.opacity(0.5)
-                                                    } else {
-                                                        input
-                                                    }
-                                                }),
-                                        )
-                                        .child(
-                                            NumberFieldIncrement::new()
-                                                .size(px(28.0))
-                                                .rounded_md()
-                                                .border_1()
-                                                .border_color(rgb(0xd1d5db))
-                                                .flex()
-                                                .items_center()
-                                                .justify_center()
-                                                .style_with_state(|state, increment| {
-                                                    if state.can_increment {
-                                                        increment.bg(rgb(0xffffff))
-                                                    } else {
-                                                        increment.bg(rgb(0xf3f4f6)).opacity(0.5)
-                                                    }
-                                                })
-                                                .child("+"),
-                                        ),
+                                div().text_size(px(13.0)).text_color(rgb(0x6b7280)).child(
+                                    "A wrapped grid of the current ported Base UI components.",
                                 ),
-                        ),
-                    )
-                    .child(
-                        FieldRoot::new()
-                            .id("example-number-field-field")
-                            .validation_mode(base_gpui::field::FieldValidationMode::OnBlur)
-                            .flex()
-                            .flex_col()
-                            .gap_2()
-                            .child(
-                                FieldLabel::new()
-                                    .text_size(px(13.0))
-                                    .text_color(rgb(0x374151))
-                                    .child("Quantity"),
-                            )
-                            .child(
-                                NumberFieldRoot::new()
-                                    .id("example-field-number-field")
-                                    .name("quantity")
-                                    .required(true)
-                                    .min(0.0)
-                                    .max(99.0)
-                                    .default_value(None)
-                                    .child(
-                                        NumberFieldGroup::new()
-                                            .flex()
-                                            .items_center()
-                                            .gap_1()
-                                            .child(
-                                                NumberFieldDecrement::new()
-                                                    .size(px(28.0))
-                                                    .rounded_md()
-                                                    .border_1()
-                                                    .border_color(rgb(0xd1d5db))
-                                                    .flex()
-                                                    .items_center()
-                                                    .justify_center()
-                                                    .child("−"),
-                                            )
-                                            .child(
-                                                NumberFieldInput::new()
-                                                    .w(px(120.0))
-                                                    .h(px(32.0))
-                                                    .rounded_md()
-                                                    .border_1()
-                                                    .px_2()
-                                                    .style_with_state(|state, input| {
-                                                        if state.root.invalid {
-                                                            input.border_color(rgb(0xdc2626))
-                                                        } else if state.root.focused {
-                                                            input.border_color(rgb(0x2563eb))
-                                                        } else {
-                                                            input.border_color(rgb(0xd1d5db))
-                                                        }
-                                                    }),
-                                            )
-                                            .child(
-                                                NumberFieldIncrement::new()
-                                                    .size(px(28.0))
-                                                    .rounded_md()
-                                                    .border_1()
-                                                    .border_color(rgb(0xd1d5db))
-                                                    .flex()
-                                                    .items_center()
-                                                    .justify_center()
-                                                    .child("+"),
-                                            ),
-                                    ),
-                            )
-                            .child(
-                                FieldError::new()
-                                    .text_color(rgb(0xdc2626))
-                                    .text_size(px(12.0))
-                                    .child("Quantity is required."),
                             ),
                     )
                     .child(
                         div()
                             .flex()
-                            .flex_col()
+                            .flex_wrap()
+                            .items_start()
                             .gap_3()
-                            .child("Radio Group (LTR arrows)")
-                            .child(
-                                DirectionProvider::new()
-                                    .direction(TextDirection::Ltr)
-                                    .child(
-                                        RadioGroupRoot::<&'static str>::new()
-                                            .id("example-radio-group-ltr")
-                                            .default_value(Some("standard"))
-                                            .flex()
-                                            .gap_2()
-                                            .child(example_radio("ltr", "standard"))
-                                            .child(example_radio("ltr", "express"))
-                                            .child(example_radio("ltr", "overnight")),
-                                    ),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap_3()
-                            .child("Radio Group (RTL arrows)")
-                            .child(
-                                DirectionProvider::new()
-                                    .direction(TextDirection::Rtl)
-                                    .child(
-                                        RadioGroupRoot::<&'static str>::new()
-                                            .id("example-radio-group-rtl")
-                                            .default_value(Some("express"))
-                                            .flex()
-                                            .gap_2()
-                                            .child(example_radio("rtl", "standard"))
-                                            .child(example_radio("rtl", "express"))
-                                            .child(example_radio("rtl", "overnight")),
-                                    ),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap_3()
-                            .child("Checkbox")
-                            .child(
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .gap_2()
-                                    .child(
-                                        CheckboxRoot::new()
-                                            .id("example-checkbox")
-                                            .default_checked(false)
-                                            .size(px(18.0))
-                                            .rounded_sm()
-                                            .border_1()
-                                            .style_with_state(|state, root| {
-                                                let root = if state.checked {
-                                                    root.bg(rgb(0x111827))
-                                                        .border_color(rgb(0x111827))
-                                                } else {
-                                                    root.bg(rgb(0xffffff))
-                                                        .border_color(rgb(0x9ca3af))
-                                                };
-
-                                                if state.disabled || state.read_only {
-                                                    root.opacity(0.5)
-                                                } else {
-                                                    root
-                                                }
-                                            })
-                                            .child(
-                                                CheckboxIndicator::new()
-                                                    .size_full()
-                                                    .flex()
-                                                    .items_center()
-                                                    .justify_center()
-                                                    .text_color(rgb(0xffffff))
-                                                    .text_size(px(12.0))
-                                                    .child("✓"),
-                                            ),
-                                    )
-                                    .child("Click the square to toggle it."),
-                            )
-                            .child(
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .gap_2()
-                                    .child(
-                                        CheckboxRoot::new()
-                                            .id("checked-checkbox")
-                                            .default_checked(true)
-                                            .size(px(18.0))
-                                            .rounded_sm()
-                                            .border_1()
-                                            .style_with_state(|state, root| {
-                                                if state.checked {
-                                                    root.bg(rgb(0x2563eb))
-                                                        .border_color(rgb(0x2563eb))
-                                                } else {
-                                                    root.bg(rgb(0xffffff))
-                                                        .border_color(rgb(0x9ca3af))
-                                                }
-                                            })
-                                            .child(
-                                                CheckboxIndicator::new()
-                                                    .size_full()
-                                                    .flex()
-                                                    .items_center()
-                                                    .justify_center()
-                                                    .text_color(rgb(0xffffff))
-                                                    .text_size(px(12.0))
-                                                    .child("✓"),
-                                            ),
-                                    )
-                                    .child("Starts checked."),
-                            ),
+                            .child(component_card(
+                                "Tabs",
+                                "Keyboard-selectable tab list with indicator and panels.",
+                                tabs_demo(),
+                            ))
+                            .child(component_card(
+                                "Switch",
+                                "Toggle state, focus styling, thumb state, and callbacks.",
+                                switch_demo(),
+                            ))
+                            .child(component_card(
+                                "Field + Switch",
+                                "Field label, error, description, and registered control focus.",
+                                field_switch_demo(),
+                            ))
+                            .child(component_card(
+                                "Input",
+                                "Public Field-aware text input using Input::new().",
+                                plain_input_demo(),
+                            ))
+                            .child(component_card(
+                                "Field + Input",
+                                "Required validation and Field-derived Input styling.",
+                                input_field_demo(),
+                            ))
+                            .child(component_card(
+                                "Form",
+                                "Form validation-mode inheritance and named Field registration.",
+                                form_demo(),
+                            ))
+                            .child(component_card(
+                                "Number Field",
+                                "Text editing, stepping, min/max, and formatted numeric value.",
+                                number_field_demo(),
+                            ))
+                            .child(component_card(
+                                "Field + Number Field",
+                                "Required Field validation with a numeric control.",
+                                field_number_field_demo(),
+                            ))
+                            .child(component_card(
+                                "Radio Group LTR",
+                                "Direction-aware arrow key navigation in LTR mode.",
+                                radio_group_demo("ltr", TextDirection::Ltr, "standard"),
+                            ))
+                            .child(component_card(
+                                "Radio Group RTL",
+                                "Direction-aware arrow key navigation in RTL mode.",
+                                radio_group_demo("rtl", TextDirection::Rtl, "express"),
+                            ))
+                            .child(component_card(
+                                "Checkbox",
+                                "Unchecked and checked states with indicator rendering.",
+                                checkbox_demo(),
+                            )),
                     ),
             )
     }
+}
+
+fn component_card(
+    title: &'static str,
+    description: &'static str,
+    content: impl IntoElement,
+) -> impl IntoElement {
+    div()
+        .w(px(300.0))
+        .min_h(px(170.0))
+        .rounded_lg()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .bg(rgb(0xffffff))
+        .p_4()
+        .shadow_lg()
+        .flex()
+        .flex_col()
+        .gap_3()
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .gap_1()
+                .child(
+                    div()
+                        .text_size(px(15.0))
+                        .text_color(rgb(0x111827))
+                        .child(title),
+                )
+                .child(
+                    div()
+                        .text_size(px(12.0))
+                        .text_color(rgb(0x6b7280))
+                        .child(description),
+                ),
+        )
+        .child(content)
+}
+
+fn tabs_demo() -> impl IntoElement {
+    TabsRoot::<&'static str>::new()
+        .id("gallery-tabs")
+        .default_value(None)
+        .flex()
+        .flex_col()
+        .gap_3()
+        .child(
+            TabsList::new()
+                .relative()
+                .flex()
+                .gap_2()
+                .child(gallery_tab("overview-tab", "overview", "Overview"))
+                .child(gallery_tab("projects-tab", "projects", "Projects"))
+                .child(gallery_tab("account-tab", "account", "Account"))
+                .child(
+                    TabsIndicator::new()
+                        .absolute()
+                        .h(px(2.0))
+                        .rounded_full()
+                        .style_with_state(|state, indicator| {
+                            let indicator = match state.active_tab_position {
+                                Some(position) => {
+                                    indicator.left(position.left).top(position.bottom - px(2.0))
+                                }
+                                None => indicator,
+                            };
+                            let indicator = match state.active_tab_size {
+                                Some(size) => indicator.w(size.width),
+                                None => indicator,
+                            };
+
+                            if state.selected {
+                                indicator.bg(rgb(0x111827))
+                            } else {
+                                indicator
+                            }
+                        }),
+                ),
+        )
+        .child(gallery_panel("overview", "Workspace stats and activity."))
+        .child(gallery_panel("projects", "Milestones and deadlines."))
+        .child(gallery_panel("account", "Profile and preferences."))
+}
+
+fn gallery_tab(
+    id: &'static str,
+    value: &'static str,
+    label: &'static str,
+) -> TabsTab<&'static str> {
+    TabsTab::new()
+        .id(id)
+        .value(value)
+        .px_3()
+        .py_2()
+        .rounded_md()
+        .style_with_state(|state, tab| {
+            if state.active {
+                tab.bg(rgb(0xe5e7eb))
+            } else if state.highlighted {
+                tab.bg(rgb(0xf3f4f6))
+            } else {
+                tab
+            }
+        })
+        .child(label)
+}
+
+fn gallery_panel(value: &'static str, text: &'static str) -> TabsPanel<&'static str> {
+    TabsPanel::new()
+        .value(value)
+        .min_h(px(80.0))
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xe5e7eb))
+        .p_3()
+        .child(text)
+}
+
+fn switch_demo() -> impl IntoElement {
+    div()
+        .flex()
+        .items_center()
+        .gap_2()
+        .child(gallery_switch("example-switch", true))
+        .child("Notifications")
+}
+
+fn gallery_switch(id: &'static str, default_checked: bool) -> SwitchRoot {
+    SwitchRoot::new()
+        .id(id)
+        .default_checked(default_checked)
+        .w(px(36.0))
+        .h(px(20.0))
+        .rounded_full()
+        .border_1()
+        .p(px(2.0))
+        .style_with_state(|state, root| {
+            let root = if state.checked {
+                root.bg(rgb(0x111827)).border_color(rgb(0x111827))
+            } else {
+                root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
+            };
+
+            if state.focused {
+                root.shadow_lg()
+            } else {
+                root
+            }
+        })
+        .child(
+            SwitchThumb::new()
+                .size(px(14.0))
+                .rounded_full()
+                .style_with_state(|state, thumb| {
+                    let thumb = if state.root.checked {
+                        thumb.ml(px(16.0)).bg(rgb(0xffffff))
+                    } else {
+                        thumb.bg(rgb(0x111827))
+                    };
+
+                    if state.root.disabled || state.root.read_only {
+                        thumb.opacity(0.5)
+                    } else {
+                        thumb
+                    }
+                }),
+        )
+}
+
+fn field_switch_demo() -> impl IntoElement {
+    FieldRoot::new()
+        .id("example-field")
+        .invalid(true)
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            FieldLabel::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("Field-wrapped switch"),
+        )
+        .child_any(gallery_switch("field-switch", false))
+        .child(
+            FieldError::new()
+                .text_color(rgb(0xdc2626))
+                .text_size(px(12.0))
+                .child("This field is marked invalid."),
+        )
+        .child(
+            FieldDescription::new()
+                .text_color(rgb(0x6b7280))
+                .text_size(px(12.0))
+                .child("Labels can focus the registered control."),
+        )
+}
+
+fn plain_input_demo() -> impl IntoElement {
+    Input::new()
+        .id("example-plain-input")
+        .name("plain")
+        .default_value("Hello GPUI")
+        .placeholder("Type here")
+        .w_full()
+        .h(px(32.0))
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .px_2()
+        .style_with_state(|state, input| {
+            if state.focused {
+                input.border_color(rgb(0x2563eb))
+            } else {
+                input
+            }
+        })
+}
+
+fn input_field_demo() -> impl IntoElement {
+    FieldRoot::new()
+        .id("example-input-field")
+        .validation_mode(base_gpui::field::FieldValidationMode::OnBlur)
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            FieldLabel::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("Email"),
+        )
+        .child(
+            Input::new()
+                .id("example-email-input")
+                .name("email")
+                .required(true)
+                .placeholder("hello@example.com")
+                .w_full()
+                .h(px(32.0))
+                .rounded_md()
+                .border_1()
+                .px_2()
+                .style_with_state(|state, input| {
+                    let input = if state.invalid {
+                        input.border_color(rgb(0xdc2626))
+                    } else if state.focused {
+                        input.border_color(rgb(0x2563eb))
+                    } else {
+                        input.border_color(rgb(0xd1d5db))
+                    };
+
+                    if state.disabled || state.read_only {
+                        input.opacity(0.5)
+                    } else {
+                        input
+                    }
+                }),
+        )
+        .child(
+            FieldError::new()
+                .text_color(rgb(0xdc2626))
+                .text_size(px(12.0))
+                .child("Email is required."),
+        )
+        .child(
+            FieldDescription::new()
+                .text_color(rgb(0x6b7280))
+                .text_size(px(12.0))
+                .child("The public Input component composes FieldControl."),
+        )
+}
+
+fn form_demo() -> impl IntoElement {
+    Form::new()
+        .id("example-form")
+        .validation_mode(base_gpui::field::FieldValidationMode::OnChange)
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            FieldRoot::new()
+                .id("example-form-email-field")
+                .name("email")
+                .flex()
+                .flex_col()
+                .gap_2()
+                .child(
+                    FieldLabel::new()
+                        .text_size(px(13.0))
+                        .text_color(rgb(0x374151))
+                        .child("Form email"),
+                )
+                .child(
+                    Input::new()
+                        .id("example-form-email-input")
+                        .name("email")
+                        .required(true)
+                        .placeholder("type to validate")
+                        .w_full()
+                        .h(px(32.0))
+                        .rounded_md()
+                        .border_1()
+                        .px_2()
+                        .style_with_state(|state, input| {
+                            if state.invalid {
+                                input.border_color(rgb(0xdc2626))
+                            } else if state.focused {
+                                input.border_color(rgb(0x2563eb))
+                            } else {
+                                input.border_color(rgb(0xd1d5db))
+                            }
+                        }),
+                )
+                .child(
+                    FieldError::new()
+                        .text_color(rgb(0xdc2626))
+                        .text_size(px(12.0))
+                        .child("Email is required."),
+                ),
+        )
+        .child(
+            div()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .px_3()
+                .py_2()
+                .text_size(px(12.0))
+                .text_color(rgb(0x6b7280))
+                .child("Submit is currently exposed as a GPUI Form context/action."),
+        )
+}
+
+fn number_field_demo() -> impl IntoElement {
+    NumberFieldRoot::new()
+        .id("example-number-field")
+        .default_value(Some(2.0))
+        .min(0.0)
+        .max(10.0)
+        .step(0.5)
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(number_field_group("example-number-field", false))
+}
+
+fn field_number_field_demo() -> impl IntoElement {
+    FieldRoot::new()
+        .id("example-number-field-field")
+        .validation_mode(base_gpui::field::FieldValidationMode::OnBlur)
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            FieldLabel::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("Quantity"),
+        )
+        .child(
+            NumberFieldRoot::new()
+                .id("example-field-number-field")
+                .name("quantity")
+                .required(true)
+                .min(0.0)
+                .max(99.0)
+                .default_value(None)
+                .child(number_field_group("example-field-number-field", true)),
+        )
+        .child(
+            FieldError::new()
+                .text_color(rgb(0xdc2626))
+                .text_size(px(12.0))
+                .child("Quantity is required."),
+        )
+}
+
+fn number_field_group(id_prefix: &'static str, show_invalid: bool) -> NumberFieldGroup {
+    NumberFieldGroup::new()
+        .flex()
+        .items_center()
+        .gap_1()
+        .child(
+            NumberFieldDecrement::new()
+                .id(format!("{id_prefix}-decrement"))
+                .size(px(28.0))
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .flex()
+                .items_center()
+                .justify_center()
+                .style_with_state(|state, decrement| {
+                    if state.can_decrement {
+                        decrement.bg(rgb(0xffffff))
+                    } else {
+                        decrement.bg(rgb(0xf3f4f6)).opacity(0.5)
+                    }
+                })
+                .child("−"),
+        )
+        .child(
+            NumberFieldInput::new()
+                .w(px(120.0))
+                .h(px(32.0))
+                .rounded_md()
+                .border_1()
+                .px_2()
+                .style_with_state(move |state, input| {
+                    let input = if show_invalid && state.root.invalid {
+                        input.border_color(rgb(0xdc2626))
+                    } else if state.root.focused {
+                        input.border_color(rgb(0x2563eb))
+                    } else {
+                        input.border_color(rgb(0xd1d5db))
+                    };
+
+                    if state.root.disabled || state.root.read_only {
+                        input.opacity(0.5)
+                    } else {
+                        input
+                    }
+                }),
+        )
+        .child(
+            NumberFieldIncrement::new()
+                .id(format!("{id_prefix}-increment"))
+                .size(px(28.0))
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .flex()
+                .items_center()
+                .justify_center()
+                .style_with_state(|state, increment| {
+                    if state.can_increment {
+                        increment.bg(rgb(0xffffff))
+                    } else {
+                        increment.bg(rgb(0xf3f4f6)).opacity(0.5)
+                    }
+                })
+                .child("+"),
+        )
+}
+
+fn radio_group_demo(
+    group: &'static str,
+    direction: TextDirection,
+    default_value: &'static str,
+) -> impl IntoElement {
+    DirectionProvider::new().direction(direction).child(
+        RadioGroupRoot::<&'static str>::new()
+            .id(format!("example-radio-group-{group}"))
+            .default_value(Some(default_value))
+            .flex()
+            .gap_2()
+            .child(example_radio(group, "standard"))
+            .child(example_radio(group, "express"))
+            .child(example_radio(group, "overnight")),
+    )
 }
 
 fn example_radio(group: &'static str, value: &'static str) -> RadioGroupRadio<&'static str> {
@@ -651,20 +611,75 @@ fn example_radio(group: &'static str, value: &'static str) -> RadioGroupRadio<&'
         )
 }
 
+fn checkbox_demo() -> impl IntoElement {
+    div()
+        .flex()
+        .flex_col()
+        .gap_3()
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .child(gallery_checkbox("example-checkbox", false, 0x111827))
+                .child("Click the square to toggle it."),
+        )
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .child(gallery_checkbox("checked-checkbox", true, 0x2563eb))
+                .child("Starts checked."),
+        )
+}
+
+fn gallery_checkbox(id: &'static str, default_checked: bool, checked_color: u32) -> CheckboxRoot {
+    CheckboxRoot::new()
+        .id(id)
+        .default_checked(default_checked)
+        .size(px(18.0))
+        .rounded_sm()
+        .border_1()
+        .style_with_state(move |state, root| {
+            let root = if state.checked {
+                root.bg(rgb(checked_color)).border_color(rgb(checked_color))
+            } else {
+                root.bg(rgb(0xffffff)).border_color(rgb(0x9ca3af))
+            };
+
+            if state.disabled || state.read_only {
+                root.opacity(0.5)
+            } else {
+                root
+            }
+        })
+        .child(
+            CheckboxIndicator::new()
+                .size_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .text_color(rgb(0xffffff))
+                .text_size(px(12.0))
+                .child("✓"),
+        )
+}
+
 fn main() {
     application().run(|cx: &mut App| {
         base_gpui::init(cx);
 
-        let bounds = Bounds::centered(None, size(px(500.0), px(820.0)), cx);
+        let bounds = Bounds::centered(None, size(px(1040.0), px(760.0)), cx);
 
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |_, cx| cx.new(|_| TabsTest),
+            |_, cx| cx.new(|_| ComponentGallery),
         )
-        .expect("failed to open tabs test window");
+        .expect("failed to open component gallery window");
 
         cx.activate(true);
     });

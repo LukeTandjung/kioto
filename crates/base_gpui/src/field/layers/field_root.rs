@@ -6,10 +6,13 @@ use gpui::{
     Styled, Window,
 };
 
-use crate::field::{
-    child_wiring::wire_children, context::with_field_context, FieldChild, FieldContext, FieldProps,
-    FieldRootRenderState, FieldValidationHandler, FieldValidationMode, FieldValidationResult,
-    FieldValue,
+use crate::{
+    field::{
+        child_wiring::wire_children, context::with_field_context, FieldChild, FieldContext,
+        FieldProps, FieldRootRenderState, FieldValidationHandler, FieldValidationMode,
+        FieldValidationResult, FieldValue,
+    },
+    form::{current_form_context, FormFieldRegistration, FormFieldSnapshot},
 };
 
 #[derive(IntoElement)]
@@ -22,7 +25,7 @@ pub struct FieldRoot {
     invalid: Option<bool>,
     dirty: Option<bool>,
     touched: Option<bool>,
-    validation_mode: FieldValidationMode,
+    validation_mode: Option<FieldValidationMode>,
     validation_debounce: Option<Duration>,
     validate: Option<FieldValidationHandler>,
     style_with_state: Option<Rc<dyn Fn(FieldRootRenderState, Div) -> Div + 'static>>,
@@ -39,7 +42,7 @@ impl Default for FieldRoot {
             invalid: None,
             dirty: None,
             touched: None,
-            validation_mode: FieldValidationMode::OnSubmit,
+            validation_mode: None,
             validation_debounce: None,
             validate: None,
             style_with_state: None,
@@ -55,6 +58,14 @@ impl Styled for FieldRoot {
 
 impl RenderOnce for FieldRoot {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let form_context = current_form_context();
+        let validation_mode = self.validation_mode.unwrap_or_else(|| {
+            form_context
+                .as_ref()
+                .map(|context| context.validation_mode())
+                .unwrap_or(FieldValidationMode::OnSubmit)
+        });
+        let field_key = self.id.to_string().into();
         let context = FieldContext::new(
             self.id.clone(),
             cx,
@@ -65,11 +76,19 @@ impl RenderOnce for FieldRoot {
                 self.invalid,
                 self.dirty,
                 self.touched,
-                self.validation_mode,
+                validation_mode,
                 self.validation_debounce,
                 self.validate,
             ),
+            form_context.clone(),
         );
+        if let Some(form_context) = form_context.as_ref() {
+            let external_errors = context.read(cx, |runtime, props| {
+                let name = runtime.effective_name(props);
+                form_context.external_errors_for(name.as_ref(), cx)
+            });
+            context.set_form_external_errors(external_errors, cx);
+        }
         let render_state = context.read(cx, |runtime, props| runtime.root_state(props));
         let children = wire_children(self.children, context.clone());
         let base = match self.style_with_state {
@@ -78,7 +97,9 @@ impl RenderOnce for FieldRoot {
         };
 
         FieldScopeElement {
+            field_key,
             context,
+            form_context,
             inner: base.children(children).into_any_element(),
         }
     }
@@ -136,7 +157,7 @@ impl FieldRoot {
     }
 
     pub fn validation_mode(mut self, validation_mode: FieldValidationMode) -> Self {
-        self.validation_mode = validation_mode;
+        self.validation_mode = Some(validation_mode);
         self
     }
 
@@ -162,8 +183,40 @@ impl FieldRoot {
     }
 }
 
-struct FieldScopeElement {
+fn form_field_registration(
+    field_key: SharedString,
     context: FieldContext,
+    cx: &App,
+) -> FormFieldRegistration {
+    let snapshot = form_field_snapshot(field_key.clone(), &context, cx);
+    let validate_context = context.clone();
+    let validate_key = field_key;
+
+    FormFieldRegistration::new(snapshot).validate_with(Rc::new(move |window, cx| {
+        validate_context.validate(window, cx);
+        form_field_snapshot(validate_key.clone(), &validate_context, cx)
+    }))
+}
+
+fn form_field_snapshot(
+    field_key: SharedString,
+    context: &FieldContext,
+    cx: &App,
+) -> FormFieldSnapshot {
+    context.read(cx, |runtime, props| {
+        FormFieldSnapshot::new(field_key)
+            .maybe_name(runtime.effective_name(props))
+            .value(runtime.value())
+            .disabled(runtime.disabled_for_form(props))
+            .valid(runtime.validity_data(props).state.valid)
+            .maybe_focus_handle(runtime.focus_handle())
+    })
+}
+
+struct FieldScopeElement {
+    field_key: SharedString,
+    context: FieldContext,
+    form_context: Option<crate::form::FormContext>,
     inner: AnyElement,
 }
 
@@ -199,11 +252,24 @@ impl Element for FieldScopeElement {
             self.inner.request_layout(window, cx)
         });
         self.context.finish_registration_pass(cx);
+        if let Some(form_context) = self.form_context.as_ref() {
+            let external_errors = self.context.read(cx, |runtime, props| {
+                let name = runtime.effective_name(props);
+                form_context.external_errors_for(name.as_ref(), cx)
+            });
+            self.context.set_form_external_errors(external_errors, cx);
+        }
         if self.context.take_validation_request(cx) {
             self.context.validate(window, cx);
         }
         if self.context.take_refresh_request(cx) {
             window.defer(cx, |window, _cx| window.refresh());
+        }
+        if let Some(form_context) = self.form_context.as_ref() {
+            form_context.register_field(
+                form_field_registration(self.field_key.clone(), self.context.clone(), cx),
+                cx,
+            );
         }
 
         (layout_id, ())
