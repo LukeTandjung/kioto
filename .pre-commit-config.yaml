@@ -1,0 +1,39 @@
+fail_fast: true
+
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt --check
+        entry: cargo fmt --check
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: ast-grep
+        name: ast-grep scan
+        entry: ast-grep scan --report-style short
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: cargo-check-base-gpui
+        name: cargo check -p base_gpui
+        entry: cargo check -p base_gpui
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: cargo-test-base-gpui
+        name: cargo test -p base_gpui
+        entry: cargo test -p base_gpui
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: cargo-clippy-base-gpui
+        name: cargo clippy -p base_gpui --all-targets
+        entry: cargo clippy -p base_gpui --all-targets
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
