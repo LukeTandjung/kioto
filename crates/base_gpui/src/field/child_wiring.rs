@@ -1,6 +1,9 @@
-use crate::field::{
-    FieldChild, FieldContext, FieldControl, FieldDescription, FieldError, FieldItem,
-    FieldItemChild, FieldLabel, FieldValidity,
+use crate::{
+    field::{
+        FieldChild, FieldContext, FieldControl, FieldDescription, FieldError, FieldItem,
+        FieldItemChild, FieldLabel, FieldValidity,
+    },
+    number_field::NumberFieldRoot,
 };
 
 pub trait FieldChildNode: Sized {
@@ -35,6 +38,9 @@ impl FieldChildNode for FieldChild {
             }
             Self::Error(error) => Self::Error(error.with_field_context(context)),
             Self::Validity(validity) => Self::Validity(validity.with_field_context(context)),
+            Self::NumberField(number_field) => {
+                Self::NumberField(number_field.with_field_context(context))
+            }
             Self::Any(any) => Self::Any(any),
         }
     }
@@ -50,6 +56,9 @@ impl FieldChildNode for FieldItemChild {
             }
             Self::Error(error) => Self::Error(error.with_field_context(context)),
             Self::Validity(validity) => Self::Validity(validity.with_field_context(context)),
+            Self::NumberField(number_field) => {
+                Self::NumberField(number_field.with_field_context(context))
+            }
             Self::Any(any) => Self::Any(any),
         }
     }
@@ -86,6 +95,12 @@ impl FieldChildNode for FieldError {
 }
 
 impl FieldChildNode for FieldValidity {
+    fn with_field_context(self, context: FieldContext) -> Self {
+        self.with_field_context(context)
+    }
+}
+
+impl FieldChildNode for NumberFieldRoot {
     fn with_field_context(self, context: FieldContext) -> Self {
         self.with_field_context(context)
     }

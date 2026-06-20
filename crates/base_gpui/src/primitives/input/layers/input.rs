@@ -7,7 +7,8 @@ use gpui::{
 };
 
 use crate::primitives::input::{
-    InputEnterHandler, InputRenderState, InputRuntime, InputValueChangeHandler, INPUT_KEY_CONTEXT,
+    InputBoundaryHandler, InputEnterHandler, InputRenderState, InputRuntime,
+    InputValueChangeHandler, INPUT_KEY_CONTEXT,
 };
 
 use super::InputTextElement;
@@ -29,6 +30,8 @@ pub struct Input {
     tab_index: isize,
     on_value_change: Option<InputValueChangeHandler>,
     on_enter: Option<InputEnterHandler>,
+    on_home: Option<InputBoundaryHandler>,
+    on_end: Option<InputBoundaryHandler>,
     on_render_state: Option<InputRenderStateHandler>,
     focus_handle: Option<FocusHandle>,
     style_with_state: Option<Rc<dyn Fn(InputRenderState, Div) -> Div + 'static>>,
@@ -50,6 +53,8 @@ impl Default for Input {
             tab_index: 0,
             on_value_change: None,
             on_enter: None,
+            on_home: None,
+            on_end: None,
             on_render_state: None,
             focus_handle: None,
             style_with_state: None,
@@ -91,6 +96,8 @@ impl RenderOnce for Input {
                 self.required,
                 self.on_value_change.clone(),
                 self.on_enter.clone(),
+                self.on_home.clone(),
+                self.on_end.clone(),
                 cx,
             );
         });
@@ -215,12 +222,36 @@ impl Input {
     }
 
     pub fn on_value_change(mut self, on_value_change: impl Fn(SharedString) + 'static) -> Self {
+        self.on_value_change = Some(Rc::new(move |value, _window, _cx| on_value_change(value)));
+        self
+    }
+
+    pub fn on_value_change_with_context(
+        mut self,
+        on_value_change: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) + 'static,
+    ) -> Self {
         self.on_value_change = Some(Rc::new(on_value_change));
         self
     }
 
     pub fn on_enter(mut self, on_enter: impl Fn(SharedString) + 'static) -> Self {
         self.on_enter = Some(Rc::new(on_enter));
+        self
+    }
+
+    pub fn on_home(
+        mut self,
+        on_home: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool + 'static,
+    ) -> Self {
+        self.on_home = Some(Rc::new(on_home));
+        self
+    }
+
+    pub fn on_end(
+        mut self,
+        on_end: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool + 'static,
+    ) -> Self {
+        self.on_end = Some(Rc::new(on_end));
         self
     }
 

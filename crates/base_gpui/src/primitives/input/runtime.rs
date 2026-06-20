@@ -7,9 +7,9 @@ use gpui::{
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::primitives::input::{
-    InputBackspace, InputCopy, InputCut, InputDelete, InputEnd, InputEnter, InputEnterHandler,
-    InputHome, InputLeft, InputPaste, InputRenderState, InputRight, InputSelectAll,
-    InputSelectLeft, InputSelectRight, InputValueChangeHandler,
+    InputBackspace, InputBoundaryHandler, InputCopy, InputCut, InputDelete, InputEnd, InputEnter,
+    InputEnterHandler, InputHome, InputLeft, InputPaste, InputRenderState, InputRight,
+    InputSelectAll, InputSelectLeft, InputSelectRight, InputValueChangeHandler,
 };
 
 pub struct InputRuntime {
@@ -28,6 +28,8 @@ pub struct InputRuntime {
     controlled: bool,
     on_value_change: Option<InputValueChangeHandler>,
     on_enter: Option<InputEnterHandler>,
+    on_home: Option<InputBoundaryHandler>,
+    on_end: Option<InputBoundaryHandler>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -64,6 +66,8 @@ impl InputRuntime {
             controlled: false,
             on_value_change: None,
             on_enter: None,
+            on_home: None,
+            on_end: None,
             _subscriptions: subscriptions,
         }
     }
@@ -76,6 +80,8 @@ impl InputRuntime {
         required: bool,
         on_value_change: Option<InputValueChangeHandler>,
         on_enter: Option<InputEnterHandler>,
+        on_home: Option<InputBoundaryHandler>,
+        on_end: Option<InputBoundaryHandler>,
         cx: &mut Context<Self>,
     ) {
         let mut changed = false;
@@ -96,6 +102,8 @@ impl InputRuntime {
         self.required = required;
         self.on_value_change = on_value_change;
         self.on_enter = on_enter;
+        self.on_home = on_home;
+        self.on_end = on_end;
 
         if changed {
             cx.notify();
@@ -231,11 +239,27 @@ impl InputRuntime {
         cx.notify();
     }
 
-    pub fn home(&mut self, _: &InputHome, _: &mut Window, cx: &mut Context<Self>) {
+    pub fn home(&mut self, _: &InputHome, window: &mut Window, cx: &mut Context<Self>) {
+        if self
+            .on_home
+            .as_ref()
+            .is_some_and(|on_home| on_home(self.value.clone(), window, cx))
+        {
+            return;
+        }
+
         self.move_to(0, cx);
     }
 
-    pub fn end(&mut self, _: &InputEnd, _: &mut Window, cx: &mut Context<Self>) {
+    pub fn end(&mut self, _: &InputEnd, window: &mut Window, cx: &mut Context<Self>) {
+        if self
+            .on_end
+            .as_ref()
+            .is_some_and(|on_end| on_end(self.value.clone(), window, cx))
+        {
+            return;
+        }
+
         self.move_to(self.value.len(), cx);
     }
 
@@ -443,6 +467,7 @@ impl InputRuntime {
         range: Range<usize>,
         new_text: &str,
         mark: Option<Option<Range<usize>>>,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let new_text = normalize_single_line(new_text);
@@ -454,11 +479,7 @@ impl InputRuntime {
         let next_offset = range.start + new_text.len();
 
         if let Some(on_value_change) = self.on_value_change.as_ref() {
-            on_value_change(next_value.clone());
-        }
-
-        if self.controlled {
-            return;
+            on_value_change(next_value.clone(), window, cx);
         }
 
         self.value = next_value;
@@ -533,7 +554,7 @@ impl EntityInputHandler for InputRuntime {
         &mut self,
         range_utf16: Option<Range<usize>>,
         text: &str,
-        _: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         if !self.can_edit() {
@@ -541,7 +562,7 @@ impl EntityInputHandler for InputRuntime {
         }
 
         let range = self.replacement_range(range_utf16);
-        self.replace_selected_text(range, text, None, cx);
+        self.replace_selected_text(range, text, None, window, cx);
     }
 
     fn replace_and_mark_text_in_range(
@@ -549,7 +570,7 @@ impl EntityInputHandler for InputRuntime {
         range_utf16: Option<Range<usize>>,
         new_text: &str,
         new_selected_range: Option<Range<usize>>,
-        _: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         if !self.can_edit() {
@@ -557,7 +578,7 @@ impl EntityInputHandler for InputRuntime {
         }
 
         let range = self.replacement_range(range_utf16);
-        self.replace_selected_text(range, new_text, Some(new_selected_range), cx);
+        self.replace_selected_text(range, new_text, Some(new_selected_range), window, cx);
     }
 
     fn bounds_for_range(

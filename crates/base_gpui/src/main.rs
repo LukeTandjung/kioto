@@ -1,6 +1,10 @@
 use base_gpui::{
     checkbox::{CheckboxIndicator, CheckboxRoot},
     field::{FieldControl, FieldDescription, FieldError, FieldLabel, FieldRoot},
+    number_field::{
+        NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput,
+        NumberFieldRoot,
+    },
     primitives::input::input,
     radio_group::{RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot},
     switch::{SwitchRoot, SwitchThumb},
@@ -338,6 +342,156 @@ impl Render for TabsTest {
                             ),
                     )
                     .child(
+                        div().flex().flex_col().gap_2().child("Number Field").child(
+                            NumberFieldRoot::new()
+                                .id("example-number-field")
+                                .default_value(Some(2.0))
+                                .min(0.0)
+                                .max(10.0)
+                                .step(0.5)
+                                .flex()
+                                .flex_col()
+                                .gap_2()
+                                .child(
+                                    NumberFieldGroup::new()
+                                        .flex()
+                                        .items_center()
+                                        .gap_1()
+                                        .child(
+                                            NumberFieldDecrement::new()
+                                                .size(px(28.0))
+                                                .rounded_md()
+                                                .border_1()
+                                                .border_color(rgb(0xd1d5db))
+                                                .flex()
+                                                .items_center()
+                                                .justify_center()
+                                                .style_with_state(|state, decrement| {
+                                                    if state.can_decrement {
+                                                        decrement.bg(rgb(0xffffff))
+                                                    } else {
+                                                        decrement.bg(rgb(0xf3f4f6)).opacity(0.5)
+                                                    }
+                                                })
+                                                .child("−"),
+                                        )
+                                        .child(
+                                            NumberFieldInput::new()
+                                                .w(px(120.0))
+                                                .h(px(32.0))
+                                                .rounded_md()
+                                                .border_1()
+                                                .px_2()
+                                                .style_with_state(|state, input| {
+                                                    let input = if state.root.focused {
+                                                        input.border_color(rgb(0x2563eb))
+                                                    } else {
+                                                        input.border_color(rgb(0xd1d5db))
+                                                    };
+
+                                                    if state.root.disabled || state.root.read_only {
+                                                        input.opacity(0.5)
+                                                    } else {
+                                                        input
+                                                    }
+                                                }),
+                                        )
+                                        .child(
+                                            NumberFieldIncrement::new()
+                                                .size(px(28.0))
+                                                .rounded_md()
+                                                .border_1()
+                                                .border_color(rgb(0xd1d5db))
+                                                .flex()
+                                                .items_center()
+                                                .justify_center()
+                                                .style_with_state(|state, increment| {
+                                                    if state.can_increment {
+                                                        increment.bg(rgb(0xffffff))
+                                                    } else {
+                                                        increment.bg(rgb(0xf3f4f6)).opacity(0.5)
+                                                    }
+                                                })
+                                                .child("+"),
+                                        ),
+                                ),
+                        ),
+                    )
+                    .child(
+                        FieldRoot::new()
+                            .id("example-number-field-field")
+                            .validation_mode(base_gpui::field::FieldValidationMode::OnBlur)
+                            .flex()
+                            .flex_col()
+                            .gap_2()
+                            .child(
+                                FieldLabel::new()
+                                    .text_size(px(13.0))
+                                    .text_color(rgb(0x374151))
+                                    .child("Quantity"),
+                            )
+                            .child(
+                                NumberFieldRoot::new()
+                                    .id("example-field-number-field")
+                                    .name("quantity")
+                                    .required(true)
+                                    .min(0.0)
+                                    .max(99.0)
+                                    .default_value(None)
+                                    .child(
+                                        NumberFieldGroup::new()
+                                            .flex()
+                                            .items_center()
+                                            .gap_1()
+                                            .child(
+                                                NumberFieldDecrement::new()
+                                                    .size(px(28.0))
+                                                    .rounded_md()
+                                                    .border_1()
+                                                    .border_color(rgb(0xd1d5db))
+                                                    .flex()
+                                                    .items_center()
+                                                    .justify_center()
+                                                    .child("−"),
+                                            )
+                                            .child(
+                                                NumberFieldInput::new()
+                                                    .w(px(120.0))
+                                                    .h(px(32.0))
+                                                    .rounded_md()
+                                                    .border_1()
+                                                    .px_2()
+                                                    .style_with_state(|state, input| {
+                                                        if state.root.invalid {
+                                                            input.border_color(rgb(0xdc2626))
+                                                        } else if state.root.focused {
+                                                            input.border_color(rgb(0x2563eb))
+                                                        } else {
+                                                            input.border_color(rgb(0xd1d5db))
+                                                        }
+                                                    }),
+                                            )
+                                            .child(
+                                                NumberFieldIncrement::new()
+                                                    .size(px(28.0))
+                                                    .rounded_md()
+                                                    .border_1()
+                                                    .border_color(rgb(0xd1d5db))
+                                                    .flex()
+                                                    .items_center()
+                                                    .justify_center()
+                                                    .child("+"),
+                                            ),
+                                    ),
+                            )
+                            .child(
+                                FieldError::new()
+                                    .text_color(rgb(0xdc2626))
+                                    .text_size(px(12.0))
+                                    .child("Quantity is required."),
+                            ),
+                    )
+                    .child(
                         div()
                             .flex()
                             .flex_col()
@@ -501,7 +655,7 @@ fn main() {
     application().run(|cx: &mut App| {
         base_gpui::init(cx);
 
-        let bounds = Bounds::centered(None, size(px(500.0), px(620.0)), cx);
+        let bounds = Bounds::centered(None, size(px(500.0), px(820.0)), cx);
 
         cx.open_window(
             WindowOptions {

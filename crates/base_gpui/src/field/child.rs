@@ -1,7 +1,8 @@
 use gpui::{AnyElement, IntoElement};
 
-use crate::field::{
-    FieldControl, FieldDescription, FieldError, FieldItem, FieldLabel, FieldValidity,
+use crate::{
+    field::{FieldControl, FieldDescription, FieldError, FieldItem, FieldLabel, FieldValidity},
+    number_field::NumberFieldRoot,
 };
 
 pub enum FieldChild {
@@ -11,6 +12,7 @@ pub enum FieldChild {
     Description(FieldDescription),
     Error(FieldError),
     Validity(FieldValidity),
+    NumberField(NumberFieldRoot),
     Any(AnyElement),
 }
 
@@ -25,6 +27,7 @@ impl IntoElement for FieldChild {
             Self::Description(description) => description.into_any_element(),
             Self::Error(error) => error.into_any_element(),
             Self::Validity(validity) => validity.into_any_element(),
+            Self::NumberField(number_field) => number_field.into_any_element(),
             Self::Any(any) => any,
         }
     }
@@ -66,12 +69,19 @@ impl From<FieldValidity> for FieldChild {
     }
 }
 
+impl From<NumberFieldRoot> for FieldChild {
+    fn from(value: NumberFieldRoot) -> Self {
+        Self::NumberField(value)
+    }
+}
+
 pub enum FieldItemChild {
     Label(FieldLabel),
     Control(FieldControl),
     Description(FieldDescription),
     Error(FieldError),
     Validity(FieldValidity),
+    NumberField(NumberFieldRoot),
     Any(AnyElement),
 }
 
@@ -85,6 +95,7 @@ impl IntoElement for FieldItemChild {
             Self::Description(description) => description.into_any_element(),
             Self::Error(error) => error.into_any_element(),
             Self::Validity(validity) => validity.into_any_element(),
+            Self::NumberField(number_field) => number_field.into_any_element(),
             Self::Any(any) => any,
         }
     }
@@ -117,5 +128,11 @@ impl From<FieldError> for FieldItemChild {
 impl From<FieldValidity> for FieldItemChild {
     fn from(value: FieldValidity) -> Self {
         Self::Validity(value)
+    }
+}
+
+impl From<NumberFieldRoot> for FieldItemChild {
+    fn from(value: NumberFieldRoot) -> Self {
+        Self::NumberField(value)
     }
 }
