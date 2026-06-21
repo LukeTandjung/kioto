@@ -12,6 +12,7 @@ pub mod select;
 pub mod separator;
 pub mod switch;
 pub mod tabs;
+pub mod tooltip;
 pub mod utils;
 
 pub fn init(cx: &mut gpui::App) {
@@ -26,4 +27,5 @@ pub fn init(cx: &mut gpui::App) {
     select::init(cx);
     switch::init(cx);
     tabs::init(cx);
+    tooltip::init(cx);
 }

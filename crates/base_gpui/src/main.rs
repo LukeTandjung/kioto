@@ -23,6 +23,10 @@ use base_gpui::{
     separator::{Separator, SeparatorOrientation},
     switch::{SwitchRoot, SwitchThumb},
     tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab},
+    tooltip::{
+        TooltipPopup, TooltipPortal, TooltipPositioner, TooltipProvider, TooltipRoot,
+        TooltipTrigger, TooltipViewport,
+    },
     utils::direction::{DirectionProvider, TextDirection},
 };
 use gpui::{
@@ -119,6 +123,11 @@ impl Render for ComponentGallery {
                                 "Popover",
                                 "Anchored popup with trigger, title, description, arrow, and close.",
                                 popover_demo(),
+                            ))
+                            .child(component_card(
+                                "Tooltip",
+                                "Hover/focus visual hint with provider delay and trigger-bounds positioning.",
+                                tooltip_demo(),
                             ))
                             .child(component_card(
                                 "Field + Select",
@@ -323,6 +332,58 @@ fn popover_demo() -> impl IntoElement {
                 ),
             ),
         )
+}
+
+fn tooltip_demo() -> impl IntoElement {
+    TooltipProvider::<()>::new().child(basic_tooltip_root(
+        "gallery-tooltip-basic",
+        "Hover/focus",
+        "Basic hover or focus tooltip.",
+    ))
+}
+
+fn basic_tooltip_root(
+    id: &'static str,
+    trigger_label: &'static str,
+    content: &'static str,
+) -> TooltipRoot<()> {
+    TooltipRoot::<()>::new()
+        .id(id)
+        .flex()
+        .items_center()
+        .gap_2()
+        .child(gallery_trigger::<()>(id, trigger_label))
+        .child(gallery_popup::<()>(content))
+}
+
+fn gallery_trigger<P: Clone + 'static>(id: &'static str, label: &'static str) -> TooltipTrigger<P> {
+    TooltipTrigger::<P>::new()
+        .id(id)
+        .px_3()
+        .py_2()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0x9ca3af))
+        .bg(rgb(0xffffff))
+        .text_size(px(13.0))
+        .text_color(rgb(0x111827))
+        .child(label)
+}
+
+fn gallery_popup<P: Clone + 'static>(content: &'static str) -> TooltipPortal<P> {
+    TooltipPortal::<P>::new().child(
+        TooltipPositioner::<P>::new().child(
+            TooltipPopup::<P>::new()
+                .rounded_md()
+                .bg(rgb(0x111827))
+                .text_color(rgb(0xffffff))
+                .text_size(px(12.0))
+                .py_2()
+                .px_3()
+                .shadow_lg()
+                .child(TooltipViewport::<P>::new().child(content)),
+        ),
+    )
 }
 
 fn select_demo() -> impl IntoElement {
