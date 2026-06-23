@@ -1,8 +1,10 @@
 use std::time::Duration;
 
 use base_gpui::{
+    accordion::{AccordionHeader, AccordionItem, AccordionPanel, AccordionRoot, AccordionTrigger},
     checkbox::{CheckboxIndicator, CheckboxRoot},
     checkbox_group::CheckboxGroup,
+    collapsible::{CollapsiblePanel, CollapsibleRoot, CollapsibleTrigger},
     field::{FieldDescription, FieldError, FieldLabel, FieldRoot},
     fieldset::{FieldsetLegend, FieldsetRoot},
     form::Form,
@@ -83,6 +85,16 @@ impl Render for ComponentGallery {
                                 "Switch",
                                 "Toggle state, focus styling, thumb state, and callbacks.",
                                 switch_demo(),
+                            ))
+                            .child(component_card(
+                                "Collapsible",
+                                "Disclosure trigger with controlled panel presence.",
+                                collapsible_demo(),
+                            ))
+                            .child(component_card(
+                                "Accordion",
+                                "Single-open FAQ sections with headings, triggers, and panels.",
+                                accordion_demo(),
                             ))
                             .child(component_card(
                                 "Field + Switch",
@@ -662,6 +674,161 @@ fn switch_demo() -> impl IntoElement {
         .gap_2()
         .child(gallery_switch("example-switch", true))
         .child("Notifications")
+}
+
+fn collapsible_demo() -> impl IntoElement {
+    CollapsibleRoot::new()
+        .id("example-collapsible")
+        .default_open(true)
+        .flex()
+        .flex_col()
+        .gap_2()
+        .style_with_state(|state, root| {
+            if state.disabled {
+                root.opacity(0.5)
+            } else {
+                root
+            }
+        })
+        .child(
+            CollapsibleTrigger::new()
+                .id("example-collapsible-trigger")
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .bg(rgb(0xffffff))
+                .px_3()
+                .py_2()
+                .text_size(px(13.0))
+                .style_with_state(|state, trigger| {
+                    let trigger = if state.open {
+                        trigger.border_color(rgb(0x111827))
+                    } else {
+                        trigger
+                    };
+
+                    if state.focused {
+                        trigger.shadow_lg()
+                    } else {
+                        trigger
+                    }
+                })
+                .child("Toggle details"),
+        )
+        .child(
+            CollapsiblePanel::new()
+                .keep_mounted(true)
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xe5e7eb))
+                .bg(rgb(0xf9fafb))
+                .p_3()
+                .text_size(px(12.0))
+                .text_color(rgb(0x374151))
+                .style_with_state(|state, panel| {
+                    if state.closed {
+                        panel.opacity(0.0)
+                    } else {
+                        panel.opacity(1.0)
+                    }
+                })
+                .child("Panel content stays mounted and is hidden while closed."),
+        )
+}
+
+fn accordion_demo() -> impl IntoElement {
+    div()
+        .flex()
+        .flex_col()
+        .gap_3()
+        .child(
+            AccordionRoot::new()
+                .id("example-accordion")
+                .default_value(Vec::from(["what"]))
+                .flex()
+                .flex_col()
+                .gap_2()
+                .style_with_state(|state, root| {
+                    if state.disabled {
+                        root.opacity(0.5)
+                    } else {
+                        root
+                    }
+                })
+                .child(gallery_accordion_item(
+                    "what",
+                    "What is base_gpui?",
+                    "A GPUI-native port of Base UI component behavior.",
+                ))
+                .child(gallery_accordion_item(
+                    "why",
+                    "Why Accordion next?",
+                    "It builds on Collapsible while adding shared item state.",
+                )),
+        )
+        .child(
+            AccordionRoot::new()
+                .id("example-accordion-multiple")
+                .multiple(true)
+                .flex()
+                .flex_col()
+                .gap_2()
+                .child(gallery_accordion_item(
+                    "multi-one",
+                    "Multiple mode item one",
+                    "This item can stay open with its sibling.",
+                ))
+                .child(gallery_accordion_item(
+                    "multi-two",
+                    "Multiple mode item two",
+                    "Opening this item does not close the first.",
+                )),
+        )
+}
+
+fn gallery_accordion_item(
+    value: &'static str,
+    trigger_text: &'static str,
+    panel_text: &'static str,
+) -> AccordionItem<&'static str> {
+    AccordionItem::new(value)
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xe5e7eb))
+        .bg(rgb(0xffffff))
+        .style_with_state(|state, item| {
+            if state.open {
+                item.border_color(rgb(0x111827))
+            } else {
+                item
+            }
+        })
+        .child(
+            AccordionHeader::new().child(
+                AccordionTrigger::new()
+                    .id(format!("example-accordion-trigger-{value}"))
+                    .w_full()
+                    .px_3()
+                    .py_2()
+                    .text_size(px(13.0))
+                    .style_with_state(|state, trigger| {
+                        if state.focused {
+                            trigger.shadow_lg()
+                        } else {
+                            trigger
+                        }
+                    })
+                    .child(trigger_text),
+            ),
+        )
+        .child(
+            AccordionPanel::new()
+                .px_3()
+                .pb_3()
+                .text_size(px(12.0))
+                .text_color(rgb(0x6b7280))
+                .child(panel_text),
+        )
 }
 
 fn gallery_switch(id: &'static str, default_checked: bool) -> SwitchRoot {

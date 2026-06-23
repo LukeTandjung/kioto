@@ -1,13 +1,11 @@
 [package]
-name = "kioto"
+name = "editor"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-editor = { path = "../editor" }
 gpui.workspace = true
-gpui_platform.workspace = true
-gpui-component.workspace = true
+unicode-segmentation = "1.12"
 
 [lints]
 workspace = true

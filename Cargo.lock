@@ -1438,6 +1438,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
+name = "editor"
+version = "0.1.0"
+dependencies = [
+ "gpui",
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3122,6 +3130,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 name = "kioto"
 version = "0.1.0"
 dependencies = [
+ "editor",
  "gpui",
  "gpui-component",
  "gpui_platform",
