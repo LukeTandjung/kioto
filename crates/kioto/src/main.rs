@@ -1,30 +1,45 @@
-use editor::Editor;
+use editor::{EditorConfig, create_editor};
 use gpui::*;
 use gpui_component::*;
 use gpui_platform::application;
 
-const SAMPLE: &str = r#"fn main() {
-    println!("Hello from Kioto's editor spike");
-}
+const SAMPLE: &str = r#"= Metric Spaces
 
-// Tiny Helix-ish controls:
-//   Esc        normal mode
-//   i / a      insert / append
-//   h j k l    move
-//   v          select mode
-//   x          select line
-//   y / d / p  copy / delete / paste
+A *metric space* is a set $M$ together with a _distance_
+function $d: M times M -> RR$ satisfying, for all $x, y, z in M$:
+
++ $d(x, y) >= 0$ — non-negativity
++ $d(x, y) = 0 <=> x = y$ — identity of indiscernibles
++ $d(x, y) = d(y, x)$ — symmetry
++ $d(x, z) <= d(x, y) + d(y, z)$ — triangle inequality
+
+== Convergence
+
+A sequence $(x_n)$ *converges* to $x$ if for every $epsilon > 0$
+there exists $N$ such that $d(x_n, x) < epsilon$ whenever $n >= N$.
+
+== Completeness
+
+A metric space is _complete_ when every Cauchy sequence
+converges to a point within the space. $RR$ is complete; $QQ$ is not.
 "#;
 
 fn main() {
     application().run(move |cx: &mut App| {
         // This must be called before using any GPUI Component features.
         gpui_component::init(cx);
-        editor::init(cx);
 
         cx.spawn(async move |cx| {
             cx.open_window(WindowOptions::default(), |window, cx| {
-                let view = cx.new(|cx| Editor::new(window, cx).with_text(SAMPLE));
+                let view = create_editor(
+                    EditorConfig {
+                        text: SAMPLE.into(),
+                        title: "metric-spaces.typ".into(),
+                        ..Default::default()
+                    },
+                    window,
+                    cx,
+                );
 
                 // This first level on the window, should be a Root.
                 cx.new(|cx| Root::new(view, window, cx))
