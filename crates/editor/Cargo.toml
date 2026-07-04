@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 gpui.workspace = true
+typst-syntax = "0.15.0"
 unicode-segmentation = "1.12"
 
 [lints]
