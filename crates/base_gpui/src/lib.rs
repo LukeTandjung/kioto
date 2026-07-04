@@ -2,6 +2,7 @@ pub mod accordion;
 pub mod checkbox;
 pub mod checkbox_group;
 pub mod collapsible;
+pub mod dialog;
 pub mod field;
 pub mod fieldset;
 pub mod form;
@@ -22,6 +23,7 @@ pub fn init(cx: &mut gpui::App) {
     checkbox::init(cx);
     checkbox_group::init(cx);
     collapsible::init(cx);
+    dialog::init(cx);
     fieldset::init(cx);
     form::init(cx);
     number_field::init(cx);

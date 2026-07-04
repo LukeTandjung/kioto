@@ -5,6 +5,10 @@ use base_gpui::{
     checkbox::{CheckboxIndicator, CheckboxRoot},
     checkbox_group::CheckboxGroup,
     collapsible::{CollapsiblePanel, CollapsibleRoot, CollapsibleTrigger},
+    dialog::{
+        DialogBackdrop, DialogClose, DialogDescription, DialogPopup, DialogPortal, DialogRoot,
+        DialogTitle, DialogTrigger, DialogViewport,
+    },
     field::{FieldDescription, FieldError, FieldLabel, FieldRoot},
     fieldset::{FieldsetLegend, FieldsetRoot},
     form::Form,
@@ -135,6 +139,11 @@ impl Render for ComponentGallery {
                                 "Popover",
                                 "Anchored popup with trigger, title, description, arrow, and close.",
                                 popover_demo(),
+                            ))
+                            .child(component_card(
+                                "Dialog",
+                                "Modal overlay with trigger, backdrop, popup, title, description, and close.",
+                                dialog_demo(),
                             ))
                             .child(component_card(
                                 "Tooltip",
@@ -343,6 +352,85 @@ fn popover_demo() -> impl IntoElement {
                         ),
                 ),
             ),
+        )
+}
+
+fn dialog_demo() -> impl IntoElement {
+    DialogRoot::<()>::new()
+        .id("gallery-dialog")
+        .flex()
+        .items_center()
+        .gap_2()
+        .child(
+            DialogTrigger::<()>::new()
+                .id("open")
+                .px_3()
+                .py_2()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0x9ca3af))
+                .bg(rgb(0xffffff))
+                .text_size(px(13.0))
+                .text_color(rgb(0x111827))
+                .child("Open dialog"),
+        )
+        .child(
+            DialogPortal::<()>::new()
+                .child(
+                    DialogBackdrop::<()>::new().style_with_state(|_, backdrop| {
+                        backdrop
+                            .absolute()
+                            .top_0()
+                            .left_0()
+                            .w_full()
+                            .h_full()
+                            .bg(rgb(0x111827))
+                            .opacity(0.35)
+                    }),
+                )
+                .child(
+                    DialogViewport::<()>::new()
+                        .absolute()
+                        .top(px(96.0))
+                        .left(px(96.0))
+                        .child(
+                            DialogPopup::<()>::new()
+                                .w(px(260.0))
+                                .rounded_lg()
+                                .border_1()
+                                .border_color(rgb(0xd1d5db))
+                                .bg(rgb(0xffffff))
+                                .shadow_lg()
+                                .p_4()
+                                .flex()
+                                .flex_col()
+                                .gap_2()
+                                .child(
+                                    DialogTitle::<()>::new()
+                                        .text_size(px(15.0))
+                                        .text_color(rgb(0x111827))
+                                        .child("Dialog title"),
+                                )
+                                .child(
+                                    DialogDescription::<()>::new()
+                                        .text_size(px(12.0))
+                                        .text_color(rgb(0x6b7280))
+                                        .child("This modal is drawn through GPUI deferred overlay rendering."),
+                                )
+                                .child(
+                                    DialogClose::<()>::new()
+                                        .self_start()
+                                        .mt_2()
+                                        .px_2()
+                                        .py_1()
+                                        .rounded_sm()
+                                        .bg(rgb(0xe5e7eb))
+                                        .text_size(px(12.0))
+                                        .text_color(rgb(0x111827))
+                                        .child("Close"),
+                                ),
+                        ),
+                ),
         )
 }
 

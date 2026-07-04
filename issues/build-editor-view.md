@@ -793,30 +793,30 @@ Buffer -> DisplayMap/DisplaySnapshot -> EditorSnapshot -> EditorElement layout/p
 
 ### Phase 1: Minimal editable multiline view
 
-- [ ] Add GPUI dependencies to `crates/editor` only when the first view is implemented.
-- [ ] Create an `Editor` entity with focus handle, buffer handle, selection state, display map, and last position map.
-- [ ] Create an `EditorElement` custom element with `request_layout`, `prepaint`, and `paint`.
-- [ ] Render visible plain-text lines with a cursor and selection highlight.
-- [ ] Install `ElementInputHandler` during paint.
-- [ ] Support text insertion, backspace/delete, arrow movement, click-to-focus, click-to-place-cursor, and select-all.
-- [ ] Keep all text insertion IME-compatible through `EntityInputHandler`.
+- [x] Add GPUI dependencies to `crates/editor` only when the first view is implemented.
+- [x] Create an `Editor` entity with focus handle, buffer handle, selection state, display map, and last position map. (No display map yet — direct line mapping until phase 3.)
+- [x] Create an `EditorElement` custom element with `request_layout`, `prepaint`, and `paint`.
+- [x] Render visible plain-text lines with a cursor and selection highlight.
+- [x] Install `ElementInputHandler` during paint.
+- [x] Support text insertion, backspace/delete, arrow movement, click-to-focus, click-to-place-cursor, and select-all.
+- [x] Keep all text insertion IME-compatible through `EntityInputHandler`.
 
 ### Phase 2: Editing correctness
 
-- [ ] Add grapheme-aware cursor movement and deletion.
-- [ ] Add UTF-16 ↔ internal offset conversion tests.
-- [ ] Add undo/redo transaction grouping.
-- [ ] Add clipboard copy/cut/paste.
-- [ ] Add mouse drag selection.
-- [ ] Add scroll support and visible-row virtualization.
+- [x] Add grapheme-aware cursor movement and deletion. (Rope-backed `TextBuffer` per the buffer-representation decision: `ropey`.)
+- [x] Add UTF-16 ↔ internal offset conversion tests.
+- [x] Add undo/redo transaction grouping. (`history.rs`: contiguous typing/backspacing and IME re-replacement group within 500ms; groups break on newline, motion, mode change, and mouse click.)
+- [x] Add clipboard copy/cut/paste.
+- [x] Add mouse drag selection.
+- [x] Add scroll support and visible-row virtualization. (Includes cursor-follow autoscroll on motions and edits.)
 
 ### Phase 3: Editor-quality display model
 
-- [ ] Replace direct line mapping with a more explicit display-map pipeline.
-- [ ] Add soft wrapping.
-- [ ] Add line numbers/gutter as optional paint layers.
-- [ ] Add current-line highlighting.
-- [ ] Add syntax-highlight-ready text runs without committing to a language system yet.
+- [x] Replace direct line mapping with a more explicit display-map pipeline. (`display_map.rs`: identity `DisplaySnapshot`/`DisplayPoint` projection consumed by `EditorElement`; wrap/fold compose inside it later.)
+- [x] Add soft wrapping. (`WrapMap` built from gpui's `LineWrapper`, cached against buffer version + wrap width; vertical motion, autoscroll, and scroll clamping work in display rows; gutter numbers only on each line's first display row.)
+- [x] Add line numbers/gutter as optional paint layers. (Line numbers with current-line emphasis; fold markers wait for the fold map.)
+- [x] Add current-line highlighting.
+- [x] Add syntax-highlight-ready text runs without committing to a language system yet. (`highlights.rs`: independent highlight sources — currently IME underline and block-cursor inversion — merge into `TextRun`s per display row at layout time; syntax/diagnostics/search join the same list later.)
 
 ### Phase 4: Extension points
 
@@ -833,6 +833,58 @@ Buffer -> DisplayMap/DisplaySnapshot -> EditorSnapshot -> EditorElement layout/p
 - [ ] Implement Helix motions as selection-producing commands, not caret-only movement.
 - [ ] Add modal setting sync for input enabled, cursor shape, line mode, and selection rendering.
 - [ ] Keep modal state outside `EditorElement` and preferably outside core buffer/display-map logic.
+
+## Visual design requirements (Claude Design: "Helix Editor")
+
+Source of truth: the Claude Design project [`Helix Editor`](https://claude.ai/design/p/0331e232-c5ec-47e9-8b81-b079da7b9e12?file=Helix+Editor.dc.html), files `Helix Editor.dc.html` (frames 1a/2a) and `HelixBuffer.dc.html` (buffer component). The HTML/React mockups there are reference only — **the editor must be implemented in gpui**, not as HTML or React. Map the design tokens below into gpui style/config structs (`style.rs`), not into hardcoded paint code.
+
+### Contexts
+
+The same editor view must render in two host contexts without changing its internals:
+
+1. **Standalone (frame 1a)** — full-bleed editor filling the window, with a full-width Helix-style status line at the bottom.
+2. **Integrated (frame 2a)** — the editor embedded as the active tile in a niri-style scrolling workspace (dimmed neighbor tiles, workspace tabs, tile dots). The tile gets a compact header (`file icon · filename · language badge`) and a condensed status line. Tile chrome is the workspace layer's job; the editor crate only needs to render correctly at arbitrary sizes and expose status-line data.
+
+This reinforces the existing decision: the editor crate owns buffer/selection/rendering; workspace/pane layout, tabs, sidebars, and tile framing live outside it.
+
+### Design tokens
+
+- Background: `#0E0E0E`; panel/status-line background: `#1A1A1A`.
+- Buffer font: JetBrains Mono, 14px, line height 25px, tabular numerics in gutter and status line.
+- Foreground scale (white at alphas): body text `0.82`, bold/emphasis `1.0`, secondary `0.60`, muted `0.50`, syntax punctuation/markers `0.30`, gutter line numbers `0.24`.
+- Single warm accent: `#E8B84A` (configurable; design exposes `accent` as a prop with `#E8B84A` and `#FFFFFF` options). Used for the primary cursor, list/ordered-list markers, and the sidebar focus ring — nowhere else.
+- Inline code: `#E9C46A` text on `rgba(255,255,255,0.096)` chip, 3px radius, 3px horizontal padding.
+- Diagnostics error red: `#F87171`.
+
+### Buffer rendering requirements
+
+- Gutter: right-aligned line numbers, fixed ~3.4em column, `rgba(255,255,255,0.24)`, non-selectable; current line's number renders at full white. Diagnostic lines show a red `●` marker in the gutter.
+- Current line: full-width background highlight `rgba(255,255,255,0.038)`.
+- Markdown is rendered with in-place styling (markers stay visible but dimmed to alpha `0.30`): headings bold white with dimmed `#`/`##` prefixes, `**bold**` bold with dimmed asterisks, `*italic*` italic at alpha `0.85`, blockquotes with a 2px `rgba(255,255,255,0.15)` left border and dimmed text, task lists with dimmed `[ ]`/`[x]` (checked items struck through at alpha `0.40`), links with dimmed brackets/parens. This is a phase-3+ highlight source, not phase 1.
+- Selections are monochrome white overlays: primary selection `rgba(255,255,255,0.18)` (Select mode: `0.26`), secondary selections `0.12` (Select mode: `0.20`), 2px radius. Selections hide in Insert mode. Multiple selections ("3 sels") are first-class in the design.
+- Cursors: in Normal/Select mode a block cursor 0.6em × 1.15em; in Insert mode a 2px bar. Primary cursor uses the accent color; secondary cursors use `rgba(255,255,255,0.80)`.
+- Diagnostics: red wavy underline under the offending range, red gutter dot, and an inline end-of-line message in italic `rgba(248,113,113,0.80)` (e.g. `file 'rudin.pdf' not found in workspace`). Diagnostics rendering must be toggleable (`show-diagnostics` prop in the design).
+
+### Mode indicator and status line requirements
+
+Modes: `Normal`, `Insert`, `Select` — matching the planned Helix modal layer.
+
+- Mode segment (leftmost status-line segment, uppercase, bold, wide letter-spacing):
+  - `NORMAL` — white text on `rgba(255,255,255,0.08)`.
+  - `INSERT` — inverts: `#0E0E0E` text on solid `#FFFFFF` (the "live typing" signal).
+  - `SELECT` — white text on `rgba(255,255,255,0.22)`.
+  - No semantic hues; the mode language is monochrome.
+- Standalone status line (27px, `#1A1A1A`, 1px top border `rgba(255,255,255,0.05)`): mode segment · filename · modified marker `[+]` in `#F59E0B` · diagnostic counts (red/muted dots) · right-aligned group: selection count (`3 sels`), `Ln 3, Col 14`, language name, encoding (`UTF-8`), line endings (`LF`), scroll percentage.
+- Integrated status line (26px): mode segment (smaller, 9px) · right-aligned diagnostics, selection count, and `Ln, Col` only.
+- Status-line data (mode, path, dirty flag, diagnostic counts, selection count, cursor position, language, encoding, EOL, scroll %) should be exposed by the editor as queryable state so hosts can compose their own status line.
+
+### Mapping to implementation phases
+
+- Phase 1: dark theme tokens, gutter line numbers, block/bar cursor, monochrome selection overlays.
+- Phase 2: multiple-selection rendering and selection counts.
+- Phase 3: current-line highlight, markdown in-place styling as a highlight source, status-line state surface.
+- Phase 4: diagnostics layer (underline + gutter dot + inline message).
+- Phase 5: mode segment behavior tied to the modal layer; Insert-mode cursor/selection changes.
 
 ## Out of scope for the first editor view
 

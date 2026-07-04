@@ -25,6 +25,8 @@ actions!(
         AppendMode,
         SelectMode,
         SelectLine,
+        Undo,
+        Redo,
     ]
 );
 
@@ -56,6 +58,14 @@ pub fn init(cx: &mut App) {
         KeyBinding::new("cmd-v", Paste, Some(EDITOR_INSERT_CONTEXT)),
         #[cfg(not(target_os = "macos"))]
         KeyBinding::new("ctrl-v", Paste, Some(EDITOR_INSERT_CONTEXT)),
+        #[cfg(target_os = "macos")]
+        KeyBinding::new("cmd-z", Undo, Some(EDITOR_INSERT_CONTEXT)),
+        #[cfg(not(target_os = "macos"))]
+        KeyBinding::new("ctrl-z", Undo, Some(EDITOR_INSERT_CONTEXT)),
+        #[cfg(target_os = "macos")]
+        KeyBinding::new("cmd-shift-z", Redo, Some(EDITOR_INSERT_CONTEXT)),
+        #[cfg(not(target_os = "macos"))]
+        KeyBinding::new("ctrl-shift-z", Redo, Some(EDITOR_INSERT_CONTEXT)),
         KeyBinding::new("i", InsertMode, Some(EDITOR_NORMAL_CONTEXT)),
         KeyBinding::new("a", AppendMode, Some(EDITOR_NORMAL_CONTEXT)),
         KeyBinding::new("v", SelectMode, Some(EDITOR_NORMAL_CONTEXT)),
@@ -63,6 +73,8 @@ pub fn init(cx: &mut App) {
         KeyBinding::new("y", Copy, Some(EDITOR_NORMAL_CONTEXT)),
         KeyBinding::new("d", Cut, Some(EDITOR_NORMAL_CONTEXT)),
         KeyBinding::new("p", Paste, Some(EDITOR_NORMAL_CONTEXT)),
+        KeyBinding::new("u", Undo, Some(EDITOR_NORMAL_CONTEXT)),
+        KeyBinding::new("shift-u", Redo, Some(EDITOR_NORMAL_CONTEXT)),
         KeyBinding::new("h", MoveLeft, Some(EDITOR_NORMAL_CONTEXT)),
         KeyBinding::new("j", MoveDown, Some(EDITOR_NORMAL_CONTEXT)),
         KeyBinding::new("k", MoveUp, Some(EDITOR_NORMAL_CONTEXT)),

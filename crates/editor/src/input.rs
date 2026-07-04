@@ -105,6 +105,6 @@ impl EntityInputHandler for Editor {
         _cx: &mut Context<Self>,
     ) -> Option<usize> {
         let offset = self.last_position_map.as_ref()?.offset_for_point(point)?;
-        Some(self.buffer.offset_to_utf16(offset))
+        Some(self.buffer.range_to_utf16(&(offset..offset)).start)
     }
 }

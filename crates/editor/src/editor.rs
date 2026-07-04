@@ -1,19 +1,22 @@
 use gpui::{
-    App, ClipboardItem, Context, FocusHandle, Focusable, InteractiveElement as _, IntoElement,
-    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ParentElement as _, Render,
-    ScrollHandle, ScrollWheelEvent, Styled as _, Window, div, px, rgb,
+    App, ClipboardItem, Context, FocusHandle, Focusable, FontWeight, InteractiveElement as _,
+    IntoElement, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ParentElement as _,
+    Render, ScrollHandle, ScrollWheelEvent, Styled as _, Window, div, px,
 };
 
 use crate::{
     actions::{
         AppendMode, Backspace, Copy, Cut, Delete, EDITOR_INSERT_CONTEXT, EDITOR_NORMAL_CONTEXT,
         EDITOR_SELECT_CONTEXT, Enter, InsertMode, MoveDown, MoveLeft, MoveLineEnd, MoveLineStart,
-        MoveRight, MoveUp, NormalMode, Paste, SelectAll, SelectLine, SelectMode,
+        MoveRight, MoveUp, NormalMode, Paste, Redo, SelectAll, SelectLine, SelectMode, Undo,
     },
     buffer::TextBuffer,
+    display_map::{DisplayPoint, DisplaySnapshot, WrapMap},
     element::EditorElement,
+    history::{Edit, History},
     position_map::PositionMap,
     selection::Selection,
+    style::EditorStyle,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -50,32 +53,52 @@ pub struct Editor {
     pub last_position_map: Option<PositionMap>,
     pub scroll_handle: ScrollHandle,
     pub is_selecting: bool,
+    pub style: EditorStyle,
+    pub title: String,
+    pub wrap_map: WrapMap,
+    history: History,
 }
 
 impl Editor {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle().tab_stop(true);
         focus_handle.focus(window, cx);
+        let buffer = TextBuffer::default();
         Self {
             focus_handle,
-            buffer: TextBuffer::default(),
+            wrap_map: WrapMap::unwrapped(&buffer),
+            buffer,
             selection: Selection::caret(0),
             mode: EditorMode::Insert,
             marked_range: None,
             last_position_map: None,
             scroll_handle: ScrollHandle::new(),
             is_selecting: false,
+            style: EditorStyle::default(),
+            title: "scratch".into(),
+            history: History::default(),
         }
     }
 
-    pub fn with_text(mut self, text: impl Into<String>) -> Self {
+    pub fn with_text(mut self, text: impl AsRef<str>) -> Self {
         self.buffer = TextBuffer::new(text);
+        self.wrap_map = WrapMap::unwrapped(&self.buffer);
         self.selection.set_caret(0);
         self
     }
 
-    pub fn text(&self) -> &str {
-        self.buffer.as_str()
+    pub fn with_style(mut self, style: EditorStyle) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn with_title(mut self, title: impl Into<String>) -> Self {
+        self.title = title.into();
+        self
+    }
+
+    pub fn text(&self) -> String {
+        self.buffer.text()
     }
 
     pub fn mode(&self) -> EditorMode {
@@ -115,11 +138,21 @@ impl Editor {
         new_text: &str,
         cx: &mut Context<Self>,
     ) {
+        let selection_before = self.selection.clone();
+        let old_text = self.buffer.slice(range.clone()).into_owned();
         let start = range.start;
-        self.buffer.replace(range, new_text);
+        self.buffer.replace(range.clone(), new_text);
         let cursor = start + new_text.len();
         self.selection.set_caret(cursor.min(self.buffer.len()));
         self.marked_range = None;
+        self.history.record(Edit {
+            range,
+            old_text,
+            new_text: new_text.to_string(),
+            selection_before,
+            selection_after: self.selection.clone(),
+        });
+        self.autoscroll_to_cursor();
         cx.notify();
     }
 
@@ -134,8 +167,10 @@ impl Editor {
         selected_range: Option<std::ops::Range<usize>>,
         cx: &mut Context<Self>,
     ) {
+        let selection_before = self.selection.clone();
+        let old_text = self.buffer.slice(range.clone()).into_owned();
         let start = range.start;
-        self.buffer.replace(range, new_text);
+        self.buffer.replace(range.clone(), new_text);
         if new_text.is_empty() {
             self.marked_range = None;
             self.selection.set_caret(start);
@@ -147,6 +182,49 @@ impl Editor {
                 .unwrap_or_else(|| marked.end..marked.end);
             self.selection.set_range(selection);
         }
+        self.history.record(Edit {
+            range,
+            old_text,
+            new_text: new_text.to_string(),
+            selection_before,
+            selection_after: self.selection.clone(),
+        });
+        cx.notify();
+    }
+
+    pub fn undo(&mut self, _: &Undo, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(transaction) = self.history.undo() else {
+            window.play_system_bell();
+            return;
+        };
+        for edit in transaction.iter().rev() {
+            let start = edit.range.start;
+            self.buffer
+                .replace(start..start + edit.new_text.len(), &edit.old_text);
+        }
+        if let Some(first) = transaction.first() {
+            self.selection = first.selection_before.clone();
+        }
+        self.marked_range = None;
+        self.ensure_normal_selection();
+        self.autoscroll_to_cursor();
+        cx.notify();
+    }
+
+    pub fn redo(&mut self, _: &Redo, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(transaction) = self.history.redo() else {
+            window.play_system_bell();
+            return;
+        };
+        for edit in &transaction {
+            self.buffer.replace(edit.range.clone(), &edit.new_text);
+        }
+        if let Some(last) = transaction.last() {
+            self.selection = last.selection_after.clone();
+        }
+        self.marked_range = None;
+        self.ensure_normal_selection();
+        self.autoscroll_to_cursor();
         cx.notify();
     }
 
@@ -167,19 +245,18 @@ impl Editor {
     }
 
     pub fn move_line_start(&mut self, _: &MoveLineStart, _: &mut Window, cx: &mut Context<Self>) {
-        let (row, _) = self.buffer.offset_to_line_col(self.cursor());
-        let offset = self.buffer.line_start_offset(row);
+        let (row, _) = self.buffer.offset_to_point(self.cursor());
+        let offset = self.buffer.line(row).range.start;
         self.apply_motion(offset, cx);
     }
 
     pub fn move_line_end(&mut self, _: &MoveLineEnd, _: &mut Window, cx: &mut Context<Self>) {
-        let (row, _) = self.buffer.offset_to_line_col(self.cursor());
-        let end = self.buffer.line_end_offset(row);
-        let offset = if self.mode == EditorMode::Insert || end == self.buffer.line_start_offset(row)
-        {
-            end
+        let (row, _) = self.buffer.offset_to_point(self.cursor());
+        let line = self.buffer.line(row);
+        let offset = if self.mode == EditorMode::Insert || line.is_empty() {
+            line.range.end
         } else {
-            self.buffer.previous_grapheme_boundary(end)
+            self.buffer.previous_grapheme_boundary(line.range.end)
         };
         self.apply_motion(offset, cx);
     }
@@ -233,6 +310,7 @@ impl Editor {
     pub fn normal_mode(&mut self, _: &NormalMode, _: &mut Window, cx: &mut Context<Self>) {
         self.mode = EditorMode::Normal;
         self.marked_range = None;
+        self.history.break_group();
         self.ensure_normal_selection();
         cx.notify();
     }
@@ -258,14 +336,14 @@ impl Editor {
     }
 
     pub fn select_line(&mut self, _: &SelectLine, _: &mut Window, cx: &mut Context<Self>) {
-        let (row, _) = self.buffer.offset_to_line_col(self.cursor());
-        let start = self.buffer.line_start_offset(row);
+        let (row, _) = self.buffer.offset_to_point(self.cursor());
+        let line = self.buffer.line(row);
         let end = if row + 1 < self.buffer.line_count() {
-            self.buffer.line_start_offset(row + 1)
+            self.buffer.line(row + 1).range.start
         } else {
-            self.buffer.line_end_offset(row)
+            line.range.end
         };
-        self.selection.set_range(start..end);
+        self.selection.set_range(line.range.start..end);
         self.mode = EditorMode::Select;
         cx.notify();
     }
@@ -276,7 +354,7 @@ impl Editor {
             return;
         }
         cx.write_to_clipboard(ClipboardItem::new_string(
-            self.buffer.slice(range).to_string(),
+            self.buffer.slice(range).into_owned(),
         ));
     }
 
@@ -287,7 +365,7 @@ impl Editor {
         }
         let start = range.start;
         cx.write_to_clipboard(ClipboardItem::new_string(
-            self.buffer.slice(range.clone()).to_string(),
+            self.buffer.slice(range.clone()).into_owned(),
         ));
         self.replace_range(range, "", cx);
         if self.mode != EditorMode::Insert {
@@ -322,6 +400,7 @@ impl Editor {
     ) {
         self.focus(window, cx);
         self.is_selecting = true;
+        self.history.break_group();
         let offset = self.offset_for_mouse_position(event.position);
         if event.modifiers.shift || self.mode == EditorMode::Select {
             self.selection.select_to(offset);
@@ -368,7 +447,7 @@ impl Editor {
         let delta = event.delta.pixel_delta(line_height);
         let mut offset = self.scroll_handle.offset();
         offset.y += delta.y;
-        let total_height = self.buffer.line_count() as f32 * line_height;
+        let total_height = self.wrap_map.row_count() as f32 * line_height;
         let viewport_height = self
             .last_position_map
             .as_ref()
@@ -403,14 +482,19 @@ impl Editor {
     }
 
     fn move_vertical(&mut self, down: bool, cx: &mut Context<Self>) {
-        let cursor = self.cursor();
-        let (row, column) = self.buffer.offset_to_line_col(cursor);
+        // Vertical motion works in display space so wrapped lines step one
+        // visual row at a time.
+        let snapshot = DisplaySnapshot::new(&self.buffer, &self.wrap_map);
+        let point = snapshot.offset_to_display(self.cursor());
         let target_row = if down {
-            (row + 1).min(self.buffer.line_count().saturating_sub(1))
+            (point.row + 1).min(snapshot.row_count().saturating_sub(1))
         } else {
-            row.saturating_sub(1)
+            point.row.saturating_sub(1)
         };
-        let offset = self.buffer.line_col_to_offset(target_row, column);
+        let offset = snapshot.display_to_offset(DisplayPoint {
+            row: target_row,
+            column: point.column,
+        });
         self.apply_motion(offset, cx);
     }
 
@@ -421,7 +505,29 @@ impl Editor {
             EditorMode::Normal => self.set_normal_selection_at(offset),
             EditorMode::Select => self.selection.select_to(offset),
         }
+        self.history.break_group();
+        self.autoscroll_to_cursor();
         cx.notify();
+    }
+
+    /// Keeps the cursor's line inside the viewport after motions and edits.
+    fn autoscroll_to_cursor(&mut self) {
+        let Some(map) = &self.last_position_map else {
+            return;
+        };
+        let snapshot = DisplaySnapshot::new(&self.buffer, &self.wrap_map);
+        let row = snapshot.offset_to_display(self.cursor()).row;
+        let mut offset = self.scroll_handle.offset();
+        // The cursor row's y position relative to the viewport top.
+        let cursor_top = map.line_height * row as f32 + offset.y;
+        if cursor_top < px(0.) {
+            offset.y -= cursor_top;
+        } else if cursor_top + map.line_height > map.bounds.size.height {
+            offset.y -= cursor_top + map.line_height - map.bounds.size.height;
+        } else {
+            return;
+        }
+        self.scroll_handle.set_offset(offset);
     }
 
     fn ensure_normal_selection(&mut self) {
@@ -468,6 +574,53 @@ impl Editor {
             .and_then(|map| map.offset_for_point(position))
             .unwrap_or(0)
     }
+
+    fn render_status_line(&self) -> impl IntoElement {
+        let (mode_fg, mode_bg) = self.style.mode_segment(self.mode);
+        let (row, column) = self.buffer.offset_to_point(self.selection.cursor());
+
+        div()
+            .flex()
+            .items_stretch()
+            .h(px(27.))
+            .flex_none()
+            .bg(self.style.status_background)
+            .border_t_1()
+            .border_color(self.style.status_border)
+            .text_size(px(12.))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .px_4()
+                    .bg(mode_bg)
+                    .text_color(mode_fg)
+                    .text_size(px(11.))
+                    .font_weight(FontWeight::BOLD)
+                    .child(self.mode.label()),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .px_3()
+                    .text_color(self.style.text)
+                    .child(self.title.clone()),
+            )
+            .child(div().flex_1())
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_4()
+                    .px_4()
+                    .text_color(self.style.text_muted)
+                    .child("1 sel")
+                    .child(format!("Ln {}, Col {}", row + 1, column + 1))
+                    .child("UTF-8")
+                    .child("LF"),
+            )
+    }
 }
 
 impl Focusable for Editor {
@@ -478,14 +631,16 @@ impl Focusable for Editor {
 
 impl Render for Editor {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let mode = self.mode;
         div()
+            .flex()
+            .flex_col()
             .size_full()
-            .bg(rgb(0x0d1117))
-            .text_color(rgb(0xc9d1d9))
+            .bg(self.style.background)
+            .text_color(self.style.text)
+            .font_family("JetBrains Mono")
             .text_size(px(14.))
-            .line_height(px(20.))
-            .key_context(mode.key_context())
+            .line_height(px(25.))
+            .key_context(self.mode.key_context())
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::backspace))
             .on_action(cx.listener(Self::delete))
@@ -505,28 +660,19 @@ impl Render for Editor {
             .on_action(cx.listener(Self::append_mode))
             .on_action(cx.listener(Self::select_mode))
             .on_action(cx.listener(Self::select_line))
+            .on_action(cx.listener(Self::undo))
+            .on_action(cx.listener(Self::redo))
             .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_move(cx.listener(Self::on_mouse_move))
             .on_scroll_wheel(cx.listener(Self::on_scroll_wheel))
-            .child(EditorElement::new(cx.entity()))
             .child(
                 div()
-                    .absolute()
-                    .right_2()
-                    .bottom_2()
-                    .px_2()
-                    .py_1()
-                    .rounded_sm()
-                    .bg(match mode {
-                        EditorMode::Insert => rgb(0x238636),
-                        EditorMode::Normal => rgb(0x1f6feb),
-                        EditorMode::Select => rgb(0x8957e5),
-                    })
-                    .text_color(rgb(0xffffff))
-                    .text_size(px(11.))
-                    .child(mode.label()),
+                    .flex_1()
+                    .min_h_0()
+                    .child(EditorElement::new(cx.entity())),
             )
+            .child(self.render_status_line())
     }
 }
