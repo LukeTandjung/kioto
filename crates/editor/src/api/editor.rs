@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use gpui::{App, Entity, Window};
 
 use crate::app::render::EditorView;
@@ -9,6 +11,9 @@ pub struct EditorConfig {
     pub text: String,
     pub title: String,
     pub style: EditorStyle,
+    /// Where the document persists. When set and `text` is empty, the
+    /// document loads from here; `ctrl-s` saves back to it.
+    pub location: Option<PathBuf>,
 }
 
 impl Default for EditorConfig {
@@ -17,6 +22,7 @@ impl Default for EditorConfig {
             text: String::new(),
             title: "scratch".into(),
             style: EditorStyle::default(),
+            location: None,
         }
     }
 }

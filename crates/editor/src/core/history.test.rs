@@ -1,13 +1,13 @@
 use super::{Edit, History};
-use crate::selection::Selection;
+use crate::core::position::Position;
 
 fn insert(at: usize, text: &str) -> Edit {
     Edit {
         range: at..at,
         old_text: String::new(),
         new_text: text.into(),
-        selection_before: Selection::caret(at),
-        selection_after: Selection::caret(at + text.len()),
+        cursor_before: Position(at),
+        cursor_after: Position(at + text.len()),
     }
 }
 
@@ -16,8 +16,8 @@ fn backspace(range: std::ops::Range<usize>, old_text: &str) -> Edit {
         range: range.clone(),
         old_text: old_text.into(),
         new_text: String::new(),
-        selection_before: Selection::caret(range.end),
-        selection_after: Selection::caret(range.start),
+        cursor_before: Position(range.end),
+        cursor_after: Position(range.start),
     }
 }
 
@@ -100,8 +100,8 @@ fn no_op_edits_are_ignored() {
         range: 0..1,
         old_text: "a".into(),
         new_text: "a".into(),
-        selection_before: Selection::caret(0),
-        selection_after: Selection::caret(0),
+        cursor_before: Position(0),
+        cursor_after: Position(0),
     });
 
     assert!(history.undo().is_none());

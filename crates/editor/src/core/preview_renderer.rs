@@ -29,6 +29,24 @@ pub struct PreviewBlock {
     pub display_text: String,
     pub spans: Vec<StyleSpan>,
     pub offset_map: OffsetMap,
+    /// Compiled bitmap for `BlockKind::Rendered` blocks; `display_text` and
+    /// `offset_map` still describe the source so hit testing keeps working.
+    pub rendered: Option<std::sync::Arc<RenderedFragment>>,
+}
+
+/// A compiled preview fragment as raw pixels — language- and UI-neutral, so
+/// `core` stays free of both `typst-*` and `gpui`. Producers rasterize at a
+/// device resolution; consumers draw at the logical size.
+#[derive(Clone, Debug)]
+pub struct RenderedFragment {
+    /// Bitmap dimensions in device pixels.
+    pub width: u32,
+    pub height: u32,
+    /// Size to draw at, in logical pixels.
+    pub logical_width: f32,
+    pub logical_height: f32,
+    /// Straight-alpha BGRA bytes, row-major, `width * height * 4` long.
+    pub bgra: Vec<u8>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

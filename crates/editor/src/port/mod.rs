@@ -1,2 +1,3 @@
 // External capabilities expressed in editor/domain terms.
-// DocumentStore and Clipboard ports land in milestone 5.
+pub mod clipboard;
+pub mod document_store;

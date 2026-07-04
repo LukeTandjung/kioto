@@ -7,28 +7,37 @@
 //! cursor/mouse/selection geometry crosses the source ↔ display divide
 //! through each block's `OffsetMap`.
 
+use std::collections::HashMap;
 use std::ops::Range as ByteRange;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use gpui::{
-    App, Bounds, Context, Element, ElementId, ElementInputHandler, Entity, EntityInputHandler,
-    FocusHandle, Focusable, FontStyle, FontWeight, GlobalElementId, Hsla, InteractiveElement as _,
-    IntoElement, KeyDownEvent, Keystroke, LayoutId, MouseButton, MouseDownEvent, MouseMoveEvent,
-    MouseUpEvent, ParentElement as _, Pixels, Point, Render, ScrollHandle, ScrollWheelEvent,
-    ShapedLine, SharedString, Style, Styled as _, TextAlign, TextRun, UTF16Selection, Window, div,
-    fill, point, px, relative, rgb, rgba, size,
+    App, Bounds, Context, Corners, Element, ElementId, ElementInputHandler, Entity,
+    EntityInputHandler, FocusHandle, Focusable, FontStyle, FontWeight, GlobalElementId, Hsla,
+    InteractiveElement as _, IntoElement, KeyDownEvent, Keystroke, LayoutId, MouseButton,
+    MouseDownEvent, MouseMoveEvent, MouseUpEvent, ParentElement as _, Pixels, Point, Render,
+    RenderImage, ScrollHandle, ScrollWheelEvent, ShapedLine, SharedString, Size, Style,
+    Styled as _, TextAlign, TextRun, UTF16Selection, Window, div, fill, point, px, relative, rgb,
+    rgba, size,
 };
+use image::{Frame, ImageBuffer, Rgba};
+use smallvec::SmallVec;
 
+use crate::adapters::gpui_clipboard::GpuiClipboard;
 use crate::app::documents::typst::TypstDocument;
 use crate::app::editor::Editor;
 use crate::app::style::EditorStyle;
 use crate::core::editable_buffer::EditableBuffer;
-use crate::core::mode::Input;
+use crate::core::mode::{EditorAction, Input};
 use crate::core::motion::{self, Motion};
 use crate::core::position::{Position, Range};
 use crate::core::preview_renderer::{
-    BlockKind, PreviewBlock, PreviewRenderer as _, SpanKind, StyleSpan,
+    BlockKind, PreviewBlock, PreviewOutput, PreviewRenderer as _, RenderedFragment, SpanKind,
+    StyleSpan,
 };
 use crate::core::selection::Selection;
+use crate::port::document_store::DocumentStore;
 
 const GUTTER_PADDING_LEFT: Pixels = px(8.);
 const GUTTER_PADDING_RIGHT: Pixels = px(18.);
@@ -48,6 +57,14 @@ pub struct EditorView {
     scroll_handle: ScrollHandle,
     last_layout: Option<ViewLayout>,
     drag_anchor: Option<Position>,
+    /// GPU-side images for compiled fragments, keyed by the fragment's
+    /// allocation — stable while the document's fragment cache holds it.
+    fragment_images: HashMap<usize, Arc<RenderImage>>,
+    /// The in-progress search query while the `/` bar is open; keystrokes
+    /// feed it instead of the modal state machine.
+    search_input: Option<String>,
+    location: Option<PathBuf>,
+    store: Box<dyn DocumentStore>,
 }
 
 impl EditorView {
@@ -55,6 +72,8 @@ impl EditorView {
         editor: Editor<TypstDocument>,
         style: EditorStyle,
         title: String,
+        location: Option<PathBuf>,
+        store: Box<dyn DocumentStore>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -68,21 +87,127 @@ impl EditorView {
             scroll_handle: ScrollHandle::new(),
             last_layout: None,
             drag_anchor: None,
+            fragment_images: HashMap::new(),
+            search_input: None,
+            location,
+            store,
         }
     }
 
+    /// Renders the preview and pairs each block with the GPU image for its
+    /// compiled fragment, converting bitmaps on first sight and dropping
+    /// images whose fragments are gone.
+    fn preview_with_images(&mut self) -> (PreviewOutput, Vec<Option<Arc<RenderImage>>>) {
+        let cursor = self.editor.cursor();
+        let preview = self.editor.document.render_preview(&[cursor]);
+        let images: Vec<_> = preview
+            .blocks
+            .iter()
+            .map(|block| block.rendered.as_ref().and_then(|f| self.fragment_image(f)))
+            .collect();
+        let live: Vec<usize> = preview
+            .blocks
+            .iter()
+            .filter_map(|block| block.rendered.as_ref())
+            .map(|fragment| Arc::as_ptr(fragment) as usize)
+            .collect();
+        self.fragment_images.retain(|key, _| live.contains(key));
+        (preview, images)
+    }
+
+    fn fragment_image(&mut self, fragment: &Arc<RenderedFragment>) -> Option<Arc<RenderImage>> {
+        let key = Arc::as_ptr(fragment) as usize;
+        if let Some(image) = self.fragment_images.get(&key) {
+            return Some(image.clone());
+        }
+        // The buffer is typed `Rgba` (the container format `image` offers)
+        // but carries BGRA bytes, which is what GPUI's renderer samples.
+        let buffer = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(
+            fragment.width,
+            fragment.height,
+            fragment.bgra.clone(),
+        )?;
+        let image = Arc::new(RenderImage::new(SmallVec::from_elem(Frame::new(buffer), 1)));
+        self.fragment_images.insert(key, image.clone());
+        Some(image)
+    }
+
     fn on_key_down(&mut self, event: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
+        if self.search_input.is_some() {
+            self.handle_search_key(&event.keystroke);
+            self.autoscroll_to_cursor();
+            cx.stop_propagation();
+            cx.notify();
+            return;
+        }
+        if event.keystroke.modifiers.control && event.keystroke.key == "s" {
+            self.save();
+            cx.stop_propagation();
+            cx.notify();
+            return;
+        }
+
         let Some(input) = input_for_keystroke(&event.keystroke, self.editor.mode.is_insert())
         else {
             return;
         };
-        self.editor.handle_input(input);
+        let action = self.editor.handle_input(input, &mut GpuiClipboard::new(cx));
+        if action == EditorAction::StartSearch {
+            self.search_input = Some(String::new());
+        }
         self.autoscroll_to_cursor();
         // Mark the key handled so it does not also reach the platform
         // text-input fallback (e.g. `i` entering insert mode must not
         // insert an "i").
         cx.stop_propagation();
         cx.notify();
+    }
+
+    /// Feeds one keystroke to the open search bar: printable characters
+    /// build the query, Enter commits it, Escape cancels.
+    fn handle_search_key(&mut self, keystroke: &Keystroke) {
+        match keystroke.key.as_str() {
+            "escape" => {
+                self.search_input = None;
+            }
+            "enter" => {
+                let query = self.search_input.take().expect("search bar is open");
+                self.editor.search(&query);
+            }
+            "backspace" => {
+                if let Some(query) = self.search_input.as_mut() {
+                    query.pop();
+                }
+            }
+            "space" => {
+                if let Some(query) = self.search_input.as_mut() {
+                    query.push(' ');
+                }
+            }
+            key => {
+                let mut chars = key.chars();
+                if let (Some(character), None, Some(query)) =
+                    (chars.next(), chars.next(), self.search_input.as_mut())
+                {
+                    query.push(if keystroke.modifiers.shift {
+                        character.to_ascii_uppercase()
+                    } else {
+                        character
+                    });
+                }
+            }
+        }
+    }
+
+    /// Writes the document through the store port; a no-op for editors
+    /// without a location.
+    fn save(&mut self) {
+        let Some(location) = &self.location else {
+            return;
+        };
+        if let Err(error) = self.store.save(location, self.editor.document.text()) {
+            eprintln!("{error}");
+        }
     }
 
     fn on_mouse_down(
@@ -108,6 +233,7 @@ impl EditorView {
             self.editor.cursors[0].set(offset);
             self.drag_anchor = Some(offset);
         }
+        self.editor.break_undo_group();
         cx.notify();
     }
 
@@ -218,6 +344,18 @@ impl EditorView {
                     .px_3()
                     .text_color(self.style.text)
                     .child(self.title.clone()),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .px_3()
+                    .text_color(self.style.text)
+                    .children(
+                        self.search_input
+                            .as_ref()
+                            .map(|query| format!("/{query}\u{2588}")),
+                    ),
             )
             .child(div().flex_1())
             .child(
@@ -469,6 +607,8 @@ struct LayoutLine {
     content_y: Pixels,
     height: Pixels,
     line_number: Option<ShapedLine>,
+    /// Compiled fragment drawn in place of text, with its logical size.
+    image: Option<(Arc<RenderImage>, Size<Pixels>)>,
 }
 
 /// Geometry of one source position in the viewport.
@@ -676,6 +816,7 @@ impl Element for EditorElement {
         window: &mut Window,
         cx: &mut App,
     ) -> Self::PrepaintState {
+        let (preview, images) = self.view.update(cx, |view, _| view.preview_with_images());
         let view = self.view.read(cx);
         let text_style = window.text_style();
         let base_font = text_style.font();
@@ -683,7 +824,6 @@ impl Element for EditorElement {
         let text = view.editor.document.text();
         let source_lines = motion::line_ranges(text);
         let cursor = view.editor.cursor();
-        let preview = view.editor.document.render_preview(&[cursor]);
         let insert_mode = view.editor.mode.is_insert();
 
         // Gutter sized by the source line count.
@@ -738,6 +878,58 @@ impl Element for EditorElement {
             let (font_size, line_height, weight, base_color) =
                 block_metrics(block.kind, &view.style);
 
+            // A source line number for the row showing display offset
+            // `display`, once per source row.
+            let number_for_display =
+                |display: usize, last: &mut Option<usize>, window: &Window| -> Option<ShapedLine> {
+                    let source = block.offset_map.display_to_source(display);
+                    let source_row = source_lines
+                        .iter()
+                        .rposition(|line| line.start <= source)
+                        .unwrap_or(0);
+                    let number = (*last != Some(source_row)).then(|| {
+                        let color = if source_row == cursor_source_row {
+                            view.style.gutter_number_current.into()
+                        } else {
+                            view.style.gutter_number.into()
+                        };
+                        shape_plain(
+                            format!("{:>width$}", source_row + 1, width = digits).into(),
+                            px(12.),
+                            color,
+                            window,
+                        )
+                    });
+                    *last = Some(source_row);
+                    number
+                };
+
+            // A compiled fragment renders as one image line; the styled text
+            // below is the fallback when compilation failed.
+            if let Some(image) = &images[block_index]
+                && let Some(fragment) = &block.rendered
+            {
+                let logical = size(px(fragment.logical_width), px(fragment.logical_height));
+                let height = logical.height.max(line_height);
+                let line_number = number_for_display(0, &mut last_numbered_row, window);
+                lines.push(LayoutLine {
+                    block: block_index,
+                    display_range: 0..0,
+                    shaped: window.text_system().shape_line(
+                        SharedString::default(),
+                        font_size,
+                        &row_runs(0, &(0..0), &[], &base_font, weight, base_color),
+                        None,
+                    ),
+                    content_y,
+                    height,
+                    line_number,
+                    image: Some((image.clone(), logical)),
+                });
+                content_y += height;
+                continue;
+            }
+
             for row_range in display_rows(&block.display_text) {
                 let row_text = &block.display_text[row_range.clone()];
                 let runs = row_runs(
@@ -755,26 +947,8 @@ impl Element for EditorElement {
                     None,
                 );
 
-                // Source line number for the gutter, once per source row.
-                let source_at_row_start = block.offset_map.display_to_source(row_range.start);
-                let source_row = source_lines
-                    .iter()
-                    .rposition(|line| line.start <= source_at_row_start)
-                    .unwrap_or(0);
-                let line_number = (last_numbered_row != Some(source_row)).then(|| {
-                    let color = if source_row == cursor_source_row {
-                        view.style.gutter_number_current.into()
-                    } else {
-                        view.style.gutter_number.into()
-                    };
-                    shape_plain(
-                        format!("{:>width$}", source_row + 1, width = digits).into(),
-                        px(12.),
-                        color,
-                        window,
-                    )
-                });
-                last_numbered_row = Some(source_row);
+                let line_number =
+                    number_for_display(row_range.start, &mut last_numbered_row, window);
 
                 lines.push(LayoutLine {
                     block: block_index,
@@ -783,6 +957,7 @@ impl Element for EditorElement {
                     content_y,
                     height: line_height,
                     line_number,
+                    image: None,
                 });
                 content_y += line_height;
             }
@@ -909,6 +1084,22 @@ impl Element for EditorElement {
                         cx,
                     )
                     .ok();
+            }
+            if let Some((image, logical)) = &line.image {
+                let origin = point(
+                    bounds.left() + prepaint.layout.gutter_width,
+                    y + (line.height - logical.height) / 2.,
+                );
+                window
+                    .paint_image(
+                        Bounds::new(origin, *logical),
+                        Corners::default(),
+                        image.clone(),
+                        0,
+                        false,
+                    )
+                    .ok();
+                continue;
             }
             line.shaped
                 .paint(

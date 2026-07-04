@@ -1,22 +1,24 @@
-use std::ops::Range;
 use std::time::{Duration, Instant};
 
-use crate::selection::Selection;
+use crate::core::position::Position;
 
-/// One buffer mutation, recorded against the pre-edit buffer state.
+/// One buffer mutation, recorded against the pre-edit buffer state. The
+/// inverse operation — replacing `new_text` back with `old_text` at
+/// `range.start` — is what undo applies.
 #[derive(Clone, Debug)]
 pub struct Edit {
-    pub range: Range<usize>,
+    pub range: std::ops::Range<usize>,
     pub old_text: String,
     pub new_text: String,
-    pub selection_before: Selection,
-    pub selection_after: Selection,
+    pub cursor_before: Position,
+    pub cursor_after: Position,
 }
 
 /// Undo/redo stacks with automatic transaction grouping: rapid contiguous
 /// typing, contiguous backspacing, and IME re-replacement collapse into one
 /// transaction, so a single undo removes a typed run rather than one
-/// character.
+/// character. Pure edit-log logic — no buffer access; the caller applies
+/// the inverse operations.
 #[derive(Default)]
 pub struct History {
     undo_stack: Vec<Vec<Edit>>,
@@ -94,8 +96,8 @@ fn continues(previous: &Edit, edit: &Edit) -> bool {
         && edit.new_text.is_empty()
         && edit.range.end == previous.range.start;
     // IME composition repeatedly replaces the same marked region.
-    let re_replacing = edit.range.start == previous.range.start
-        && edit.range.len() == previous.new_text.len();
+    let re_replacing =
+        edit.range.start == previous.range.start && edit.range.len() == previous.new_text.len();
 
     typing || backspacing || re_replacing
 }

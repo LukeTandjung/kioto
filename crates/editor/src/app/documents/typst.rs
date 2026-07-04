@@ -1,6 +1,7 @@
 use typst_syntax::ast::{self, AstNode as _};
 use typst_syntax::{Source, SyntaxNode};
 
+use crate::app::documents::fragments::FragmentCompiler;
 use crate::core::editable_buffer::{EditableBuffer, clamp_range};
 use crate::core::position::{Position, Range};
 use crate::core::preview_renderer::{
@@ -17,12 +18,14 @@ use crate::core::preview_renderer::{
 /// the only place allowed to depend on `typst-*` crates.
 pub struct TypstDocument {
     source: Source,
+    fragments: FragmentCompiler,
 }
 
 impl TypstDocument {
     pub fn new(text: impl Into<String>) -> Self {
         Self {
             source: Source::detached(text),
+            fragments: FragmentCompiler::new(),
         }
     }
 
@@ -113,7 +116,15 @@ impl PreviewRenderer for TypstDocument {
                     let mut sink = BlockSink::new(self);
                     sink.include(node);
                     sink.push_verbatim(equation.body().to_untyped(), SpanKind::Plain);
-                    blocks.extend(sink.finish(BlockKind::MathBlock));
+                    // Compiled math draws as a bitmap; the styled text block
+                    // is the fallback when the markup does not compile.
+                    blocks.extend(sink.finish(BlockKind::MathBlock).map(|mut block| {
+                        block.rendered = self.fragments.render_math(&block.display_text);
+                        if block.rendered.is_some() {
+                            block.kind = BlockKind::Rendered;
+                        }
+                        block
+                    }));
                 }
                 _ => {
                     let sink = paragraph.get_or_insert_with(|| BlockSink::new(self));
@@ -153,6 +164,7 @@ fn raw_block(text: &str, source_range: Range) -> PreviewBlock {
         display_text: text[range].to_string(),
         spans: Vec::new(),
         offset_map: OffsetMap::identity(&source_range),
+        rendered: None,
     }
 }
 
@@ -267,6 +279,7 @@ impl<'a> BlockSink<'a> {
             display_text: self.display,
             spans: self.spans,
             offset_map: self.map,
+            rendered: None,
         })
     }
 }

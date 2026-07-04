@@ -1,15 +1,18 @@
 use crate::core::actions::CoreActions;
 use crate::core::cursor::Cursor;
-use crate::core::editable_buffer::EditableBuffer;
+use crate::core::editable_buffer::{EditableBuffer, clamp_range};
+use crate::core::history::{Edit, History};
 use crate::core::mode::{EditorAction, EditorMode, Input};
 use crate::core::motion::{self, Motion};
 use crate::core::position::{Position, Range};
 use crate::core::selection::Selection;
+use crate::port::clipboard::Clipboard;
 
-/// The concrete editor: canonical document, cursors, selections, and the
-/// modal state machine. Pure — no GPUI, no ports — so the whole modal flow
-/// unit-tests directly. Actions that need ports (yank/paste/undo/search)
-/// are accepted but deferred to milestone 5.
+/// The concrete editor: canonical document, cursors, selections, the modal
+/// state machine, and the undo history. Pure except for the clipboard,
+/// which crosses a port: modes return yank/paste as data and `apply`
+/// interprets them against the port the caller passes in — GPUI's clipboard
+/// in the app, an in-memory one in tests.
 ///
 /// Single-cursor for now: `cursors[0]` is the primary; the `Vec`s exist so
 /// multi-cursor lands without an API break.
@@ -18,6 +21,8 @@ pub struct Editor<D: EditableBuffer> {
     pub cursors: Vec<Cursor>,
     pub selections: Vec<Selection>,
     pub mode: EditorMode,
+    history: History,
+    last_search: Option<String>,
 }
 
 impl<D: EditableBuffer> Editor<D> {
@@ -27,6 +32,8 @@ impl<D: EditableBuffer> Editor<D> {
             cursors: vec![Cursor::default()],
             selections: Vec::new(),
             mode: EditorMode::normal(),
+            history: History::default(),
+            last_search: None,
         }
     }
 
@@ -42,24 +49,30 @@ impl<D: EditableBuffer> Editor<D> {
             .filter(|range| !range.is_empty())
     }
 
-    pub fn handle_input(&mut self, input: Input) {
+    /// Dispatches one input through the active mode and applies the
+    /// resulting action. Returns the action so the view can react to the
+    /// ones that need UI (opening the search bar).
+    pub fn handle_input(&mut self, input: Input, clipboard: &mut dyn Clipboard) -> EditorAction {
         let action = self.mode.handle_input(input);
-        self.apply(action);
+        self.apply(action.clone(), clipboard);
+        action
     }
 
-    pub fn apply(&mut self, action: EditorAction) {
+    pub fn apply(&mut self, action: EditorAction, clipboard: &mut dyn Clipboard) {
         match action {
             EditorAction::None => {}
             EditorAction::InsertText(text) => self.insert_text(&text),
             EditorAction::DeleteBackward => self.delete_motion(Motion::Left),
             EditorAction::DeleteForward => self.delete_motion(Motion::Right),
             EditorAction::Move(motion) => {
+                self.history.break_group();
                 self.selections.clear();
                 let target = motion::resolve(self.document.text(), self.cursor(), motion);
                 self.cursors[0].set(target);
             }
             EditorAction::Extend(motion) => self.extend(motion),
             EditorAction::EnterInsert { after_cursor } => {
+                self.history.break_group();
                 if after_cursor {
                     let target =
                         motion::resolve(self.document.text(), self.cursor(), Motion::Right);
@@ -69,6 +82,7 @@ impl<D: EditableBuffer> Editor<D> {
                 self.mode = EditorMode::insert();
             }
             EditorAction::EnterNormal => {
+                self.history.break_group();
                 self.selections.clear();
                 self.mode = EditorMode::normal();
             }
@@ -79,13 +93,14 @@ impl<D: EditableBuffer> Editor<D> {
             }
             EditorAction::SelectLine => self.select_line(),
             EditorAction::DeleteSelection => self.delete_selection(),
-            // Deferred to milestone 5: ports (clipboard), core history, search.
-            EditorAction::Yank
-            | EditorAction::Paste
-            | EditorAction::Undo
-            | EditorAction::StartSearch
-            | EditorAction::NextMatch
-            | EditorAction::PreviousMatch => {}
+            EditorAction::Yank => self.yank(clipboard),
+            EditorAction::Paste => self.paste(clipboard),
+            EditorAction::Undo => self.undo(),
+            // Needs a query first; the view opens its search input and
+            // calls `search` with what the user types.
+            EditorAction::StartSearch => {}
+            EditorAction::NextMatch => self.jump_to_match(Direction::Forward),
+            EditorAction::PreviousMatch => self.jump_to_match(Direction::Backward),
         }
     }
 
@@ -96,22 +111,135 @@ impl<D: EditableBuffer> Editor<D> {
             .selected_range()
             .unwrap_or_else(|| Range::caret(self.cursor()));
         self.selections.clear();
-        CoreActions::replace_chars(&mut self.document, range, text);
-        self.cursors[0].set(Position(range.start.0 + text.len()));
+        self.edit(range, text);
+    }
+
+    /// Sets a new search query and jumps to its first match at or after the
+    /// cursor (wrapping). The query sticks around for `n`/`N`.
+    pub fn search(&mut self, query: &str) {
+        if query.is_empty() {
+            return;
+        }
+        self.last_search = Some(query.to_string());
+        let text = self.document.text();
+        let cursor = self.cursor().0;
+        let target = find_match(text, query, cursor, Direction::Forward);
+        if let Some(target) = target {
+            self.history.break_group();
+            self.selections.clear();
+            self.cursors[0].set(Position(target));
+        }
+    }
+
+    /// The current search query, if one was set.
+    pub fn search_query(&self) -> Option<&str> {
+        self.last_search.as_deref()
+    }
+
+    /// Ends the current undo grouping run — call on cursor placement that
+    /// bypasses the modal path (mouse clicks).
+    pub fn break_undo_group(&mut self) {
+        self.history.break_group();
+    }
+
+    /// The single mutation funnel: every buffer edit passes through here so
+    /// undo history records all of them. Ranges are clamped exactly the way
+    /// `EditableBuffer::replace` clamps, keeping the recorded inverse honest.
+    fn edit(&mut self, range: Range, new_text: &str) {
+        let clamped = clamp_range(self.document.text(), range);
+        let old_text = self.document.text()[clamped.clone()].to_string();
+        let cursor_after = Position(clamped.start + new_text.len());
+        self.history.record(Edit {
+            range: clamped.clone(),
+            old_text,
+            new_text: new_text.to_string(),
+            cursor_before: self.cursor(),
+            cursor_after,
+        });
+        CoreActions::replace_chars(
+            &mut self.document,
+            Range::new(Position(clamped.start), Position(clamped.end)),
+            new_text,
+        );
+        self.cursors[0].set(cursor_after);
+    }
+
+    fn undo(&mut self) {
+        let Some(transaction) = self.history.undo() else {
+            return;
+        };
+        // Reverse each edit newest-first; every inverse is applied against
+        // exactly the state its edit produced.
+        for edit in transaction.iter().rev() {
+            let applied = Range::new(
+                Position(edit.range.start),
+                Position(edit.range.start + edit.new_text.len()),
+            );
+            CoreActions::replace_chars(&mut self.document, applied, &edit.old_text);
+        }
+        self.selections.clear();
+        if let Some(first) = transaction.first() {
+            self.cursors[0].set(first.cursor_before);
+        }
+    }
+
+    fn yank(&mut self, clipboard: &mut dyn Clipboard) {
+        let Some(range) = self.selected_range() else {
+            return;
+        };
+        let clamped = clamp_range(self.document.text(), range);
+        clipboard.write(self.document.text()[clamped.clone()].to_string());
+        self.selections.clear();
+        self.cursors[0].set(Position(clamped.start));
+        if self.mode.is_visual() {
+            self.mode = EditorMode::normal();
+        }
+    }
+
+    /// Pastes clipboard text: over the selection when one exists, otherwise
+    /// after the grapheme under the cursor (vim's `p`).
+    fn paste(&mut self, clipboard: &mut dyn Clipboard) {
+        let Some(text) = clipboard.read() else {
+            return;
+        };
+        self.history.break_group();
+        let range = self.selected_range().unwrap_or_else(|| {
+            let after = motion::resolve(self.document.text(), self.cursor(), Motion::Right);
+            Range::caret(after)
+        });
+        self.selections.clear();
+        self.edit(range, &text);
+        if self.mode.is_visual() {
+            self.mode = EditorMode::normal();
+        }
+    }
+
+    fn jump_to_match(&mut self, direction: Direction) {
+        let Some(query) = self.last_search.clone() else {
+            return;
+        };
+        let text = self.document.text();
+        let start = match direction {
+            // Step past the current match position so repeated `n` advances.
+            Direction::Forward => self.cursor().0 + 1,
+            Direction::Backward => self.cursor().0,
+        };
+        if let Some(target) = find_match(text, &query, start, direction) {
+            self.history.break_group();
+            self.selections.clear();
+            self.cursors[0].set(Position(target));
+        }
     }
 
     fn delete_motion(&mut self, motion: Motion) {
         if let Some(range) = self.selected_range() {
             self.selections.clear();
-            CoreActions::delete_chars(&mut self.document, range);
-            self.cursors[0].set(range.start);
+            self.edit(range, "");
             return;
         }
         let cursor = self.cursor();
         let target = motion::resolve(self.document.text(), cursor, motion);
-        let range = Range::new(cursor, target);
-        CoreActions::delete_chars(&mut self.document, range);
-        self.cursors[0].set(range.start);
+        self.edit(Range::new(cursor, target), "");
     }
 
     fn extend(&mut self, motion: Motion) {
@@ -146,8 +274,7 @@ impl<D: EditableBuffer> Editor<D> {
     fn delete_selection(&mut self) {
         if let Some(range) = self.selected_range() {
             self.selections.clear();
-            CoreActions::delete_chars(&mut self.document, range);
-            self.cursors[0].set(range.start);
+            self.edit(range, "");
         } else if !self.mode.is_insert() {
             // No selection: delete the grapheme under the cursor.
             self.delete_motion(Motion::Right);
@@ -155,6 +282,25 @@ impl<D: EditableBuffer> Editor<D> {
         if self.mode.is_visual() {
             self.mode = EditorMode::normal();
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Direction {
+    Forward,
+    Backward,
+}
+
+/// The byte offset of the nearest `query` match from `from` in `direction`,
+/// wrapping around the document. Plain case-sensitive substring search.
+fn find_match(text: &str, query: &str, from: usize, direction: Direction) -> Option<usize> {
+    let from = from.min(text.len());
+    match direction {
+        Direction::Forward => text[from..]
+            .find(query)
+            .map(|offset| from + offset)
+            .or_else(|| text.find(query)),
+        Direction::Backward => text[..from].rfind(query).or_else(|| text.rfind(query)),
     }
 }
 

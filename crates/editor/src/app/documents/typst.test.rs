@@ -95,10 +95,29 @@ fn paragraphs_split_on_blank_lines() {
 #[test]
 fn block_math_and_code_get_their_own_blocks() {
     let blocks = preview("$ x + y $\n\n```rust\nfn main() {}\n```");
-    assert_eq!(blocks[0].kind, BlockKind::MathBlock);
+    // Valid block math compiles to a bitmap fragment (milestone 4); the
+    // styled text and offset map stay behind it for hit testing.
+    assert_eq!(blocks[0].kind, BlockKind::Rendered);
+    assert!(blocks[0].rendered.is_some());
     assert_eq!(blocks[0].display_text, "x + y");
     assert_eq!(blocks[1].kind, BlockKind::CodeBlock);
     assert_eq!(blocks[1].display_text, "fn main() {}");
+}
+
+#[test]
+fn math_that_does_not_compile_falls_back_to_styled_text() {
+    let blocks = preview("$ nosuchfunction() $");
+    assert_eq!(blocks[0].kind, BlockKind::MathBlock);
+    assert!(blocks[0].rendered.is_none());
+}
+
+#[test]
+fn math_with_the_cursor_inside_stays_raw() {
+    let document = TypstDocument::new("$ x + y $");
+    let output = document.render_preview(&[Position(3)]);
+    assert_eq!(output.blocks[0].kind, BlockKind::Raw);
+    assert!(output.blocks[0].rendered.is_none());
+    assert_eq!(output.blocks[0].display_text, "$ x + y $");
 }
 
 #[test]
