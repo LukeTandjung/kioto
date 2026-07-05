@@ -37,6 +37,7 @@ enum PreviewBlockContent {
         kind: BlockKind,
         display_text: String,
         spans: Vec<StyleSpan>,
+        fragments: Vec<InlineFragment>,
     },
     Raw {
         display_text: String,
@@ -54,6 +55,7 @@ impl PreviewBlock {
         kind: BlockKind,
         display_text: String,
         spans: Vec<StyleSpan>,
+        fragments: Vec<InlineFragment>,
         offset_map: OffsetMap,
     ) -> Self {
         debug_assert!(!matches!(kind, BlockKind::Raw | BlockKind::Rendered));
@@ -64,6 +66,7 @@ impl PreviewBlock {
                 kind,
                 display_text,
                 spans,
+                fragments,
             },
         }
     }
@@ -121,6 +124,15 @@ impl PreviewBlock {
         }
     }
 
+    /// Compiled inline fragments drawn in place of ranges of the display
+    /// text (inline math). Empty for raw and whole-block-rendered blocks.
+    pub fn inline_fragments(&self) -> &[InlineFragment] {
+        match &self.content {
+            PreviewBlockContent::Text { fragments, .. } => fragments,
+            PreviewBlockContent::Raw { .. } | PreviewBlockContent::Rendered { .. } => &[],
+        }
+    }
+
     pub fn rendered_fragment(&self) -> Option<&Arc<RenderedFragment>> {
         match &self.content {
             PreviewBlockContent::Rendered { fragment, .. } => Some(fragment),
@@ -161,6 +173,16 @@ impl PreviewBlock {
             ),
         }
     }
+}
+
+/// A compiled fragment standing in for a range of a text block's display
+/// text — the range still exists in the display coordinate system (offset
+/// maps and hit testing are unaffected), but the view draws the fragment's
+/// bitmap instead of those bytes.
+#[derive(Clone, Debug)]
+pub struct InlineFragment {
+    pub display_range: std::ops::Range<usize>,
+    pub fragment: Arc<RenderedFragment>,
 }
 
 /// A compiled preview fragment as raw pixels — language- and UI-neutral, so

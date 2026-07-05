@@ -84,6 +84,40 @@ fn inline_math_hides_dollars() {
 }
 
 #[test]
+fn inline_math_compiles_to_an_inline_fragment() {
+    let blocks = preview("Let $x in M$ hold.");
+    let fragments = blocks[0].inline_fragments();
+    assert_eq!(fragments.len(), 1);
+    // The fragment stands in for exactly the math span's display bytes.
+    assert_eq!(
+        &blocks[0].display_text()[fragments[0].display_range.clone()],
+        "x in M"
+    );
+    assert!(fragments[0].fragment.width > 0);
+}
+
+#[test]
+fn inline_math_that_does_not_compile_has_no_fragment() {
+    let blocks = preview("Let $nosuchfunction()$ hold.");
+    assert!(blocks[0].inline_fragments().is_empty());
+    // The styled span fallback is still there.
+    assert!(
+        blocks[0]
+            .spans()
+            .iter()
+            .any(|span| span.kind == SpanKind::InlineMath)
+    );
+}
+
+#[test]
+fn cursor_inside_a_paragraph_disables_its_inline_fragments() {
+    let document = TypstDocument::new("Let $x in M$ hold.");
+    let output = document.render_preview(&[Position(1)]);
+    assert_eq!(output.blocks[0].kind(), BlockKind::Raw);
+    assert!(output.blocks[0].inline_fragments().is_empty());
+}
+
+#[test]
 fn paragraphs_split_on_blank_lines() {
     let blocks = preview("one\n\ntwo");
     assert_eq!(blocks.len(), 2);

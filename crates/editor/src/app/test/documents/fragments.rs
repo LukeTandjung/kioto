@@ -31,6 +31,20 @@ fn caches_by_source_text() {
 }
 
 #[test]
+fn inline_and_display_styles_are_cached_separately() {
+    let compiler = FragmentCompiler::new();
+    let display = compiler
+        .render_math("sum_(i=1)^n i")
+        .expect("should compile");
+    let inline = compiler
+        .render_inline_math("sum_(i=1)^n i")
+        .expect("should compile");
+    assert!(!Arc::ptr_eq(&display, &inline));
+    // Inline style shrinks the limits, so the fragment is shorter.
+    assert!(inline.height < display.height);
+}
+
+#[test]
 fn broken_markup_compiles_to_none() {
     let compiler = FragmentCompiler::new();
     // An undefined function is a compile error, not a panic.

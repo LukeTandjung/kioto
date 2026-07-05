@@ -63,27 +63,44 @@ impl FragmentCompiler {
         }
     }
 
-    /// Compiles the body of a math equation (the text between the `$`
-    /// delimiters) to a bitmap. Returns the cached fragment when the same
-    /// body was compiled before; `None` when Typst rejects the markup.
+    /// Compiles the body of a block math equation (the text between the `$ `
+    /// delimiters) to a bitmap, typeset in display style. Returns the cached
+    /// fragment when the same body was compiled before; `None` when Typst
+    /// rejects the markup.
     pub fn render_math(&self, math_body: &str) -> Option<Arc<RenderedFragment>> {
+        self.render_cached(math_body, MathStyle::Display)
+    }
+
+    /// Compiles the body of an inline math equation, typeset in inline style
+    /// (shrunk limits, text-height fractions).
+    pub fn render_inline_math(&self, math_body: &str) -> Option<Arc<RenderedFragment>> {
+        self.render_cached(math_body, MathStyle::Inline)
+    }
+
+    fn render_cached(&self, math_body: &str, style: MathStyle) -> Option<Arc<RenderedFragment>> {
         let mut hasher = DefaultHasher::new();
-        math_body.hash(&mut hasher);
+        (math_body, style == MathStyle::Inline).hash(&mut hasher);
         let key = hasher.finish();
 
         if let Some(cached) = self.cache.borrow().get(&key) {
             return cached.clone();
         }
-        let fragment = self.compile(math_body).map(Arc::new);
+        let fragment = self.compile(math_body, style).map(Arc::new);
         self.cache.borrow_mut().insert(key, fragment.clone());
         fragment
     }
 
-    fn compile(&self, math_body: &str) -> Option<RenderedFragment> {
+    fn compile(&self, math_body: &str, style: MathStyle) -> Option<RenderedFragment> {
+        // In Typst, whitespace inside the delimiters selects the style:
+        // `$ x $` typesets as display math, `$x$` as inline math.
+        let equation = match style {
+            MathStyle::Display => format!("$ {math_body} $"),
+            MathStyle::Inline => format!("${math_body}$"),
+        };
         let text = format!(
             "#set page(width: auto, height: auto, margin: 0pt, fill: none)\n\
              #set text(size: {MATH_SIZE_PT}pt, fill: rgb(\"{MATH_COLOR}\"))\n\
-             $ {math_body} $\n"
+             {equation}\n"
         );
         let world = FragmentWorld {
             shared: Arc::clone(&self.shared),
@@ -119,6 +136,12 @@ impl FragmentCompiler {
             bgra,
         })
     }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MathStyle {
+    Display,
+    Inline,
 }
 
 impl Default for FragmentCompiler {

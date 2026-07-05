@@ -6,18 +6,109 @@ use gpui::{Bounds, Pixels, Point, RenderImage, ShapedLine, Size, point, px, size
 use crate::core::position::Position;
 use crate::core::preview_renderer::PreviewBlock;
 
-/// One shaped display row of one block.
+/// One horizontal piece of a display row: either shaped text or a compiled
+/// fragment drawn as an image. Both cover a range of the block's display
+/// text, so hit testing and cursor geometry work uniformly across them.
+pub enum RowSegment {
+    Text {
+        display_range: ByteRange<usize>,
+        // Boxed: a ShapedLine is ~3KB inline, dwarfing the Image variant.
+        shaped: Box<ShapedLine>,
+        x: Pixels,
+    },
+    Image {
+        display_range: ByteRange<usize>,
+        image: Arc<RenderImage>,
+        size: Size<Pixels>,
+        x: Pixels,
+    },
+}
+
+impl RowSegment {
+    fn display_range(&self) -> &ByteRange<usize> {
+        match self {
+            RowSegment::Text { display_range, .. } | RowSegment::Image { display_range, .. } => {
+                display_range
+            }
+        }
+    }
+
+    fn x(&self) -> Pixels {
+        match self {
+            RowSegment::Text { x, .. } | RowSegment::Image { x, .. } => *x,
+        }
+    }
+
+    fn width(&self) -> Pixels {
+        match self {
+            RowSegment::Text { shaped, .. } => shaped.width(),
+            RowSegment::Image { size, .. } => size.width,
+        }
+    }
+}
+
+/// One display row of one block, as a sequence of segments.
 pub struct LayoutLine {
     pub block: usize,
     /// Range within the block's display text that this row shows.
     pub display_range: ByteRange<usize>,
-    pub shaped: ShapedLine,
+    pub segments: Vec<RowSegment>,
     /// y offset in unscrolled content coordinates.
     pub content_y: Pixels,
     pub height: Pixels,
     pub line_number: Option<ShapedLine>,
-    /// Compiled fragment drawn in place of text, with its logical size.
-    pub image: Option<(Arc<RenderImage>, Size<Pixels>)>,
+}
+
+impl LayoutLine {
+    /// x offset of a display position within this row, in row-local
+    /// coordinates. Positions inside an image segment snap to its edges.
+    pub fn x_for_display(&self, display: usize) -> Pixels {
+        let mut end_x = px(0.);
+        for segment in &self.segments {
+            let range = segment.display_range();
+            if display < range.start {
+                return segment.x();
+            }
+            if display < range.end {
+                return match segment {
+                    RowSegment::Text { shaped, x, .. } => {
+                        *x + shaped.x_for_index(display - range.start)
+                    }
+                    RowSegment::Image { x, .. } => *x,
+                };
+            }
+            end_x = segment.x() + segment.width();
+        }
+        end_x
+    }
+
+    /// Display position of a row-local x offset. x inside an image segment
+    /// resolves to the nearer edge of its display range.
+    pub fn display_for_x(&self, x: Pixels) -> usize {
+        let mut result = self.display_range.start;
+        for segment in &self.segments {
+            if x < segment.x() {
+                break;
+            }
+            let range = segment.display_range();
+            if x < segment.x() + segment.width() {
+                return match segment {
+                    RowSegment::Text {
+                        shaped, x: seg_x, ..
+                    } => range.start + shaped.closest_index_for_x(x - *seg_x),
+                    RowSegment::Image { x: seg_x, size, .. } => {
+                        if x - *seg_x < size.width / 2. {
+                            range.start
+                        } else {
+                            range.end
+                        }
+                    }
+                };
+            }
+            result = range.end;
+        }
+        result
+    }
 }
 
 /// Geometry of one source position in the viewport.
@@ -34,6 +125,9 @@ pub struct ViewLayout {
     pub content_height: Pixels,
     pub blocks: Vec<PreviewBlock>,
     pub lines: Vec<LayoutLine>,
+    /// Gutter numbers of the blank rows between blocks, as `(content_y,
+    /// shaped number)` — the rows have no text but keep their numbers.
+    pub gap_numbers: Vec<(Pixels, ShapedLine)>,
 }
 
 impl ViewLayout {
@@ -55,8 +149,7 @@ impl ViewLayout {
         }
 
         let x = position.x - self.bounds.left() - self.gutter_width;
-        let column = line.shaped.closest_index_for_x(x);
-        let display = line.display_range.start + column.min(line.display_range.len());
+        let display = line.display_for_x(x);
         let block = &self.blocks[line.block];
         block.offset_map.display_to_source(display)
     }
@@ -80,7 +173,7 @@ impl ViewLayout {
                 && display <= line.display_range.end
         })?;
         let line = &self.lines[line_index];
-        let x = line.shaped.x_for_index(display - line.display_range.start);
+        let x = line.x_for_display(display);
         Some(SourceGeometry {
             origin: point(
                 self.bounds.left() + self.gutter_width + x,
@@ -103,13 +196,13 @@ impl ViewLayout {
             }
             let display_start = block.offset_map.source_to_display(Position(start));
             let display_end = block.offset_map.source_to_display(Position(end));
-            let left = display_start.max(line.display_range.start) - line.display_range.start;
-            let right = display_end.min(line.display_range.end) - line.display_range.start;
             if display_start > line.display_range.end || display_end < line.display_range.start {
                 continue;
             }
-            let start_x = line.shaped.x_for_index(left.min(line.display_range.len()));
-            let mut end_x = line.shaped.x_for_index(right.min(line.display_range.len()));
+            let left = display_start.clamp(line.display_range.start, line.display_range.end);
+            let right = display_end.clamp(line.display_range.start, line.display_range.end);
+            let start_x = line.x_for_display(left);
+            let mut end_x = line.x_for_display(right);
             if end_x <= start_x {
                 if display_end <= line.display_range.start {
                     continue;

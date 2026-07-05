@@ -5,7 +5,8 @@ use crate::app::documents::fragments::FragmentCompiler;
 use crate::core::editable_buffer::EditableBuffer;
 use crate::core::position::{Position, Range};
 use crate::core::preview_renderer::{
-    BlockKind, OffsetMap, PreviewBlock, PreviewOutput, PreviewRenderer, SpanKind, StyleSpan,
+    BlockKind, InlineFragment, OffsetMap, PreviewBlock, PreviewOutput, PreviewRenderer, SpanKind,
+    StyleSpan,
 };
 
 /// The Typst document model. Wraps `typst_syntax::Source`, which owns the
@@ -167,6 +168,7 @@ struct BlockSink<'a> {
     document: &'a TypstDocument,
     display: String,
     spans: Vec<StyleSpan>,
+    fragments: Vec<InlineFragment>,
     map: OffsetMap,
     range: Option<Range>,
 }
@@ -177,6 +179,7 @@ impl<'a> BlockSink<'a> {
             document,
             display: String::new(),
             spans: Vec::new(),
+            fragments: Vec::new(),
             map: OffsetMap::default(),
             range: None,
         }
@@ -239,7 +242,18 @@ impl<'a> BlockSink<'a> {
             }
             ast::Expr::Raw(raw) if !raw.block() => self.emit_raw_inner(raw),
             ast::Expr::Equation(equation) if !equation.block() => {
-                self.push_verbatim(equation.body().to_untyped(), SpanKind::InlineMath)
+                let display_start = self.display.len();
+                self.push_verbatim(equation.body().to_untyped(), SpanKind::InlineMath);
+                // The styled math text stays in the display coordinate
+                // system; the compiled bitmap is drawn in its place when
+                // the markup compiles.
+                let body = &self.display[display_start..];
+                if let Some(fragment) = self.document.fragments.render_inline_math(body) {
+                    self.fragments.push(InlineFragment {
+                        display_range: display_start..self.display.len(),
+                        fragment,
+                    });
+                }
             }
             _ => self.push_verbatim(expr.to_untyped(), kind),
         }
@@ -275,6 +289,7 @@ impl<'a> BlockSink<'a> {
             kind,
             self.display,
             self.spans,
+            self.fragments,
             self.map,
         ))
     }

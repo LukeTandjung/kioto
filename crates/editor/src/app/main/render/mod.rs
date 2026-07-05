@@ -16,8 +16,9 @@ use gpui::{
     EntityInputHandler, FocusHandle, Focusable, FontStyle, FontWeight, GlobalElementId, Hsla,
     InteractiveElement as _, IntoElement, KeyDownEvent, Keystroke, LayoutId, MouseButton,
     MouseDownEvent, MouseMoveEvent, MouseUpEvent, ParentElement as _, Pixels, Point, Render,
-    RenderImage, ScrollHandle, ScrollWheelEvent, ShapedLine, SharedString, Style, Styled as _,
-    TextAlign, TextRun, UTF16Selection, Window, div, fill, point, px, relative, rgb, rgba, size,
+    RenderImage, ScrollHandle, ScrollWheelEvent, ShapedLine, SharedString, Size, Style,
+    Styled as _, TextAlign, TextRun, UTF16Selection, Window, div, fill, point, px, relative, rgb,
+    rgba, size,
 };
 use image::{Frame, ImageBuffer, Rgba};
 use smallvec::SmallVec;
@@ -38,7 +39,7 @@ use crate::core::selection::Selection;
 use crate::port::clipboard::Clipboard;
 use crate::port::document_store::{DocumentLocation, DocumentStore};
 
-use layout::{LayoutLine, ViewLayout, display_rows};
+use layout::{LayoutLine, RowSegment, ViewLayout, display_rows};
 
 const GUTTER_PADDING_LEFT: Pixels = px(8.);
 const GUTTER_PADDING_RIGHT: Pixels = px(18.);
@@ -49,6 +50,21 @@ const CODE_COLOR: u32 = 0xE9C46A;
 const CHIP_BACKGROUND: u32 = 0xFFFFFF18;
 
 type ClipboardFactory = for<'a> fn(&'a mut App) -> Box<dyn Clipboard + 'a>;
+
+/// GPU images for one block's compiled fragments, resolved in prepaint.
+struct BlockImages {
+    /// The whole-block image of a rendered math block.
+    whole: Option<Arc<RenderImage>>,
+    /// Images standing in for ranges of the display text (inline math).
+    inline: Vec<InlineImage>,
+}
+
+struct InlineImage {
+    display_range: ByteRange<usize>,
+    image: Arc<RenderImage>,
+    /// Logical draw size.
+    size: Size<Pixels>,
+}
 
 /// The GPUI entity wrapping the pure `Editor`. Owns everything only the
 /// view cares about: focus, scroll, the last layout for hit testing.
@@ -100,25 +116,48 @@ impl EditorView {
         }
     }
 
-    /// Renders the preview and pairs each block with the GPU image for its
-    /// compiled fragment, converting bitmaps on first sight and dropping
-    /// images whose fragments are gone.
-    fn preview_with_images(&mut self) -> (PreviewOutput, Vec<Option<Arc<RenderImage>>>) {
+    /// Renders the preview and pairs each block with the GPU images for its
+    /// compiled fragments — the whole-block one for rendered math blocks and
+    /// the inline ones for inline math — converting bitmaps on first sight
+    /// and dropping images whose fragments are gone.
+    fn preview_with_images(&mut self) -> (PreviewOutput, Vec<BlockImages>) {
         let cursor = self.editor.cursor();
         let preview = self.editor.document.render_preview(&[cursor]);
         let images: Vec<_> = preview
             .blocks
             .iter()
-            .map(|block| {
-                block
+            .map(|block| BlockImages {
+                whole: block
                     .rendered_fragment()
-                    .and_then(|f| self.fragment_image(f))
+                    .and_then(|f| self.fragment_image(f)),
+                inline: block
+                    .inline_fragments()
+                    .iter()
+                    .filter_map(|inline| {
+                        let image = self.fragment_image(&inline.fragment)?;
+                        Some(InlineImage {
+                            display_range: inline.display_range.clone(),
+                            image,
+                            size: size(
+                                px(inline.fragment.logical_width),
+                                px(inline.fragment.logical_height),
+                            ),
+                        })
+                    })
+                    .collect(),
             })
             .collect();
         let live: Vec<usize> = preview
             .blocks
             .iter()
-            .filter_map(|block| block.rendered_fragment())
+            .flat_map(|block| {
+                block.rendered_fragment().into_iter().chain(
+                    block
+                        .inline_fragments()
+                        .iter()
+                        .map(|inline| &inline.fragment),
+                )
+            })
             .map(|fragment| Arc::as_ptr(fragment) as usize)
             .collect();
         self.fragment_images.retain(|key, _| live.contains(key));
@@ -699,24 +738,47 @@ impl Element for EditorElement {
             .iter()
             .rposition(|line| line.start <= cursor.0)
             .unwrap_or(0);
+        let source_row_of = |offset: usize| {
+            source_lines
+                .iter()
+                .rposition(|line| line.start <= offset)
+                .unwrap_or(0)
+        };
+        let shape_number = |source_row: usize, window: &Window| {
+            let color = if source_row == cursor_source_row {
+                view.style.gutter_number_current.into()
+            } else {
+                view.style.gutter_number.into()
+            };
+            shape_plain(
+                format!("{:>width$}", source_row + 1, width = digits).into(),
+                px(12.),
+                color,
+                window,
+            )
+        };
 
         // Lay every block out top to bottom. Gap rows between blocks come
         // from the source's blank lines so lists stay tight and paragraphs
-        // breathe.
+        // breathe; they carry no text but still show their line numbers.
         let mut lines: Vec<LayoutLine> = Vec::new();
+        let mut gap_numbers: Vec<(Pixels, ShapedLine)> = Vec::new();
         let mut content_y = px(0.);
-        let mut previous_end: usize = 0;
+        let mut previous_row: usize = 0;
         let mut last_numbered_row: Option<usize> = None;
 
         for (block_index, block) in preview.blocks.iter().enumerate() {
-            let gap_text =
-                &text[previous_end.min(block.source_range.start.0)..block.source_range.start.0];
-            let gap_rows = gap_text
-                .matches('\n')
-                .count()
-                .saturating_sub(if block_index == 0 { 0 } else { 1 });
-            content_y += BASE_LINE_HEIGHT * gap_rows as f32;
-            previous_end = block.source_range.end.0;
+            let block_row = source_row_of(block.source_range.start.0);
+            let gap_start_row = if block_index == 0 {
+                0
+            } else {
+                previous_row + 1
+            };
+            for gap_row in gap_start_row..block_row {
+                gap_numbers.push((content_y, shape_number(gap_row, window)));
+                content_y += BASE_LINE_HEIGHT;
+            }
+            previous_row = source_row_of(block.source_range.end.0);
 
             let (font_size, line_height, weight, base_color) =
                 block_metrics(block.kind(), &view.style);
@@ -726,69 +788,97 @@ impl Element for EditorElement {
             let number_for_display =
                 |display: usize, last: &mut Option<usize>, window: &Window| -> Option<ShapedLine> {
                     let source = block.offset_map.display_to_source(display);
-                    let source_row = source_lines
-                        .iter()
-                        .rposition(|line| line.start <= source.0)
-                        .unwrap_or(0);
-                    let number = (*last != Some(source_row)).then(|| {
-                        let color = if source_row == cursor_source_row {
-                            view.style.gutter_number_current.into()
-                        } else {
-                            view.style.gutter_number.into()
-                        };
-                        shape_plain(
-                            format!("{:>width$}", source_row + 1, width = digits).into(),
-                            px(12.),
-                            color,
-                            window,
-                        )
-                    });
+                    let source_row = source_row_of(source.0);
+                    let number =
+                        (*last != Some(source_row)).then(|| shape_number(source_row, window));
                     *last = Some(source_row);
                     number
                 };
 
-            // A compiled fragment renders as one image line; the styled text
-            // below is the fallback when compilation failed.
-            if let Some(image) = &images[block_index]
+            // A whole-block compiled fragment renders as one image row
+            // covering the full display text; the styled text below is the
+            // fallback when compilation failed.
+            if let Some(image) = &images[block_index].whole
                 && let Some(fragment) = block.rendered_fragment()
             {
                 let logical = size(px(fragment.logical_width), px(fragment.logical_height));
                 let height = logical.height.max(line_height);
+                let display_range = 0..block.display_text().len();
                 let line_number = number_for_display(0, &mut last_numbered_row, window);
                 lines.push(LayoutLine {
                     block: block_index,
-                    display_range: 0..0,
-                    shaped: window.text_system().shape_line(
-                        SharedString::default(),
-                        font_size,
-                        &row_runs(0, &(0..0), &[], &base_font, weight, base_color),
-                        None,
-                    ),
+                    display_range: display_range.clone(),
+                    segments: vec![RowSegment::Image {
+                        display_range,
+                        image: image.clone(),
+                        size: logical,
+                        x: px(0.),
+                    }],
                     content_y,
                     height,
                     line_number,
-                    image: Some((image.clone(), logical)),
                 });
                 content_y += height;
                 continue;
             }
 
             for row_range in display_rows(block.display_text()) {
-                let row_text = &block.display_text()[row_range.clone()];
-                let runs = row_runs(
-                    row_text.len(),
-                    &row_range,
-                    block.spans(),
-                    &base_font,
-                    weight,
-                    base_color,
-                );
-                let shaped = window.text_system().shape_line(
-                    SharedString::from(row_text.to_string()),
-                    font_size,
-                    &runs,
-                    None,
-                );
+                // Cut the row at inline-image boundaries: text pieces are
+                // shaped, image pieces stand in for their display bytes.
+                let mut segments = Vec::new();
+                let mut x = px(0.);
+                let mut height = line_height;
+                let mut piece_start = row_range.start;
+                let shape_text = |range: ByteRange<usize>, x: Pixels| {
+                    let piece_text = &block.display_text()[range.clone()];
+                    let runs = row_runs(
+                        piece_text.len(),
+                        &range,
+                        block.spans(),
+                        &base_font,
+                        weight,
+                        base_color,
+                    );
+                    let shaped = window.text_system().shape_line(
+                        SharedString::from(piece_text.to_string()),
+                        font_size,
+                        &runs,
+                        None,
+                    );
+                    let width = shaped.width();
+                    (
+                        RowSegment::Text {
+                            display_range: range,
+                            shaped: Box::new(shaped),
+                            x,
+                        },
+                        width,
+                    )
+                };
+                for inline in &images[block_index].inline {
+                    if inline.display_range.start < row_range.start
+                        || inline.display_range.end > row_range.end
+                    {
+                        continue;
+                    }
+                    if piece_start < inline.display_range.start {
+                        let (segment, width) =
+                            shape_text(piece_start..inline.display_range.start, x);
+                        segments.push(segment);
+                        x += width;
+                    }
+                    segments.push(RowSegment::Image {
+                        display_range: inline.display_range.clone(),
+                        image: inline.image.clone(),
+                        size: inline.size,
+                        x,
+                    });
+                    x += inline.size.width;
+                    height = height.max(inline.size.height);
+                    piece_start = inline.display_range.end;
+                }
+                let (segment, _) = shape_text(piece_start..row_range.end, x);
+                segments.push(segment);
 
                 let line_number =
                     number_for_display(row_range.start, &mut last_numbered_row, window);
@@ -796,13 +886,12 @@ impl Element for EditorElement {
                 lines.push(LayoutLine {
                     block: block_index,
                     display_range: row_range,
-                    shaped,
+                    segments,
                     content_y,
-                    height: line_height,
+                    height,
                     line_number,
-                    image: None,
                 });
-                content_y += line_height;
+                content_y += height;
             }
         }
         let content_height = content_y + BASE_LINE_HEIGHT;
@@ -814,6 +903,7 @@ impl Element for EditorElement {
             content_height,
             blocks: preview.blocks,
             lines,
+            gap_numbers,
         };
 
         let selection_rects = view
@@ -835,9 +925,8 @@ impl Element for EditorElement {
                 let display_next = block
                     .offset_map
                     .source_to_display(Position(next.min(block.source_range.end.0)))
-                    .clamp(line.display_range.start, line.display_range.end)
-                    - line.display_range.start;
-                let end_x = line.shaped.x_for_index(display_next).max(
+                    .clamp(line.display_range.start, line.display_range.end);
+                let end_x = line.x_for_display(display_next).max(
                     geometry.origin.x - layout.bounds.left() - layout.gutter_width
                         + BASE_FONT_SIZE * 0.6,
                 );
@@ -907,16 +996,34 @@ impl Element for EditorElement {
 
         let top = bounds.top();
         let bottom = bounds.bottom();
+        for (content_y, number) in &prepaint.layout.gap_numbers {
+            let y = top + *content_y + prepaint.layout.scroll_y;
+            if y + BASE_LINE_HEIGHT < top || y > bottom {
+                continue;
+            }
+            number
+                .paint(
+                    point(bounds.left() + GUTTER_PADDING_LEFT, y),
+                    BASE_LINE_HEIGHT,
+                    TextAlign::Right,
+                    Some(prepaint.layout.gutter_width - GUTTER_PADDING_LEFT - GUTTER_PADDING_RIGHT),
+                    window,
+                    cx,
+                )
+                .ok();
+        }
         for line in &prepaint.layout.lines {
             let y = prepaint.layout.line_y(line);
             if y + line.height < top || y > bottom {
                 continue;
             }
             if let Some(number) = &line.line_number {
+                // Numbers align to the first text baseline even when an
+                // image makes the row taller than a text line.
                 number
                     .paint(
                         point(bounds.left() + GUTTER_PADDING_LEFT, y),
-                        line.height,
+                        BASE_LINE_HEIGHT.min(line.height),
                         TextAlign::Right,
                         Some(
                             prepaint.layout.gutter_width
@@ -928,32 +1035,35 @@ impl Element for EditorElement {
                     )
                     .ok();
             }
-            if let Some((image, logical)) = &line.image {
-                let origin = point(
-                    bounds.left() + prepaint.layout.gutter_width,
-                    y + (line.height - logical.height) / 2.,
-                );
-                window
-                    .paint_image(
-                        Bounds::new(origin, *logical),
-                        Corners::default(),
-                        image.clone(),
-                        0,
-                        false,
-                    )
-                    .ok();
-                continue;
+            let left = bounds.left() + prepaint.layout.gutter_width;
+            for segment in &line.segments {
+                match segment {
+                    RowSegment::Text { shaped, x, .. } => {
+                        shaped
+                            .paint(
+                                point(left + *x, y),
+                                line.height,
+                                TextAlign::Left,
+                                None,
+                                window,
+                                cx,
+                            )
+                            .ok();
+                    }
+                    RowSegment::Image { image, size, x, .. } => {
+                        let origin = point(left + *x, y + (line.height - size.height) / 2.);
+                        window
+                            .paint_image(
+                                Bounds::new(origin, *size),
+                                Corners::default(),
+                                image.clone(),
+                                0,
+                                false,
+                            )
+                            .ok();
+                    }
+                }
             }
-            line.shaped
-                .paint(
-                    point(bounds.left() + prepaint.layout.gutter_width, y),
-                    line.height,
-                    TextAlign::Left,
-                    None,
-                    window,
-                    cx,
-                )
-                .ok();
         }
 
         if focused && let Some((cursor, CursorLayer::OverText)) = &prepaint.cursor {
@@ -969,6 +1079,7 @@ impl Element for EditorElement {
                 content_height: px(0.),
                 blocks: Vec::new(),
                 lines: Vec::new(),
+                gap_numbers: Vec::new(),
             },
         );
         self.view.update(cx, |view, _| {
