@@ -1,3 +1,4 @@
 // External capabilities expressed in editor/domain terms.
-pub mod clipboard;
-pub mod document_store;
+mod main;
+
+pub use main::*;

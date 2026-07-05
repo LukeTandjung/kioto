@@ -1,6 +1,3 @@
-pub mod editor;
+mod main;
 
-pub use editor::{EditorConfig, create_editor};
-
-pub use crate::app::render::EditorView;
-pub use crate::app::style::EditorStyle;
+pub use main::*;

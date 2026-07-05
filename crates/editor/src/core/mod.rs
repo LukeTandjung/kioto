@@ -1,9 +1,5 @@
-pub mod actions;
-pub mod cursor;
-pub mod editable_buffer;
-pub mod history;
-pub mod mode;
-pub mod motion;
-pub mod position;
-pub mod preview_renderer;
-pub mod selection;
+mod main;
+#[cfg(test)]
+mod test;
+
+pub use main::*;

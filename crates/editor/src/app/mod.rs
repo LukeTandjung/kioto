@@ -1,4 +1,5 @@
-pub mod documents;
-pub mod editor;
-pub mod render;
-pub mod style;
+mod main;
+#[cfg(test)]
+mod test;
+
+pub use main::*;

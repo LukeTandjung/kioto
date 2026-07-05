@@ -1,3 +1,3 @@
-mod editor;
+mod main;
 
-pub use editor::create_editor;
+pub use main::{create_editor, open_editor};

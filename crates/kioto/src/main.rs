@@ -1,4 +1,4 @@
-use editor::{EditorConfig, create_editor};
+use editor::{DocumentLocation, EditorConfig, create_editor, open_editor};
 use gpui::*;
 use gpui_component::*;
 use gpui_platform::application;
@@ -38,21 +38,19 @@ fn main() {
                 // The sample seeds the buffer on first run; once saved
                 // (ctrl-s), later runs load the file instead.
                 let location = std::path::PathBuf::from("metric-spaces.typ");
-                let text = if location.exists() {
-                    String::new()
-                } else {
-                    SAMPLE.into()
+                let document_location = DocumentLocation::filesystem(location.clone());
+                let config = EditorConfig {
+                    text: SAMPLE.into(),
+                    title: "metric-spaces.typ".into(),
+                    location: Some(document_location.clone()),
+                    ..Default::default()
                 };
-                let view = create_editor(
-                    EditorConfig {
-                        text,
-                        title: "metric-spaces.typ".into(),
-                        location: Some(location),
-                        ..Default::default()
-                    },
-                    window,
-                    cx,
-                );
+                let view = if location.exists() {
+                    open_editor(document_location, config, window, cx)
+                        .expect("load editor document")
+                } else {
+                    create_editor(config, window, cx)
+                };
 
                 // This first level on the window, should be a Root.
                 cx.new(|cx| Root::new(view, window, cx))

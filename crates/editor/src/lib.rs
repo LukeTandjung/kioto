@@ -2,19 +2,19 @@
 //!
 //! Hexagonal shape per `issues/editor-business-requirements.md`: `api`
 //! (public surface), `imp` (composition root), `app` (use-case
-//! orchestration, document models, render orchestration), `core` (pure
-//! editor domain logic), `port` (external capabilities), `adapters`
-//! (side-effecting port implementations).
+//! orchestration and document models), `core` (pure editor domain logic),
+//! `port` (external capabilities), and `adapters` (side-effecting port and
+//! GPUI implementations).
 //!
 //! The pre-rebuild spike modules were deleted after milestone 5 harvested
 //! the last of them (`history.rs` → `core/history.rs`); they live on in
 //! git history.
 
-pub mod adapters;
+mod adapters;
 pub mod api;
-pub mod app;
-pub mod core;
+mod app;
+mod core;
 mod imp;
-pub mod port;
+mod port;
 
 pub use api::*;
