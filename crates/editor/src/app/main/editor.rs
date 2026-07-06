@@ -214,12 +214,16 @@ impl<D: EditableBuffer> Editor<D> {
         let Some(query) = self.last_search.clone() else {
             return;
         };
-        let text = self.document.text();
+        // Step past the current match position so repeated `n` advances —
+        // by grapheme, not byte, so the slice in `find_match` stays on a
+        // char boundary over multi-byte text.
         let start = match direction {
-            // Step past the current match position so repeated `n` advances.
-            Direction::Forward => self.cursor().0 + 1,
+            Direction::Forward => {
+                motion::resolve(self.document.text(), self.cursor(), Motion::Right).0
+            }
             Direction::Backward => self.cursor().0,
         };
+        let text = self.document.text();
         if let Some(target) = find_match(text, &query, start, direction) {
             self.history.break_group();
             self.selections.clear();

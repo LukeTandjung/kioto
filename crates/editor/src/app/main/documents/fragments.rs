@@ -97,9 +97,13 @@ impl FragmentCompiler {
             MathStyle::Display => format!("$ {math_body} $"),
             MathStyle::Inline => format!("${math_body}$"),
         };
+        // Text edges default to cap-height/baseline, so an auto-sized page
+        // clips descenders and subscripts; "bounds" sizes the line box to
+        // the actual glyphs.
         let text = format!(
             "#set page(width: auto, height: auto, margin: 0pt, fill: none)\n\
-             #set text(size: {MATH_SIZE_PT}pt, fill: rgb(\"{MATH_COLOR}\"))\n\
+             #set text(size: {MATH_SIZE_PT}pt, fill: rgb(\"{MATH_COLOR}\"), \
+             top-edge: \"bounds\", bottom-edge: \"bounds\")\n\
              {equation}\n"
         );
         let world = FragmentWorld {

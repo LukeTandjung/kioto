@@ -194,6 +194,21 @@ fn search_jumps_and_repeats_with_wrapping() {
 }
 
 #[test]
+fn next_match_from_a_multibyte_char_does_not_panic() {
+    // The cursor lands on "é" (2 bytes); a byte-wise +1 step would slice
+    // mid-codepoint inside `find_match` and panic.
+    let mut editor = editor("é beta é beta");
+    editor.search("é");
+    assert_eq!(editor.cursor(), Position(0));
+
+    type_keys(&mut editor, "n");
+    assert_eq!(editor.cursor(), Position(8));
+    // Wraps back to the first match.
+    type_keys(&mut editor, "n");
+    assert_eq!(editor.cursor(), Position(0));
+}
+
+#[test]
 fn search_with_no_match_stays_put() {
     let mut editor = editor("alpha");
     editor.search("zeta");

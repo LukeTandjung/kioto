@@ -805,6 +805,10 @@ impl Element for EditorElement {
                 let height = logical.height.max(line_height);
                 let display_range = 0..block.display_text().len();
                 let line_number = number_for_display(0, &mut last_numbered_row, window);
+                // Display math centers in the content area (row-local x, so
+                // hit testing and cursor geometry follow it).
+                let centered_x =
+                    ((bounds.size.width - gutter_width - logical.width) / 2.).max(px(0.));
                 lines.push(LayoutLine {
                     block: block_index,
                     display_range: display_range.clone(),
@@ -812,7 +816,7 @@ impl Element for EditorElement {
                         display_range,
                         image: image.clone(),
                         size: logical,
-                        x: px(0.),
+                        x: centered_x,
                     }],
                     content_y,
                     height,
