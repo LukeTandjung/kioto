@@ -391,8 +391,13 @@ fn dialog_demo() -> impl IntoElement {
                 .child(
                     DialogViewport::<()>::new()
                         .absolute()
-                        .top(px(96.0))
-                        .left(px(96.0))
+                        .top_0()
+                        .left_0()
+                        .w_full()
+                        .h_full()
+                        .flex()
+                        .items_center()
+                        .justify_center()
                         .child(
                             DialogPopup::<()>::new()
                                 .w(px(260.0))
@@ -899,13 +904,6 @@ fn gallery_accordion_item(
                     .px_3()
                     .py_2()
                     .text_size(px(13.0))
-                    .style_with_state(|state, trigger| {
-                        if state.focused {
-                            trigger.shadow_lg()
-                        } else {
-                            trigger
-                        }
-                    })
                     .child(trigger_text),
             ),
         )

@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    deferred, div, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement,
-    Styled, Window,
+    anchored, deferred, div, point, px, AnyElement, App, Div, IntoElement, ParentElement,
+    RenderOnce, StyleRefinement, Styled, Window,
 };
 
 use crate::dialog::{
@@ -75,7 +75,7 @@ impl<P: Clone + 'static> RenderOnce for DialogPortal<P> {
         }
         .children(backdrop_children);
 
-        div().child(deferred(base).priority(1))
+        div().child(deferred(anchored().position(point(px(0.0), px(0.0))).child(base)).priority(1))
     }
 }
 
