@@ -136,92 +136,94 @@ they should not be reimplemented.
 
 ### Module / API surface
 
-- [ ] `crates/base_gpui/src/alert_dialog/` module exists and is registered in
+- [x] `crates/base_gpui/src/alert_dialog/` module exists and is registered in
       `lib.rs` (`pub mod alert_dialog;` + `alert_dialog::init(cx);`).
-- [ ] `AlertDialogRoot<P>` builder exists.
-- [ ] `AlertDialogTrigger<P>` builder exists.
-- [ ] `AlertDialogHandle<P>` and `create_alert_dialog_handle<P>()` exist.
-- [ ] `alert_dialog/mod.rs` re-exports `AlertDialogBackdrop`, `AlertDialogClose`,
+- [x] `AlertDialogRoot<P>` builder exists.
+- [x] `AlertDialogTrigger<P>` builder exists.
+- [x] `AlertDialogHandle<P>` and `create_alert_dialog_handle<P>()` exist.
+- [x] `alert_dialog/mod.rs` re-exports `AlertDialogBackdrop`, `AlertDialogClose`,
       `AlertDialogDescription`, `AlertDialogPopup`, `AlertDialogPortal`,
       `AlertDialogTitle`, `AlertDialogViewport` as aliases of the Dialog parts.
-- [ ] `AlertDialogRoot<P>` exposes `id`, `default_open`, `open`, `on_open_change`,
+- [x] `AlertDialogRoot<P>` exposes `id`, `default_open`, `open`, `on_open_change`,
       `on_open_change_complete`, `trigger_id`, `default_trigger_id`,
       `no_trigger_id`, `child` / `children` / `child_any`, `style_with_state`,
       `handle`.
-- [ ] `AlertDialogRoot<P>` does **not** expose `modal`, `modal_mode`, `trap_focus`,
+- [x] `AlertDialogRoot<P>` does **not** expose `modal`, `modal_mode`, `trap_focus`,
       or `disable_pointer_dismissal`.
-- [ ] `AlertDialogTrigger<P>` exposes `id`, `disabled`, `payload`,
+- [x] `AlertDialogTrigger<P>` exposes `id`, `disabled`, `payload`,
       `style_with_state`, and `handle` (typed to `AlertDialogHandle<P>`).
-- [ ] `AlertDialogTrigger<P>` / `AlertDialogRoot<P>` accept `AlertDialogHandle<P>`,
+- [x] `AlertDialogTrigger<P>` / `AlertDialogRoot<P>` accept `AlertDialogHandle<P>`,
       not `DialogHandle<P>`, so plain Dialog handles cannot drive an alert dialog.
-- [ ] Payload type parameter constrained as `P: Clone + 'static`, consistent with Dialog.
+- [x] Payload type parameter constrained as `P: Clone + 'static`, consistent with Dialog.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui` passes.
-- [ ] No duplication of Dialog runtime/context logic; Alert Dialog composes or
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui` passes.
+- [x] No duplication of Dialog runtime/context logic; Alert Dialog composes or
       flags the existing implementation (see Reuse strategy).
-- [ ] Add a small example/demo mounting an Alert Dialog with Trigger + Portal +
+- [x] Add a small example/demo mounting an Alert Dialog with Trigger + Portal +
       Backdrop + Popup + Title + Description + two Close actions (confirm/cancel).
 
 ### Forced-invariant behavior
 
-- [ ] Regardless of caller input, an Alert Dialog is always modal
+- [x] Regardless of caller input, an Alert Dialog is always modal
       (`DialogModalMode::Modal`).
-- [ ] Regardless of caller input, an Alert Dialog always has
+- [x] Regardless of caller input, an Alert Dialog always has
       `disable_pointer_dismissal = true`.
-- [ ] Clicking outside the popup does **not** close an open Alert Dialog.
-- [ ] Clicking the backdrop does **not** close an open Alert Dialog.
-- [ ] Pressing Escape **does** close an open Alert Dialog (Escape is not gated by
+- [x] Clicking outside the popup does **not** close an open Alert Dialog.
+- [x] Clicking the backdrop does **not** close an open Alert Dialog.
+- [x] Pressing Escape **does** close an open Alert Dialog (Escape is not gated by
       `disable_pointer_dismissal`). **(inherited — verify not regressed)**
-- [ ] An `AlertDialogClose` action closes the dialog. **(inherited)**
-- [ ] Focus is trapped within the popup while open. **(inherited)**
+- [x] An `AlertDialogClose` action closes the dialog. **(inherited)**
+- [x] Focus is trapped within the popup while open. **(inherited)**
 - [ ] If option 2 (variant flag) is chosen: a handle-supplied store/context created
       as a plain Dialog is re-pinned to alert invariants on bind, mirroring
-      `handle.ts` re-applying `alertDialogState`.
+      `handle.ts` re-applying `alertDialogState`. *(N/A — option 1 (compose) was
+      chosen; invariants are forced in `AlertDialogRoot::render`.)*
 
 ### Open/close state behavior (inherited from Dialog — verify through Alert Dialog)
 
-- [ ] Uncontrolled: `default_open(true)` opens initially.
-- [ ] Controlled: `open(...)` makes the caller own open state; interaction fires
+- [x] Uncontrolled: `default_open(true)` opens initially.
+- [x] Controlled: `open(...)` makes the caller own open state; interaction fires
       `on_open_change` without mutating internal state.
-- [ ] Controlled precedence: if `open(...)` is supplied, the root is controlled;
+- [x] Controlled precedence: if `open(...)` is supplied, the root is controlled;
       otherwise uncontrolled.
-- [ ] `on_open_change` / `on_open_change_complete` fire with correct timing and can
+- [x] `on_open_change` / `on_open_change_complete` fire with correct timing and can
       `preventUnmountOnClose` equivalent behavior where Dialog supports it.
-- [ ] Trigger opens the dialog; `trigger_id` / `default_trigger_id` scope which
+- [x] Trigger opens the dialog; `trigger_id` / `default_trigger_id` scope which
       trigger is active.
 
 ### Handle / detached trigger behavior
 
-- [ ] `create_alert_dialog_handle::<P>()` returns an `AlertDialogHandle<P>`.
-- [ ] `AlertDialogRoot::handle(...)` binds the handle to the root context.
-- [ ] `AlertDialogHandle` `open` / `open_with_payload` / `close` / `is_open` /
+- [x] `create_alert_dialog_handle::<P>()` returns an `AlertDialogHandle<P>`.
+- [x] `AlertDialogRoot::handle(...)` binds the handle to the root context.
+- [x] `AlertDialogHandle` `open` / `open_with_payload` / `close` / `is_open` /
       `unmount` behave as the Dialog handle does, but the dialog remains
       pointer-dismissal-disabled and modal.
-- [ ] A detached `AlertDialogTrigger` bound via handle opens the dialog.
-- [ ] `AlertDialogHandle<P>` and `DialogHandle<P>` are not interchangeable at the
+- [x] A detached `AlertDialogTrigger` bound via handle opens the dialog.
+- [x] `AlertDialogHandle<P>` and `DialogHandle<P>` are not interchangeable at the
       type level.
 
 ### Styling / state exposure
 
-- [ ] Alert Dialog parts expose the same `Dialog*StyleState` structs via
+- [x] Alert Dialog parts expose the same `Dialog*StyleState` structs via
       `style_with_state` (reused, not duplicated).
-- [ ] `DialogRootStyleState` reports `modal_mode = Modal` and
+- [x] `DialogRootStyleState` reports `modal_mode = Modal` and
       `disable_pointer_dismissal = true` for an Alert Dialog root.
 
 ### Tests / verification
 
-- [ ] Outside/backdrop press does not close (the core Alert-vs-Dialog difference).
-- [ ] Escape closes.
-- [ ] `AlertDialogClose` closes.
-- [ ] Trigger opens.
-- [ ] Handle-driven open/close (including detached trigger).
-- [ ] Controlled open state does not self-mutate on interaction.
-- [ ] Uncontrolled `default_open` initial state.
-- [ ] Focus trap active while open.
-- [ ] Type-level test/example showing a `DialogHandle` cannot be passed where an
+- [x] Outside/backdrop press does not close (the core Alert-vs-Dialog difference).
+- [x] Escape closes.
+- [x] `AlertDialogClose` closes.
+- [x] Trigger opens.
+- [x] Handle-driven open/close (including detached trigger).
+- [x] Controlled open state does not self-mutate on interaction.
+- [x] Uncontrolled `default_open` initial state.
+- [ ] Focus trap active while open. *(No direct tab-cycle test; inherited Dialog
+      focus-trap machinery is unchanged and tests assert `modal_mode = Modal`.)*
+- [x] Type-level test/example showing a `DialogHandle` cannot be passed where an
       `AlertDialogHandle` is required (compile-fail note or doc example is enough).
 
 ## AccessKit accessibility follow-up

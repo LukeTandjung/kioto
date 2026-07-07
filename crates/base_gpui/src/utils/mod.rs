@@ -8,6 +8,8 @@ pub mod direction;
 pub mod overlay;
 pub mod presence;
 
-pub use direction::{current_direction, DirectionProvider, HorizontalDirection, TextDirection};
+pub use direction::{
+    current_direction, DirectionProvider, HorizontalArrowKey, HorizontalDirection, TextDirection,
+};
 pub use overlay::{modal_backdrop, OverlayDismissHandler};
 pub use presence::PresenceState;

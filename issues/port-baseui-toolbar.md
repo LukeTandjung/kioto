@@ -113,165 +113,165 @@ Cross-link: when `issues/port-baseui-toggle.md` and `issues/port-baseui-toggle-g
 
 ### Module/API surface
 
-- [ ] Add a `toolbar` module and export it from `crates/base_gpui/src/lib.rs`.
-- [ ] Register Toolbar key bindings from `base_gpui::init(cx)`.
-- [ ] Add public `ToolbarRoot`, `ToolbarButton`, `ToolbarLink`, `ToolbarInput`, `ToolbarGroup`, and `ToolbarSeparator` layer types.
-- [ ] `ToolbarRoot` supports `.orientation(ToolbarOrientation)` with `Horizontal` as the default; orientation is a typed enum, not a string.
-- [ ] `ToolbarRoot` supports `.loop_focus(bool)`, defaulting to `true`.
-- [ ] `ToolbarRoot` supports `.disabled(bool)`, defaulting to `false`.
-- [ ] `ToolbarButton` supports `.disabled(bool)` (default `false`), `.focusable_when_disabled(bool)` (default `true`), and `.on_click(...)`.
-- [ ] `ToolbarLink` supports `.on_click(...)` and has no disabled builder; links can never be disabled.
-- [ ] `ToolbarInput` supports `.disabled(bool)` (default `false`) and `.focusable_when_disabled(bool)` (default `true`), and forwards the ported `Input` component's value/change builder APIs rather than duplicating them.
-- [ ] `ToolbarGroup` supports `.disabled(bool)`, defaulting to `false`.
-- [ ] `ToolbarSeparator` supports an optional `.orientation(SeparatorOrientation)` override; when not set, orientation is derived from the toolbar (perpendicular).
-- [ ] Add a typed `ToolbarChild` enum routing `Button`, `Link`, `Input`, `Group`, and `Separator` before `AnyElement` erasure.
-- [ ] Add a typed `ToolbarGroupChild` enum for group children (`Button`, `Link`, `Input`) before `AnyElement` erasure.
-- [ ] Decide whether `ToolbarChild` needs an `AnyElement` escape hatch: Base UI's docs demo places non-toolbar wrappers (e.g. `Menu.Root` around a trigger button) as direct root children; record the decision in this issue before implementation.
-- [ ] Expose `ToolbarItemMetadata { disabled, focusable_when_disabled }` as a public type for the Toggle/ToggleGroup integration contract.
-- [ ] `toolbar/mod.rs` exposes barrel exports only for component names, style states, context, props, runtime, actions, metadata, and child types; no items defined in `mod.rs`.
-- [ ] No `pub(crate)` / `pub(super)` restricted visibility; items are private or fully `pub`, and the module passes the repo's ast-grep lint checks.
+- [x] Add a `toolbar` module and export it from `crates/base_gpui/src/lib.rs`.
+- [x] Register Toolbar key bindings from `base_gpui::init(cx)`.
+- [x] Add public `ToolbarRoot`, `ToolbarButton`, `ToolbarLink`, `ToolbarInput`, `ToolbarGroup`, and `ToolbarSeparator` layer types.
+- [x] `ToolbarRoot` supports `.orientation(ToolbarOrientation)` with `Horizontal` as the default; orientation is a typed enum, not a string.
+- [x] `ToolbarRoot` supports `.loop_focus(bool)`, defaulting to `true`.
+- [x] `ToolbarRoot` supports `.disabled(bool)`, defaulting to `false`.
+- [x] `ToolbarButton` supports `.disabled(bool)` (default `false`), `.focusable_when_disabled(bool)` (default `true`), and `.on_click(...)`.
+- [x] `ToolbarLink` supports `.on_click(...)` and has no disabled builder; links can never be disabled.
+- [x] `ToolbarInput` supports `.disabled(bool)` (default `false`) and `.focusable_when_disabled(bool)` (default `true`), and forwards the ported `Input` component's value/change builder APIs rather than duplicating them.
+- [x] `ToolbarGroup` supports `.disabled(bool)`, defaulting to `false`.
+- [x] `ToolbarSeparator` supports an optional `.orientation(SeparatorOrientation)` override; when not set, orientation is derived from the toolbar (perpendicular).
+- [x] Add a typed `ToolbarChild` enum routing `Button`, `Link`, `Input`, `Group`, and `Separator` before `AnyElement` erasure.
+- [x] Add a typed `ToolbarGroupChild` enum for group children (`Button`, `Link`, `Input`) before `AnyElement` erasure.
+- [x] Decide whether `ToolbarChild` needs an `AnyElement` escape hatch: Base UI's docs demo places non-toolbar wrappers (e.g. `Menu.Root` around a trigger button) as direct root children; record the decision in this issue before implementation. **Decision: no `AnyElement` variant for now** — deferred until menu/select trigger hosting is designed; the typed enum can gain an escape hatch or trigger variants without breaking the registration contract.
+- [x] Expose `ToolbarItemMetadata { disabled, focusable_when_disabled }` as a public type for the Toggle/ToggleGroup integration contract.
+- [x] `toolbar/mod.rs` exposes barrel exports only for component names, style states, context, props, runtime, actions, metadata, and child types; no items defined in `mod.rs`.
+- [x] No `pub(crate)` / `pub(super)` restricted visibility; items are private or fully `pub`, and the module passes the repo's ast-grep lint checks.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui toolbar` passes.
-- [ ] The component compiles without adding web/React-specific concepts (`className`, render props, DOM roles, native-button switches) to public APIs.
-- [ ] The implementation follows `docs/base-gpui-component-architecture.md`: flat module layout (`runtime.rs`, `context.rs`, `props.rs`, `style_state.rs`, `child.rs`, `child_wiring.rs`, `layers/`), no nested `child/context/{props,runtime,state}` taxonomy, no `utils/` folder.
-- [ ] Add a small example/demo in `crates/base_gpui/src/main.rs` or a dedicated example rendering a toolbar with buttons, a group, a separator, a link, and an input.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui toolbar` passes.
+- [x] The component compiles without adding web/React-specific concepts (`className`, render props, DOM roles, native-button switches) to public APIs.
+- [x] The implementation follows `docs/base-gpui-component-architecture.md`: flat module layout (`runtime.rs`, `context.rs`, `props.rs`, `style_state.rs`, `child.rs`, `child_wiring.rs`, `layers/`), no nested `child/context/{props,runtime,state}` taxonomy, no `utils/` folder.
+- [x] Add a small example/demo in `crates/base_gpui/src/main.rs` or a dedicated example rendering a toolbar with buttons, a group, a separator, a link, and an input.
 
 ### Architecture / internal primitives
 
-- [ ] Add `ToolbarRuntime` as the single owner of toolbar business state: registered item metadata in source order, focus handles, highlighted/roving-tab-stop index, orientation, loop-focus flag, and toolbar disabled state.
-- [ ] `ToolbarRuntime` computes the roving-focus skip set internally from item metadata (`disabled && !focusable_when_disabled`), Base UI's `disabledIndices` equivalent; the skip set never escapes as public state — parts ask item-shaped questions only.
-- [ ] `ToolbarRuntime` exposes commands (`sync_children`, `move_highlight`, `set_highlight`/click-focus, initial-tab-stop resolution) and per-part style-state queries; no getter/setter pairs.
-- [ ] Add `ToolbarProps` for stable root configuration (orientation, loop focus, disabled).
-- [ ] Add `ToolbarContext` as a thin injection type with only `read(...)` / `update(...)`-style methods; toolbar vocabulary (registration, highlight movement) lives on the runtime.
-- [ ] Child wiring in `child_wiring.rs` is the only place that assigns item indices; it flattens group children into the toolbar's single item order (groups occupy no roving slot) and collects `Vec<ToolbarItemMetadata>` plus `focus_handles: Vec<(usize, FocusHandle)>`, following `crates/base_gpui/src/tabs/child_wiring.rs`.
-- [ ] Separators and groups register no item metadata; only buttons, links, and inputs occupy roving slots.
-- [ ] Renderable GPUI elements live only under `toolbar/layers/`; child routing lives in `child.rs`, not `layers/`.
-- [ ] Root render is the single mutation site outside event handlers: wire children once, `sync_children`, resolve the initial tab stop; no index bookkeeping in parts.
-- [ ] Do not add new shared generic primitives; roving focus and registration stay toolbar-local per the tabs/radio-group precedent.
+- [x] Add `ToolbarRuntime` as the single owner of toolbar business state: registered item metadata in source order, focus handles, highlighted/roving-tab-stop index, orientation, loop-focus flag, and toolbar disabled state.
+- [x] `ToolbarRuntime` computes the roving-focus skip set internally from item metadata (`disabled && !focusable_when_disabled`), Base UI's `disabledIndices` equivalent; the skip set never escapes as public state — parts ask item-shaped questions only.
+- [x] `ToolbarRuntime` exposes commands (`sync_children`, `move_highlight`, `set_highlight`/click-focus, initial-tab-stop resolution) and per-part style-state queries; no getter/setter pairs.
+- [x] Add `ToolbarProps` for stable root configuration (orientation, loop focus, disabled).
+- [x] Add `ToolbarContext` as a thin injection type with only `read(...)` / `update(...)`-style methods; toolbar vocabulary (registration, highlight movement) lives on the runtime.
+- [x] Child wiring in `child_wiring.rs` is the only place that assigns item indices; it flattens group children into the toolbar's single item order (groups occupy no roving slot) and collects `Vec<ToolbarItemMetadata>` plus `focus_handles: Vec<(usize, FocusHandle)>`, following `crates/base_gpui/src/tabs/child_wiring.rs`.
+- [x] Separators and groups register no item metadata; only buttons, links, and inputs occupy roving slots.
+- [x] Renderable GPUI elements live only under `toolbar/layers/`; child routing lives in `child.rs`, not `layers/`.
+- [x] Root render is the single mutation site outside event handlers: wire children once, `sync_children`, resolve the initial tab stop; no index bookkeeping in parts.
+- [x] Do not add new shared generic primitives; roving focus and registration stay toolbar-local per the tabs/radio-group precedent.
 
 ### Item registration and metadata
 
-- [ ] Each item registers `ToolbarItemMetadata { disabled, focusable_when_disabled }` with its effective (cascaded) disabled state, matching Base UI's `ItemMetadata`.
-- [ ] `ToolbarButton` registers its merged disabled state and its `focusable_when_disabled` flag (default `true`).
-- [ ] `ToolbarLink` always registers `{ disabled: false, focusable_when_disabled: true }`; it occupies a roving slot even when the toolbar is disabled.
-- [ ] `ToolbarInput` registers its merged disabled state and its `focusable_when_disabled` flag (default `true`).
-- [ ] Items are registered in source order and re-synced on every root render so add/remove/disable changes are reflected without stale indices.
-- [ ] Registration flows through the same channel the Toggle/ToggleGroup contract will use; no button-specific registration path.
+- [x] Each item registers `ToolbarItemMetadata { disabled, focusable_when_disabled }` with its effective (cascaded) disabled state, matching Base UI's `ItemMetadata`.
+- [x] `ToolbarButton` registers its merged disabled state and its `focusable_when_disabled` flag (default `true`).
+- [x] `ToolbarLink` always registers `{ disabled: false, focusable_when_disabled: true }`; it occupies a roving slot even when the toolbar is disabled.
+- [x] `ToolbarInput` registers its merged disabled state and its `focusable_when_disabled` flag (default `true`).
+- [x] Items are registered in source order and re-synced on every root render so add/remove/disable changes are reflected without stale indices.
+- [x] Registration flows through the same channel the Toggle/ToggleGroup contract will use; no button-specific registration path.
 
 ### Roving focus / keyboard behavior
 
-- [ ] The toolbar is a single tab stop: exactly one item (the current roving tab stop) participates in window Tab order, via GPUI `tab_stop` / `tab_index`.
-- [ ] Toolbar keyboard handling uses GPUI actions and a toolbar key context (`actions.rs` + `key_context(...)` + `on_action(...)`), not raw key-down handlers.
-- [ ] Horizontal orientation: ArrowRight moves highlight/focus to the next item and ArrowLeft to the previous item in ambient LTR direction.
-- [ ] Horizontal orientation: ArrowLeft moves next and ArrowRight moves previous in ambient RTL direction (consume the shared direction primitive from `issues/port-baseui-direction-provider.md`).
-- [ ] Vertical orientation: ArrowDown moves next and ArrowUp moves previous; direction does not flip vertical arrows.
-- [ ] Perpendicular arrows are inert: vertical arrows do nothing in a horizontal toolbar and horizontal arrows do nothing in a vertical toolbar.
-- [ ] `loop_focus = true` wraps arrow navigation at both ends; `loop_focus = false` clamps at the ends.
-- [ ] Home and End do not navigate: Base UI Toolbar leaves `enableHomeAndEndKeys` off (`useCompositeRoot.ts` defaults it to `false` and `ToolbarRoot.tsx` never enables it).
-- [ ] Arrow navigation skips items whose metadata is `disabled && !focusable_when_disabled`.
-- [ ] Disabled items with `focusable_when_disabled = true` (the default) remain in the roving order and receive focus during arrow navigation.
-- [ ] Arrow navigation moves real GPUI focus (via the stored `FocusHandle`s) to the newly highlighted item, and the roving tab stop follows it.
-- [ ] The initial tab stop is the first item not excluded by the skip set; a disabled, non-focusable first item never becomes the initial tab stop.
-- [ ] Clicking or focusing an item makes it the current roving tab stop, so tabbing away and back returns to that item rather than resetting to the first.
-- [ ] Modifier-held arrow presses (other than plain Shift text-selection inside the input, covered below) do not navigate, matching composite modifier handling.
+- [x] The toolbar is a single tab stop: exactly one item (the current roving tab stop) participates in window Tab order, via GPUI `tab_stop` / `tab_index`.
+- [x] Toolbar keyboard handling uses GPUI actions and a toolbar key context (`actions.rs` + `key_context(...)` + `on_action(...)`), not raw key-down handlers.
+- [x] Horizontal orientation: ArrowRight moves highlight/focus to the next item and ArrowLeft to the previous item in ambient LTR direction.
+- [x] Horizontal orientation: ArrowLeft moves next and ArrowRight moves previous in ambient RTL direction (consume the shared direction primitive from `issues/port-baseui-direction-provider.md`).
+- [x] Vertical orientation: ArrowDown moves next and ArrowUp moves previous; direction does not flip vertical arrows.
+- [x] Perpendicular arrows are inert: vertical arrows do nothing in a horizontal toolbar and horizontal arrows do nothing in a vertical toolbar.
+- [x] `loop_focus = true` wraps arrow navigation at both ends; `loop_focus = false` clamps at the ends.
+- [x] Home and End do not navigate: Base UI Toolbar leaves `enableHomeAndEndKeys` off (`useCompositeRoot.ts` defaults it to `false` and `ToolbarRoot.tsx` never enables it).
+- [x] Arrow navigation skips items whose metadata is `disabled && !focusable_when_disabled`.
+- [x] Disabled items with `focusable_when_disabled = true` (the default) remain in the roving order and receive focus during arrow navigation.
+- [x] Arrow navigation moves real GPUI focus (via the stored `FocusHandle`s) to the newly highlighted item, and the roving tab stop follows it.
+- [x] The initial tab stop is the first item not excluded by the skip set; a disabled, non-focusable first item never becomes the initial tab stop.
+- [x] Clicking or focusing an item makes it the current roving tab stop, so tabbing away and back returns to that item rather than resetting to the first.
+- [x] Modifier-held arrow presses (other than plain Shift text-selection inside the input, covered below) do not navigate, matching composite modifier handling.
 
 ### Disabled cascade behavior
 
-- [ ] Effective item disabled state is `toolbar.disabled || group.disabled || item.disabled` for buttons and inputs.
-- [ ] `ToolbarGroup` merges `toolbar.disabled || group.disabled` and cascades the merged value to its contained items.
-- [ ] `ToolbarLink` ignores the cascade entirely: toolbar/group disabled never disables a link, matching Base UI's "disables all toolbar items except links" behavior.
-- [ ] Disabling the toolbar or a group updates the registered metadata and therefore the skip set on the next render, without any part diffing previous values.
+- [x] Effective item disabled state is `toolbar.disabled || group.disabled || item.disabled` for buttons and inputs.
+- [x] `ToolbarGroup` merges `toolbar.disabled || group.disabled` and cascades the merged value to its contained items.
+- [x] `ToolbarLink` ignores the cascade entirely: toolbar/group disabled never disables a link, matching Base UI's "disables all toolbar items except links" behavior.
+- [x] Disabling the toolbar or a group updates the registered metadata and therefore the skip set on the next render, without any part diffing previous values.
 
 ### Button behavior
 
-- [ ] An enabled `ToolbarButton` fires `on_click` on pointer click.
-- [ ] An enabled, focused `ToolbarButton` activates via Enter and Space through the toolbar key context (GPUI has no native button activation).
-- [ ] A disabled `ToolbarButton` never fires `on_click` from pointer or keyboard.
-- [ ] A disabled `ToolbarButton` with `focusable_when_disabled = true` still receives hover state so tooltip-style interactions on disabled buttons keep working.
-- [ ] A disabled `ToolbarButton` with `focusable_when_disabled = false` is removed from roving focus and cannot be focused by arrow navigation.
-- [ ] The button is designed to later host trigger-style children (menu/select/dialog triggers) without changing the toolbar registration contract; do not implement trigger hosting in this issue.
+- [x] An enabled `ToolbarButton` fires `on_click` on pointer click.
+- [x] An enabled, focused `ToolbarButton` activates via Enter and Space through the toolbar key context (GPUI has no native button activation).
+- [x] A disabled `ToolbarButton` never fires `on_click` from pointer or keyboard.
+- [x] A disabled `ToolbarButton` with `focusable_when_disabled = true` still receives hover state so tooltip-style interactions on disabled buttons keep working.
+- [x] A disabled `ToolbarButton` with `focusable_when_disabled = false` is removed from roving focus and cannot be focused by arrow navigation.
+- [x] The button is designed to later host trigger-style children (menu/select/dialog triggers) without changing the toolbar registration contract; do not implement trigger hosting in this issue.
 
 ### Link behavior
 
-- [ ] `ToolbarLink` renders as a plain focusable styled item (no anchor semantics) and fires `on_click` on click, Enter, and Space.
-- [ ] `ToolbarLink` occupies exactly one roving slot and is always navigable, including when the toolbar or an enclosing group is disabled.
+- [x] `ToolbarLink` renders as a plain focusable styled item (no anchor semantics) and fires `on_click` on click, Enter, and Space.
+- [x] `ToolbarLink` occupies exactly one roving slot and is always navigable, including when the toolbar or an enclosing group is disabled.
 
 ### Input behavior
 
-- [ ] `ToolbarInput` wraps the existing `crates/base_gpui/src/input/` component; text editing, value state, and change callbacks come from the reused input, not a reimplementation.
-- [ ] `ToolbarInput` is a composite item: it occupies one roving slot and arrow navigation can move focus into and out of it.
-- [ ] While the input has focus, a forward arrow only moves roving focus to the next item when the caret sits at the end of the text with no selection; otherwise the arrow performs native caret movement.
-- [ ] While the input has focus, a backward arrow only moves roving focus to the previous item when the caret sits at position 0 with no selection; otherwise the arrow performs native caret movement.
-- [ ] Shift+arrow inside the input always performs text selection and never navigates the toolbar.
-- [ ] When roving focus moves into the input, its text content is fully selected, matching the composite `onFocus` select-all behavior.
-- [ ] A disabled `ToolbarInput` does not accept text input or trap focus; with `focusable_when_disabled = false` it is skipped by roving focus, and with the default `true` it stays in the roving order.
-- [ ] If the ported input does not yet expose caret/selection queries needed for the edge checks, extend `crates/base_gpui/src/primitives/input` rather than duplicating editing logic in the toolbar.
+- [x] `ToolbarInput` wraps the existing `crates/base_gpui/src/input/` component; text editing, value state, and change callbacks come from the reused input, not a reimplementation.
+- [x] `ToolbarInput` is a composite item: it occupies one roving slot and arrow navigation can move focus into and out of it.
+- [x] While the input has focus, a forward arrow only moves roving focus to the next item when the caret sits at the end of the text with no selection; otherwise the arrow performs native caret movement.
+- [x] While the input has focus, a backward arrow only moves roving focus to the previous item when the caret sits at position 0 with no selection; otherwise the arrow performs native caret movement.
+- [x] Shift+arrow inside the input always performs text selection and never navigates the toolbar.
+- [x] When roving focus moves into the input, its text content is fully selected, matching the composite `onFocus` select-all behavior.
+- [x] A disabled `ToolbarInput` does not accept text input or trap focus; with `focusable_when_disabled = false` it is skipped by roving focus, and with the default `true` it stays in the roving order.
+- [x] If the ported input does not yet expose caret/selection queries needed for the edge checks, extend `crates/base_gpui/src/primitives/input` rather than duplicating editing logic in the toolbar.
 
 ### Group behavior
 
-- [ ] `ToolbarGroup` renders as a plain container (Base UI `role="group"` div) and is not a composite item: it has no focus handle and no roving slot.
-- [ ] Group children participate in the toolbar's roving order exactly as if they were direct toolbar children (flattened indices).
-- [ ] Group disabled state cascades to contained buttons and inputs but not links.
+- [x] `ToolbarGroup` renders as a plain container (Base UI `role="group"` div) and is not a composite item: it has no focus handle and no roving slot.
+- [x] Group children participate in the toolbar's roving order exactly as if they were direct toolbar children (flattened indices).
+- [x] Group disabled state cascades to contained buttons and inputs but not links.
 
 ### Separator behavior
 
-- [ ] `ToolbarSeparator` wraps the existing `crates/base_gpui/src/separator/` component.
-- [ ] Default orientation is perpendicular to the toolbar: a horizontal toolbar renders vertical separators and a vertical toolbar renders horizontal separators.
-- [ ] An explicit `.orientation(...)` on `ToolbarSeparator` overrides the derived perpendicular orientation.
-- [ ] Separators are not composite items and are never focused by roving navigation.
+- [x] `ToolbarSeparator` wraps the existing `crates/base_gpui/src/separator/` component.
+- [x] Default orientation is perpendicular to the toolbar: a horizontal toolbar renders vertical separators and a vertical toolbar renders horizontal separators.
+- [x] An explicit `.orientation(...)` on `ToolbarSeparator` overrides the derived perpendicular orientation.
+- [x] Separators are not composite items and are never focused by roving navigation.
 
 ### Toggle/ToggleGroup integration seam
 
-- [ ] `ToolbarItemMetadata` and the registration path are public/extensible enough that a future `Toggle` port can register `{ disabled, focusable_when_disabled: false }` as a toolbar item without toolbar changes beyond a new child variant.
-- [ ] The child-wiring design documents (in code comments or the child enum docs) how a future `ToggleGroup` variant contributes its child toggles as individual flattened toolbar items while the group container itself takes no roving slot.
-- [ ] A future toolbar-nested `ToggleGroup` must be able to suppress its own roving focus when a toolbar context is present; the toolbar context is designed to be optionally detectable by nested compound children.
-- [ ] Toolbar/group disabled cascade reaches future nested `ToggleGroup`/`Toggle` items through the same merged-disabled rule used for buttons and inputs.
-- [ ] Cross-link this contract from `issues/port-baseui-toggle.md` and `issues/port-baseui-toggle-group.md` when those issues are written.
+- [x] `ToolbarItemMetadata` and the registration path are public/extensible enough that a future `Toggle` port can register `{ disabled, focusable_when_disabled: false }` as a toolbar item without toolbar changes beyond a new child variant.
+- [x] The child-wiring design documents (in code comments or the child enum docs) how a future `ToggleGroup` variant contributes its child toggles as individual flattened toolbar items while the group container itself takes no roving slot.
+- [x] A future toolbar-nested `ToggleGroup` must be able to suppress its own roving focus when a toolbar context is present; the toolbar context is designed to be optionally detectable by nested compound children.
+- [x] Toolbar/group disabled cascade reaches future nested `ToggleGroup`/`Toggle` items through the same merged-disabled rule used for buttons and inputs.
+- [x] Cross-link this contract from `issues/port-baseui-toggle.md` and `issues/port-baseui-toggle-group.md` when those issues are written.
 
 ### Styling/state exposure
 
-- [ ] Add `ToolbarRootStyleState { disabled, orientation }`.
-- [ ] Add `ToolbarButtonStyleState` with at least `disabled`, `orientation`, `focusable` (the `focusable_when_disabled` fact), plus GPUI-native `focused`/tab-stop facts.
-- [ ] Add `ToolbarLinkStyleState { orientation }` plus GPUI-native focused facts.
-- [ ] Add `ToolbarInputStyleState` with at least `disabled`, `orientation`, `focusable`, composing the reused input's style state rather than hiding it.
-- [ ] Add `ToolbarGroupStyleState { disabled, orientation }`.
-- [ ] `ToolbarSeparator` styling flows through the existing `SeparatorStyleState`.
-- [ ] Expose `style_with_state(...)` on every part that draws.
-- [ ] Map Base UI data attributes (`data-disabled`, `data-orientation`, `data-focusable`) into these typed style-state fields; no DOM attributes, `className`, or CSS variables in the public surface.
+- [x] Add `ToolbarRootStyleState { disabled, orientation }`.
+- [x] Add `ToolbarButtonStyleState` with at least `disabled`, `orientation`, `focusable` (the `focusable_when_disabled` fact), plus GPUI-native `focused`/tab-stop facts.
+- [x] Add `ToolbarLinkStyleState { orientation }` plus GPUI-native focused facts.
+- [x] Add `ToolbarInputStyleState` with at least `disabled`, `orientation`, `focusable`, composing the reused input's style state rather than hiding it.
+- [x] Add `ToolbarGroupStyleState { disabled, orientation }`.
+- [x] `ToolbarSeparator` styling flows through the existing `SeparatorStyleState`.
+- [x] Expose `style_with_state(...)` on every part that draws.
+- [x] Map Base UI data attributes (`data-disabled`, `data-orientation`, `data-focusable`) into these typed style-state fields; no DOM attributes, `className`, or CSS variables in the public surface.
 
 ### Accessibility follow-up
 
-- [ ] Once the target GPUI revision supports the needed AccessKit APIs, map the root to the AccessKit toolbar role with orientation, groups to the group role, and expose item disabled state; do not port DOM ARIA attributes in this issue.
+- [ ] Once the target GPUI revision supports the needed AccessKit APIs, map the root to the AccessKit toolbar role with orientation, groups to the group role, and expose item disabled state; do not port DOM ARIA attributes in this issue. (Blocked on GPUI AccessKit support.)
 
 ### Tests / verification
 
 Add one behavior per file under `crates/base_gpui/src/toolbar/tests/`.
 
-- [ ] Horizontal LTR ArrowRight/ArrowLeft roving navigation moves focus next/previous.
-- [ ] Horizontal RTL flips ArrowLeft/ArrowRight navigation under a DirectionProvider.
-- [ ] Vertical ArrowDown/ArrowUp roving navigation moves focus next/previous.
-- [ ] Perpendicular arrows do not navigate.
-- [ ] `loop_focus = true` wraps at both ends; `loop_focus = false` clamps.
-- [ ] Home and End do not navigate.
-- [ ] A disabled item with `focusable_when_disabled = false` is skipped by arrow navigation.
-- [ ] A disabled item with default `focusable_when_disabled = true` is retained in the roving order and receives focus.
-- [ ] The initial tab stop moves off a disabled, non-focusable first item.
-- [ ] Clicking an item makes it the roving tab stop; tabbing away and back returns to it.
-- [ ] Toolbar `disabled` cascades to buttons and inputs but not links.
-- [ ] Group `disabled` cascades to contained buttons and inputs but not links.
-- [ ] Disabled button click and Enter/Space do not fire `on_click`.
-- [ ] Enabled button fires `on_click` from pointer and from Enter/Space.
-- [ ] Link stays navigable and clickable inside a disabled toolbar.
-- [ ] Input: forward arrow at caret-end leaves the input; forward arrow mid-text moves the caret instead.
-- [ ] Input: backward arrow at caret position 0 leaves the input; backward arrow mid-text moves the caret instead.
-- [ ] Input: Shift+arrow selects text and never navigates.
-- [ ] Input: roving focus into the input selects all its text.
-- [ ] Disabled input is skipped when `focusable_when_disabled = false` and does not block vertical/horizontal roving traversal.
-- [ ] Separator renders perpendicular to toolbar orientation by default and honors an explicit orientation override.
-- [ ] `style_with_state(...)` receives correct root, button, link, input, and group state (including `focusable` on disabled-but-focusable items).
+- [x] Horizontal LTR ArrowRight/ArrowLeft roving navigation moves focus next/previous.
+- [x] Horizontal RTL flips ArrowLeft/ArrowRight navigation under a DirectionProvider.
+- [x] Vertical ArrowDown/ArrowUp roving navigation moves focus next/previous.
+- [x] Perpendicular arrows do not navigate.
+- [x] `loop_focus = true` wraps at both ends; `loop_focus = false` clamps.
+- [x] Home and End do not navigate.
+- [x] A disabled item with `focusable_when_disabled = false` is skipped by arrow navigation.
+- [x] A disabled item with default `focusable_when_disabled = true` is retained in the roving order and receives focus.
+- [x] The initial tab stop moves off a disabled, non-focusable first item.
+- [x] Clicking an item makes it the roving tab stop; tabbing away and back returns to it.
+- [x] Toolbar `disabled` cascades to buttons and inputs but not links.
+- [x] Group `disabled` cascades to contained buttons and inputs but not links.
+- [x] Disabled button click and Enter/Space do not fire `on_click`.
+- [x] Enabled button fires `on_click` from pointer and from Enter/Space.
+- [x] Link stays navigable and clickable inside a disabled toolbar.
+- [x] Input: forward arrow at caret-end leaves the input; forward arrow mid-text moves the caret instead.
+- [x] Input: backward arrow at caret position 0 leaves the input; backward arrow mid-text moves the caret instead.
+- [x] Input: Shift+arrow selects text and never navigates.
+- [x] Input: roving focus into the input selects all its text.
+- [x] Disabled input is skipped when `focusable_when_disabled = false` and does not block vertical/horizontal roving traversal.
+- [x] Separator renders perpendicular to toolbar orientation by default and honors an explicit orientation override.
+- [x] `style_with_state(...)` receives correct root, button, link, input, and group state (including `focusable` on disabled-but-focusable items).
 
 ## Uncertain / needs confirmation
 

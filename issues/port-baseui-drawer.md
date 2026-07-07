@@ -235,81 +235,85 @@ that must keep working through Drawer reuse, not be reimplemented.
 
 ### Module/API surface
 
-- [ ] Add a `drawer` module and export it from `crates/base_gpui/src/lib.rs`.
+- [x] Add a `drawer` module and export it from `crates/base_gpui/src/lib.rs`.
 - [ ] Re-export the reused Dialog parts under Drawer names from `drawer/mod.rs`:
       `DrawerTrigger<P>`, `DrawerPortal<P>`, `DrawerTitle<P>`,
       `DrawerDescription<P>`, `DrawerClose<P>`, `DrawerHandle<P>`,
       `create_drawer_handle<P>()` — as type aliases / re-exports of the `dialog`
       module items, with no forked implementations.
-- [ ] Add drawer-specific public layer types `DrawerRoot<P = ()>`,
+      *Partially done: Trigger/Title/Description/Close/Handle/create_drawer_handle are
+      literal re-exports; `DrawerPortal` is a drawer-typed thin copy because GPUI's
+      typed child enums cannot route drawer-specific Backdrop/Viewport through
+      `DialogPortal`.*
+- [x] Add drawer-specific public layer types `DrawerRoot<P = ()>`,
       `DrawerViewport<P = ()>`, `DrawerPopup<P = ()>`, `DrawerBackdrop<P = ()>`,
       `DrawerContent<P = ()>`, `DrawerSwipeArea<P = ()>`, `DrawerProvider`,
       `DrawerIndent`, `DrawerIndentBackground`.
-- [ ] Constrain payloads as `P: Clone + 'static`, consistent with Dialog.
-- [ ] `DrawerRoot<P>` forwards the Dialog root surface unchanged: `id`,
+- [x] Constrain payloads as `P: Clone + 'static`, consistent with Dialog.
+- [x] `DrawerRoot<P>` forwards the Dialog root surface unchanged: `id`,
       `default_open` (default `false`), `open`, `on_open_change`,
       `on_open_change_complete`, `disable_pointer_dismissal` (default `false` —
       unlike AlertDialog, Drawer does not force it), `modal` (default modal),
       `trigger_id`, `default_trigger_id`, `handle`, children, `style_with_state`.
-- [ ] Add `DrawerSwipeDirection::{Up, Down, Left, Right}` and
+- [x] Add `DrawerSwipeDirection::{Up, Down, Left, Right}` and
       `DrawerRoot::swipe_direction(...)`, defaulting to `Down`.
-- [ ] Add `DrawerSnapPoint` as a typed Rust value instead of Base UI's
+- [x] Add `DrawerSnapPoint` as a typed Rust value instead of Base UI's
       `number | string` union, e.g. `DrawerSnapPoint::{Fraction(f32), Px(Pixels),
       Rems(Rems)}` where `Fraction` covers Base UI numbers `<= 1` (fraction of
       viewport height) and `Px` covers numbers `> 1` / `'…px'` strings.
-- [ ] Support `DrawerRoot::snap_points(Vec<DrawerSnapPoint>)`.
-- [ ] Support `DrawerRoot::snap_to_sequential_points(bool)`, default `false`.
-- [ ] Support uncontrolled snap point via
+- [x] Support `DrawerRoot::snap_points(Vec<DrawerSnapPoint>)`.
+- [x] Support `DrawerRoot::snap_to_sequential_points(bool)`, default `false`.
+- [x] Support uncontrolled snap point via
       `DrawerRoot::default_snap_point(Option<DrawerSnapPoint>)`; when unset, the
       default is the first entry of `snap_points`, or none when there are no snap
       points.
-- [ ] Support controlled snap point via
+- [x] Support controlled snap point via
       `DrawerRoot::snap_point(Option<DrawerSnapPoint>)`; calling the builder marks
       the snap point controlled even when `None`.
-- [ ] Support `DrawerRoot::on_snap_point_change(...)` with a Rust-native cancelable
+- [x] Support `DrawerRoot::on_snap_point_change(...)` with a Rust-native cancelable
       details API reusing the Dialog details shape, e.g.
       `Fn(Option<DrawerSnapPoint>, &mut DrawerSnapPointChangeDetails, &mut Window,
       &mut App)`.
-- [ ] Extend the shared open-change reason vocabulary with a swipe reason (Base UI
+- [x] Extend the shared open-change reason vocabulary with a swipe reason (Base UI
       `REASONS.swipe`): add `DialogOpenChangeReason::Swipe` (or an equivalent
       drawer-visible reason) so swipe-dismiss/swipe-open report a distinct reason
       through the reused `on_open_change`. Do not add a `CloseWatcher` reason.
 - [ ] `DrawerPopup<P>` supports `initial_focus(...)` / `final_focus(...)`
       pass-through to the Dialog popup focus policy once Dialog implements it
       (dependency noted above).
-- [ ] `DrawerBackdrop<P>` supports `.force_render(bool)`, default `false`
+- [x] `DrawerBackdrop<P>` supports `.force_render(bool)`, default `false`
       (renders a nested drawer's backdrop anyway).
-- [ ] `DrawerSwipeArea<P>` supports `.disabled(bool)` (default `false`),
+- [x] `DrawerSwipeArea<P>` supports `.disabled(bool)` (default `false`),
       `.swipe_direction(DrawerSwipeDirection)` (default: opposite of the root
       `swipe_direction`), and `.id(...)` for trigger association.
-- [ ] `DrawerContent<P>` takes arbitrary GPUI children and exposes no behavior
+- [x] `DrawerContent<P>` takes arbitrary GPUI children and exposes no behavior
       props; its job is the swipe-exclusion marker.
-- [ ] `DrawerProvider` takes children and no other required props;
+- [x] `DrawerProvider` takes children and no other required props;
       `DrawerIndent` / `DrawerIndentBackground` take children plus
       `style_with_state`.
-- [ ] `drawer/mod.rs` remains barrel-only and exposes ergonomic exports for
+- [x] `drawer/mod.rs` remains barrel-only and exposes ergonomic exports for
       components, style states, context, props, runtime, snap-point types, and
       child types.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui drawer` passes.
-- [ ] `cargo test -p base_gpui` passes (Dialog suite unaffected).
-- [ ] `ast-grep scan crates/base_gpui/src` passes.
-- [ ] No `pub(...)` restricted visibility; module privacy via `mod` boundaries.
-- [ ] The implementation follows `docs/base-gpui-component-architecture.md` flat
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui drawer` passes.
+- [x] `cargo test -p base_gpui` passes (Dialog suite unaffected).
+- [x] `ast-grep scan crates/base_gpui/src` passes.
+- [x] No `pub(...)` restricted visibility; module privacy via `mod` boundaries.
+- [x] The implementation follows `docs/base-gpui-component-architecture.md` flat
       layout (`runtime.rs` / `context.rs` / `props.rs` / `style_state.rs` /
       `child.rs` / `child_wiring.rs` / `layers/`); no `utils/` folder for Drawer.
-- [ ] Add a gallery demo in `crates/base_gpui/src/main.rs` with a basic
+- [x] Add a gallery demo in `crates/base_gpui/src/main.rs` with a basic
       bottom drawer (Trigger + Portal + Backdrop + Viewport + Popup + Content +
       Title + Close) that can be drag-dismissed.
-- [ ] Add a compact gallery example for either snap points or SwipeArea +
+- [x] Add a compact gallery example for either snap points or SwipeArea +
       Provider/Indent.
 
 ### Architecture / internal primitives
 
-- [ ] `DrawerRoot<P>` composes the existing Dialog root machinery: it creates the
+- [x] `DrawerRoot<P>` composes the existing Dialog root machinery: it creates the
       shared `DialogContext<P>` (or builds a `DialogRoot<P>` internally) with an
       `is_drawer` marker, mirroring Base UI's `IsDrawerContext` +
       `useRenderDialogRoot(props, 'drawer')`. No duplication of open/close,
@@ -319,136 +323,140 @@ that must keep working through Drawer reuse, not be reimplemented.
       `nested_open_drawer_count` separate from the nested dialog count, mirroring
       `nestedOpenDrawerCount`. A nested plain Dialog inside a Drawer must not
       trigger drawer-stack visuals; a nested Drawer must.
-- [ ] Add `DrawerRuntime<P>` as the single owner of drawer-specific state: swipe
+      *Skipped: Dialog's own nested-dialog machinery is still unimplemented (tracked in
+      the Dialog issue); drawer nesting is tracked drawer-side in `DrawerRuntime`.*
+- [x] Add `DrawerRuntime<P>` as the single owner of drawer-specific state: swipe
       gesture state (pending/active, start position, locked axis, intended
       direction, drag offset, velocity samples, reverse-cancel baseline), resolved
       snap points, active snap point (uncontrolled value + controlled observed
       value), measured popup height and viewport height, frontmost height, nested
       drawer presence/swiping/progress, swipe-release strength, and pending
       swipe-close snap point for cancel/revert.
-- [ ] Gesture transitions (direction lock, threshold crossing, cancel-by-reversal,
+- [x] Gesture transitions (direction lock, threshold crossing, cancel-by-reversal,
       release decision, snap selection) are computed inside `DrawerRuntime<P>` as
       commands returning outcomes; layers translate mouse events into commands and
       query style state only.
-- [ ] Add `DrawerProps<P>` for `swipe_direction`, snap-point config, and the
+- [x] Add `DrawerProps<P>` for `swipe_direction`, snap-point config, and the
       snap-point callback. Dialog-level props stay on `DialogProps<P>`.
-- [ ] Add `DrawerContext<P>` as thin injection: the drawer runtime entity, the
+- [x] Add `DrawerContext<P>` as thin injection: the drawer runtime entity, the
       inner `DialogContext<P>`, drawer props, and the controlled snap-point marker,
       with only `read(...)`, `update(...)`, and `set_snap_point(...)` (the one
       value-changing method — resolves controlled/uncontrolled and fires
       `on_snap_point_change` from the runtime outcome). Open/close continues to go
       through `DialogContext<P>` methods.
-- [ ] Nested drawer coordination is parent-linked through context: a nested
+- [x] Nested drawer coordination is parent-linked through context: a nested
       `DrawerRoot` receives its parent `DrawerContext` (as Base UI's
       `notifyParent*` callbacks) and reports presence, frontmost height, swiping,
       and swipe progress via runtime commands, propagating up the chain.
-- [ ] `DrawerProvider` owns a keyed entity with the open-drawer id set and the
+- [x] `DrawerProvider` owns a keyed entity with the open-drawer id set and the
       visual state (swipe progress, frontmost height); drawers report into it when
       a provider ancestor exists; all drawer parts work without a provider.
-- [ ] Typed child routing in `drawer/child.rs` covers the drawer anatomy shown in
+- [x] Typed child routing in `drawer/child.rs` covers the drawer anatomy shown in
       Base UI docs (Root > Trigger/SwipeArea/Portal; Portal > Backdrop/Viewport;
       Viewport > Popup; Popup > Content/Title/Description/Close); private
       traversal/context attachment in `drawer/child_wiring.rs`. Reused Dialog parts
       appear in drawer child enums as the Dialog layer types.
-- [ ] The gesture engine lives inside the drawer module (runtime + viewport/swipe
+- [x] The gesture engine lives inside the drawer module (runtime + viewport/swipe
       area layers). Do not extract a shared swipe primitive now; leave a comment
       noting Base UI shares `useSwipeDismiss` with Toast as a possible future
       extraction point.
-- [ ] The swipe gesture uses GPUI mouse handling (`on_mouse_down` /
+- [x] The swipe gesture uses GPUI mouse handling (`on_mouse_down` /
       `on_mouse_move` / `on_drag_move` / `on_mouse_up` / `on_mouse_up_out`)
       following the `number_field` scrub-area and `gpui-component` slider
       precedents; no simulated touch layer.
-- [ ] Popup and viewport measurement uses GPUI prepaint mechanisms
+- [x] Popup and viewport measurement uses GPUI prepaint mechanisms
       (`Div::on_children_prepainted(...)`), feeding `set_*_bounds`-style runtime
       commands that report whether anything changed.
 
 ### Stateful/stateless behavior (inherited via Dialog — verify through Drawer)
 
-- [ ] Uncontrolled Drawer initializes from `default_open`, defaulting to closed. **(inherited)**
-- [ ] Controlled Drawer reflects external `open` and fires `on_open_change`
+- [x] Uncontrolled Drawer initializes from `default_open`, defaulting to closed. **(inherited)**
+- [x] Controlled Drawer reflects external `open` and fires `on_open_change`
       without self-mutating. **(inherited)**
-- [ ] Trigger press, Close press, Escape, outside press, and handle open/close all
+- [x] Trigger press, Close press, Escape, outside press, and handle open/close all
       work through the reused Dialog parts with their existing reasons. **(inherited)**
-- [ ] `disable_pointer_dismissal(true)` prevents outside-press close but not swipe
+- [x] `disable_pointer_dismissal(true)` prevents outside-press close but not swipe
       dismissal or Escape. Swipe-to-dismiss is a drawer gesture, not a pointer
       "outside" dismissal.
-- [ ] Focus trap in modal / trap-focus modes works inside the drawer popup. **(inherited)**
-- [ ] Detached triggers via `DrawerHandle<P>` (= `DialogHandle<P>`) open/close the
+- [x] Focus trap in modal / trap-focus modes works inside the drawer popup. **(inherited)**
+- [x] Detached triggers via `DrawerHandle<P>` (= `DialogHandle<P>`) open/close the
       drawer; a plain Dialog handle is intentionally interchangeable. **(inherited)**
-- [ ] Closing a drawer with snap points resets the active snap point to the
+- [x] Closing a drawer with snap points resets the active snap point to the
       resolved default after the close is accepted (`DrawerRoot.tsx:151-170`);
       canceling the close leaves the snap point unchanged.
 
 ### Snap point state behavior
 
-- [ ] Uncontrolled snap point initializes from `default_snap_point`, else the first
+- [x] Uncontrolled snap point initializes from `default_snap_point`, else the first
       snap point, else none.
-- [ ] Controlled snap point reflects the external value; interactions fire
+- [x] Controlled snap point reflects the external value; interactions fire
       `on_snap_point_change` without mutating internal state as source of truth.
-- [ ] Canceling `on_snap_point_change` (uncontrolled) prevents the internal
+- [x] Canceling `on_snap_point_change` (uncontrolled) prevents the internal
       snap-point mutation.
-- [ ] When uncontrolled and the active snap point is no longer present in
+- [x] When uncontrolled and the active snap point is no longer present in
       `snap_points` (or is none while snap points exist), the resolved active snap
       point falls back to the resolved default (`DrawerRoot.tsx:97-114`).
-- [ ] Snap-point resolution: `Fraction(f)` resolves to `clamp(f, 0, 1) *
+- [x] Snap-point resolution: `Fraction(f)` resolves to `clamp(f, 0, 1) *
       viewport_height`; `Px`/`Rems` resolve via GPUI pixel/rem conversion; results
       clamp to `min(popup_height, viewport_height)`; non-finite/unresolvable values
       are skipped (`useDrawerSnapPoints.ts:30-64,124-170`).
-- [ ] Each resolved snap point carries `offset = max(0, popup_height - height)`.
-- [ ] Snap points whose resolved heights are within 1px of a later snap point are
+- [x] Each resolved snap point carries `offset = max(0, popup_height - height)`.
+- [x] Snap points whose resolved heights are within 1px of a later snap point are
       deduped, keeping the later entry (`useDrawerSnapPoints.ts:150-169`).
-- [ ] A controlled snap-point value that is not an exact member of `snap_points`
+- [x] A controlled snap-point value that is not an exact member of `snap_points`
       resolves to the closest resolved snap point by height
       (`useDrawerSnapPoints.ts:172-194`).
-- [ ] Snap-point offsets only apply for vertical swipe directions (`Down`/`Up`);
+- [x] Snap-point offsets only apply for vertical swipe directions (`Down`/`Up`);
       horizontal drawers ignore snap points, matching Base UI.
 - [ ] Viewport height comes from the drawer viewport's measured bounds when
       present, else the window content height; re-measures on resize through
       prepaint, not `ResizeObserver`.
+      *Partially done: window content height only; per-viewport bounds measurement not
+      yet wired.*
 
 ### Swipe-to-dismiss gesture (Viewport)
 
-- [ ] The gesture engine is enabled while the drawer is mounted and no nested
+- [x] The gesture engine is enabled while the drawer is mounted and no nested
       drawer is open.
-- [ ] Only the primary mouse button starts a swipe; a non-primary button appearing
+- [x] Only the primary mouse button starts a swipe; a non-primary button appearing
       mid-drag (or losing the primary button without a release event) cancels the
       swipe and restores position (`useSwipeDismiss.ts:772-792`).
-- [ ] A press over an interactive element (trigger/close/input-like children) or
+- [x] A press over an interactive element (trigger/close/input-like children) or
       over a `DrawerContent` subtree does not start a swipe; this uses typed child
       knowledge, not CSS selectors (`DrawerViewport.tsx:1008-1022`,
       `DRAWER_CONTENT_SELECTOR`).
-- [ ] Allowed swipe directions: `[swipe_direction]`, extended to both vertical
+- [x] Allowed swipe directions: `[swipe_direction]`, extended to both vertical
       directions when snap points exist and the direction is vertical
       (`DrawerViewport.tsx:161-171`).
-- [ ] The intended swipe direction locks from initial movement (axis lock after >=
+- [x] The intended swipe direction locks from initial movement (axis lock after >=
       1px movement when both axes are allowed; dominant-axis pick otherwise), and
       the swipe threshold resolves per direction as `max(size * 0.5, 10.0)` where
       size is popup width/height along the axis (`getBaseSwipeThreshold`).
-- [ ] Movement along disallowed directions is damped with the signed square-root
+- [x] Movement along disallowed directions is damped with the signed square-root
       curve (`applyDirectionalDamping`), so dragging a bottom drawer upward resists
       past its rest position.
-- [ ] With snap points and `swipe_direction = Down`, the popup translation applies
+- [x] With snap points and `swipe_direction = Down`, the popup translation applies
       the snap-point base offset plus movement with sqrt overshoot damping past the
       fully-open edge (`getSnapPointSwipeMovement`: overshoot beyond offset 0 maps
       to `-sqrt(-next_offset) - base_offset`).
-- [ ] Reverse-cancel: after the drag exceeds the threshold, moving back so
+- [x] Reverse-cancel: after the drag exceeds the threshold, moving back so
       displacement drops 10px below its maximum marks the swipe canceled; releasing
       then restores position without dismissing (`REVERSE_CANCEL_THRESHOLD`).
-- [ ] Velocity tracking: overall velocity = delta / max(duration, 50ms); release
+- [x] Velocity tracking: overall velocity = delta / max(duration, 50ms); release
       velocity from the last drag sample when it is at most 80ms old, with a 16ms
       minimum sample duration (`useSwipeDismiss.ts:281-297,925-953`).
-- [ ] Release decision without snap points: dismiss when directional displacement
+- [x] Release decision without snap points: dismiss when directional displacement
       exceeds the threshold, or when directional velocity >= 0.5 px/ms with
       positive displacement; otherwise restore (`DrawerViewport.tsx:545-585`).
-- [ ] Dismiss requests close through the Dialog context with the `Swipe` reason;
+- [x] Dismiss requests close through the Dialog context with the `Swipe` reason;
       the request is cancelable through `on_open_change`; canceling restores the
       drag position and any pending snap point (`DrawerViewport.tsx:736-761`).
-- [ ] Controlled-mode dismissal is optimistic: the dismiss animation starts, and if
+- [x] Controlled-mode dismissal is optimistic: the dismiss animation starts, and if
       the external `open` remains true after the handler runs (parent rejected),
       the position and snap point revert (`DrawerViewport.tsx:763-795`); document
       that async external closes fall back to a non-animated close, as Base UI
       does.
-- [ ] Swipe-release strength: on dismiss, compute the remaining travel distance
+- [x] Swipe-release strength: on dismiss, compute the remaining travel distance
       along the dismiss direction, clamp release velocity to 0.2..4 px/ms, map
       remaining/velocity to a duration clamped to 80..360ms, and normalize to a
       0.1..1 scalar exposed as typed style state (`resolveSwipeRelease`); the close
@@ -456,114 +464,122 @@ that must keep working through Drawer reuse, not be reimplemented.
       CSS var.
 - [ ] While swiping, the popup's transform is frozen to the live drag offset (no
       transition); on release without dismissal the popup animates back to rest.
-- [ ] Swiping state and live swipe progress (0..1 of popup size, or snap-range
+      *Partially done: live drag offset exposed/frozen; return-to-rest is instant
+      (animation depends on the open Dialog transition items).*
+- [x] Swiping state and live swipe progress (0..1 of popup size, or snap-range
       progress when snap points exist) are runtime state exposed through popup,
       backdrop, and indent style states, and reported to the parent drawer and
       provider (`applySwipeProgress`).
-- [ ] Opening the drawer resets any in-flight gesture and release state
+- [x] Opening the drawer resets any in-flight gesture and release state
       (`DrawerViewport.tsx:965-970`).
 
 ### Snap-point selection on release
 
-- [ ] Drag target offset = `clamp(current_offset + drag_delta, 0, popup_height)`.
-- [ ] Velocity skipping (default): when |release velocity| >= 0.5 px/ms, add
+- [x] Drag target offset = `clamp(current_offset + drag_delta, 0, popup_height)`.
+- [x] Velocity skipping (default): when |release velocity| >= 0.5 px/ms, add
       `clamp(velocity, -4, 4) * 300` px to the target offset before selecting
       (`SNAP_VELOCITY_*`, `DrawerViewport.tsx:624-632`).
-- [ ] A release-velocity direction that contradicts the drag direction (touch/drag
+- [x] A release-velocity direction that contradicts the drag direction (touch/drag
       reversal) falls back to the overall gesture velocity
       (`DrawerViewport.tsx:610-620`).
-- [ ] Fast dismissal: directional velocity >= 0.5 px/ms while dragging toward
+- [x] Fast dismissal: directional velocity >= 0.5 px/ms while dragging toward
       dismissal closes from snap points directly (`DrawerViewport.tsx:711-713`).
-- [ ] Default selection: the resolved snap point whose offset is closest to the
+- [x] Default selection: the resolved snap point whose offset is closest to the
       target offset wins; when the close offset (`popup_height`) is strictly
       closer than any snap point, the drawer closes instead
       (`DrawerViewport.tsx:715-734`).
-- [ ] `snap_to_sequential_points(true)` disables velocity skipping: selection uses
+- [x] `snap_to_sequential_points(true)` disables velocity skipping: selection uses
       drag distance only, advancing at most to the adjacent snap point in the drag
       direction when velocity confirms the direction; advancing past the last
       point toward dismissal closes (`DrawerViewport.tsx:641-709`).
-- [ ] Closing from snap points stores the pre-close snap point so a canceled or
+- [x] Closing from snap points stores the pre-close snap point so a canceled or
       rejected close can restore it; an accepted close leaves the snap point reset
       to default per root behavior.
-- [ ] Snap-point changes from gestures fire `on_snap_point_change` with the swipe
+- [x] Snap-point changes from gestures fire `on_snap_point_change` with the swipe
       reason and are cancelable.
 
 ### Swipe-to-open (SwipeArea)
 
-- [ ] `DrawerSwipeArea<P>` is enabled when the drawer is closed (or while its own
+- [x] `DrawerSwipeArea<P>` is enabled when the drawer is closed (or while its own
       gesture is active) and not disabled.
-- [ ] The open direction defaults to the opposite of the root `swipe_direction`
+- [x] The open direction defaults to the opposite of the root `swipe_direction`
       and can be overridden per swipe area.
-- [ ] Dragging in the open direction opens the drawer optimistically once
+- [x] Dragging in the open direction opens the drawer optimistically once
       displacement >= 1px, with the `Swipe` reason and the swipe area's id as the
       associated trigger id (`DrawerSwipeArea.tsx:337-345`, trigger registration).
-- [ ] While the gesture is active, the popup position maps displacement to the
+- [x] While the gesture is active, the popup position maps displacement to the
       remaining closed offset (`closed_offset - displacement`), with sqrt damping
       past the fully-open position, and backdrop progress maps inversely
       (`applySwipeMovement`); popup transitions are suspended during the drag.
-- [ ] Release opens (keeps open) when displacement >= 50% of the popup size along
+- [x] Release opens (keeps open) when displacement >= 50% of the popup size along
       the axis (fallback threshold 40px when unmeasured) or release velocity >=
       0.1 px/ms; otherwise, if the drawer was opened by this gesture, it closes
       again with the `Swipe` reason (`DrawerSwipeArea.tsx:347-374`).
-- [ ] Outside-press dismissal is suppressed for the duration of the gesture and
+- [x] Outside-press dismissal is suppressed for the duration of the gesture and
       re-enabled after release (deferred re-enable), so the opening drag cannot
       immediately dismiss the drawer it opened (`disableDismissForSwipe` /
       `enableDismissAfterRelease`).
 - [ ] The closed offset accounts for the popup's current animated transform when
       the gesture starts mid-transition (`resolveClosedOffset`).
+      *Skipped: no open/close transition animation yet, so there is no mid-transition
+      transform to resolve.*
 - [ ] Disabling or unmounting a mid-gesture swipe area resets gesture state,
       clears applied movement, and re-enables dismissal.
-- [ ] The swipe area registers as a drawer trigger so `trigger_id`-based styling
+      *Partially done: disabling cancels the gesture; unmount reset relies on the next
+      open reset.*
+- [x] The swipe area registers as a drawer trigger so `trigger_id`-based styling
       and focus-return treat swipe-opens like trigger opens.
-- [ ] Swipe area style state exposes `open`, `swiping`, `swipe_direction`, and
+- [x] Swipe area style state exposes `open`, `swiping`, `swipe_direction`, and
       `disabled`.
 
 ### Nested-drawer coordination
 
-- [ ] A drawer rendered inside another drawer is marked nested; parents track
+- [x] A drawer rendered inside another drawer is marked nested; parents track
       `nested_open_drawer_count` separately from nested dialogs (depends on the
       open Dialog nested items).
-- [ ] A nested drawer reports presence to its parent while open **or transitioning
+- [x] A nested drawer reports presence to its parent while open **or transitioning
       out** (`DrawerPopup.tsx:285-296`); unmounting reports absence.
-- [ ] A nested drawer reports its frontmost height up the chain; the parent's
+- [x] A nested drawer reports its frontmost height up the chain; the parent's
       `frontmost_height` reflects the deepest open drawer's popup height and falls
       back to the parent's own popup height when the nested drawer leaves
       (`DrawerRoot.tsx:116-135`).
-- [ ] Nested swipe progress propagates to all ancestors; a parent popup exposes the
+- [x] Nested swipe progress propagates to all ancestors; a parent popup exposes the
       nested drawer's live swipe progress in its style state so the parent can
       scale back proportionally (`nestedSwipeProgressStore`,
       `DrawerPopup.tsx:244-271`).
-- [ ] Nested swiping starts reporting only after 10px of directional movement and
+- [x] Nested swiping starts reporting only after 10px of directional movement and
       always reports false on gesture end/unmount (`updateNestedSwipeActive`,
       `finishNestedSwipe`).
-- [ ] The parent popup holds its measured height while a nested drawer is present,
+- [x] The parent popup holds its measured height while a nested drawer is present,
       instead of re-measuring a stretched layout (`DrawerPopup.tsx:181-214`).
-- [ ] A parent drawer's own swipe gesture is disabled while a nested drawer is
+- [x] A parent drawer's own swipe gesture is disabled while a nested drawer is
       open.
-- [ ] Nested drawer backdrops are suppressed by default; `force_render(true)`
+- [x] Nested drawer backdrops are suppressed by default; `force_render(true)`
       renders them (`DrawerBackdrop.tsx:60`).
 - [ ] Escape closes only the topmost drawer. **(inherited — depends on the open
       Dialog nested items)**
 
 ### Provider / Indent app-shell behavior
 
-- [ ] `DrawerProvider` tracks per-drawer open state by id; `active` is true when
+- [x] `DrawerProvider` tracks per-drawer open state by id; `active` is true when
       any registered drawer is open; drawers deregister on unmount
       (`DrawerProvider.tsx`).
-- [ ] Drawers report open state to the nearest provider automatically (Base UI's
+- [x] Drawers report open state to the nearest provider automatically (Base UI's
       `DrawerProviderReporter`); no user wiring required beyond mounting the
       provider.
-- [ ] The provider's visual state carries live `swipe_progress` and
+- [x] The provider's visual state carries live `swipe_progress` and
       `frontmost_height` from the frontmost non-nested drawer's gesture, and is
       reset to zero on gesture end, dismissal, and drawer unmount.
-- [ ] `DrawerIndent` style state exposes `active`, `swipe_progress`, and
+- [x] `DrawerIndent` style state exposes `active`, `swipe_progress`, and
       `frontmost_height` (typed, replacing the `--drawer-swipe-progress` /
       `--drawer-height` vars written onto the indent element).
-- [ ] `DrawerIndentBackground` style state exposes `active`.
+- [x] `DrawerIndentBackground` style state exposes `active`.
 - [ ] Indent/IndentBackground render arbitrary children and are visually neutral by
       default; the iOS-style scale-back is achieved by the user through
       `style_with_state` (documented in the gallery example).
-- [ ] All drawer parts function without a provider; Indent/IndentBackground without
+      *Partially done: parts are neutral and user-styled, but the gallery example covers
+      snap points instead of Provider/Indent.*
+- [x] All drawer parts function without a provider; Indent/IndentBackground without
       a provider are inactive, not panicking.
 
 ### Animation / transition behavior
@@ -571,42 +587,44 @@ that must keep working through Drawer reuse, not be reimplemented.
 - [ ] Open/close slide animation along `swipe_direction` uses GPUI animation
       (`gpui-component` `sheet.rs` slide precedent), driven from runtime
       presence/transition state; layers only query style state.
+      *Skipped: depends on the unchecked Dialog typed-transition items; style state
+      exposes everything needed once transitions land.*
 - [ ] Swipe-release close animation duration scales by the release-strength scalar
       (0.1..1) computed at release.
-- [ ] After a swipe dismissal, popup and backdrop expose a `swipe_dismissed` style
+- [x] After a swipe dismissal, popup and backdrop expose a `swipe_dismissed` style
       flag during the ending phase (replacing `data-swipe-dismiss`), cleared when
       the drawer reopens.
 - [ ] Snap-point changes animate the popup between snap offsets when not swiping;
       the live drag offset takes precedence while swiping.
 - [ ] `on_open_change_complete` fires after the close/open animation completes.
       **(inherited — depends on the open Dialog transition items)**
-- [ ] Transition sequencing lives inside runtimes; no shadow previous-value fields
+- [x] Transition sequencing lives inside runtimes; no shadow previous-value fields
       in layers.
 
 ### Styling/state exposure
 
-- [ ] Add `DrawerPopupStyleState<P>` with at least: `open`, `closed`, `mounted`,
+- [x] Add `DrawerPopupStyleState<P>` with at least: `open`, `closed`, `mounted`,
       `transitioning`, `expanded` (active snap point is the full `Fraction(1.0)`
       point), `nested`, `nested_drawer_open`, `nested_drawer_count`,
       `nested_drawer_swiping`, `nested_swipe_progress`, `swipe_direction`,
       `swiping`, `swipe_movement` (typed x/y pixels), `snap_point_offset`
       (signed pixels, negated for `Up`), `popup_height`, `frontmost_height`,
       `swipe_strength`, `swipe_dismissed`, active trigger id, and active payload.
-- [ ] Add `DrawerBackdropStyleState` with at least: `open`, `closed`, `mounted`,
+- [x] Add `DrawerBackdropStyleState` with at least: `open`, `closed`, `mounted`,
       `transitioning`, `swipe_progress`, `frontmost_height`, `swiping`,
       `swipe_dismissed`, `nested`, and force-/effective-rendered info.
-- [ ] Add `DrawerViewportStyleState<P>` extending the Dialog viewport fields with
+- [x] Add `DrawerViewportStyleState<P>` extending the Dialog viewport fields with
       drawer nested/swiping facts; drawer nested state replaces the generic
       dialog nested flag on this part (Base UI suppresses
       `data-nested-dialog-open` on the drawer viewport).
-- [ ] Add `DrawerSwipeAreaStyleState`, `DrawerContentStyleState` (typed, may be
+- [x] Add `DrawerSwipeAreaStyleState`, `DrawerContentStyleState` (typed, may be
       empty), `DrawerIndentStyleState`, and `DrawerIndentBackgroundStyleState`.
-- [ ] Expose `style_with_state(...)` on every drawer-specific part that draws.
-- [ ] Re-exported Dialog parts keep their existing `Dialog*StyleState` structs
+- [x] Expose `style_with_state(...)` on every drawer-specific part that draws.
+- [x] Re-exported Dialog parts keep their existing `Dialog*StyleState` structs
       (reused, not duplicated).
-- [ ] Map every Base UI drawer CSS var and data attribute listed in Out of scope to
+- [x] Map every Base UI drawer CSS var and data attribute listed in Out of scope to
       a typed style-state field; expose none of them as string attributes or vars.
-- [ ] The docs hero pattern is recreatable with GPUI builders: backdrop opacity
+- [x] The docs hero pattern is recreatable with GPUI builders: backdrop opacity
       from `swipe_progress`, popup translate from `swipe_movement` +
       `snap_point_offset`, indent scale-back from provider progress, and
       release-speed-scaled closing.
@@ -625,71 +643,71 @@ Inherited-path smoke tests (through Drawer composition):
       pointer dismissal is enabled and not when disabled.
 - [ ] Handle-driven open/close and detached trigger work through
       `DrawerHandle` re-export.
-- [ ] Re-exported parts (`DrawerTrigger`, `DrawerPortal`, `DrawerTitle`,
+- [x] Re-exported parts (`DrawerTrigger`, `DrawerPortal`, `DrawerTitle`,
       `DrawerDescription`, `DrawerClose`) are the Dialog types (compile-level
       alias check is enough).
 
 Snap-point resolution (unit tests mirroring `useDrawerSnapPoints.test.ts`):
 
-- [ ] Fractions resolve against viewport height and clamp to 0..1.
-- [ ] Pixel and rem values resolve and clamp to `min(popup, viewport)`.
-- [ ] Unresolvable values are skipped; near-duplicate heights (<= 1px) dedupe
+- [x] Fractions resolve against viewport height and clamp to 0..1.
+- [x] Pixel and rem values resolve and clamp to `min(popup, viewport)`.
+- [x] Unresolvable values are skipped; near-duplicate heights (<= 1px) dedupe
       keeping the later entry.
-- [ ] Default snap point falls back to the first entry; missing/unknown active
+- [x] Default snap point falls back to the first entry; missing/unknown active
       values resolve to default (uncontrolled) or closest point (controlled).
-- [ ] `get_snap_point_swipe_movement` sqrt overshoot damping matches Base UI for
+- [x] `get_snap_point_swipe_movement` sqrt overshoot damping matches Base UI for
       in-range and overshoot inputs.
 
 Swipe-to-dismiss:
 
-- [ ] Drag past `max(size * 0.5, 10px)` and release dismisses with the `Swipe`
+- [x] Drag past `max(size * 0.5, 10px)` and release dismisses with the `Swipe`
       reason.
-- [ ] Fast flick (velocity >= 0.5 px/ms) dismisses below the distance threshold.
-- [ ] Drag below threshold releases back to rest without closing.
-- [ ] Reversal of 10px+ from max displacement cancels the dismissal on release.
-- [ ] Drag in a disallowed direction produces sqrt-damped movement and no
+- [x] Fast flick (velocity >= 0.5 px/ms) dismisses below the distance threshold.
+- [x] Drag below threshold releases back to rest without closing.
+- [x] Reversal of 10px+ from max displacement cancels the dismissal on release.
+- [x] Drag in a disallowed direction produces sqrt-damped movement and no
       dismissal.
-- [ ] Canceling the swipe close through `on_open_change` restores position and
+- [x] Canceling the swipe close through `on_open_change` restores position and
       pending snap point.
-- [ ] Controlled root that rejects the close reverts the dismiss animation.
-- [ ] Release-strength scalar maps distance/velocity to the 0.1..1 range at the
+- [x] Controlled root that rejects the close reverts the dismiss animation.
+- [x] Release-strength scalar maps distance/velocity to the 0.1..1 range at the
       clamp boundaries.
-- [ ] Press on `DrawerContent` or an interactive child does not start a swipe.
-- [ ] Non-primary button and mid-drag button loss cancel the gesture.
-- [ ] Gesture is inert while a nested drawer is open.
+- [x] Press on `DrawerContent` or an interactive child does not start a swipe.
+- [x] Non-primary button and mid-drag button loss cancel the gesture.
+- [x] Gesture is inert while a nested drawer is open.
 
 Snap selection on release:
 
-- [ ] Closest snap point wins by drag distance.
-- [ ] Velocity offset skips to a further snap point by default.
-- [ ] Velocity direction contradicting drag direction falls back to gesture
+- [x] Closest snap point wins by drag distance.
+- [x] Velocity offset skips to a further snap point by default.
+- [x] Velocity direction contradicting drag direction falls back to gesture
       velocity.
-- [ ] `snap_to_sequential_points(true)` advances at most one adjacent point.
-- [ ] Target closer to the close offset than any snap point closes the drawer.
+- [x] `snap_to_sequential_points(true)` advances at most one adjacent point.
+- [x] Target closer to the close offset than any snap point closes the drawer.
 - [ ] Gesture snap changes fire cancelable `on_snap_point_change`; canceling keeps
       the previous snap point.
-- [ ] Accepted close resets the snap point to default; canceled close restores the
+- [x] Accepted close resets the snap point to default; canceled close restores the
       pre-close snap point.
-- [ ] Controlled snap point does not self-mutate on gesture release.
+- [x] Controlled snap point does not self-mutate on gesture release.
 
 Swipe-to-open:
 
-- [ ] Drag on the swipe area in the open direction opens the drawer with the
+- [x] Drag on the swipe area in the open direction opens the drawer with the
       `Swipe` reason and the swipe area as trigger.
-- [ ] Release below distance and velocity thresholds closes the
+- [x] Release below distance and velocity thresholds closes the
       gesture-opened drawer again.
-- [ ] Release past 50% popup size (or velocity >= 0.1 px/ms) keeps it open.
-- [ ] Outside-press dismissal stays disabled during the gesture and re-enables
+- [x] Release past 50% popup size (or velocity >= 0.1 px/ms) keeps it open.
+- [x] Outside-press dismissal stays disabled during the gesture and re-enables
       after release.
 - [ ] `disabled(true)` swipe area does nothing and exposes disabled style state.
 
 Nested drawers / provider:
 
-- [ ] Nested drawer marks the parent's `nested_drawer_open` / count, including
+- [x] Nested drawer marks the parent's `nested_drawer_open` / count, including
       while transitioning out; unmount decrements.
-- [ ] Parent `frontmost_height` follows the nested drawer's height and falls back
+- [x] Parent `frontmost_height` follows the nested drawer's height and falls back
       to its own when the nested drawer leaves.
-- [ ] Nested swipe progress and swiping flags reach the parent popup style state
+- [x] Nested swipe progress and swiping flags reach the parent popup style state
       and reset on gesture end/unmount.
 - [ ] Nested backdrop is suppressed by default; `force_render(true)` renders it.
 - [ ] Provider `active` flips with any registered drawer's open state and cleans
@@ -699,12 +717,12 @@ Nested drawers / provider:
 
 Measurement / style state:
 
-- [ ] Popup height measurement updates runtime state through prepaint and is held
+- [x] Popup height measurement updates runtime state through prepaint and is held
       while a nested drawer is present.
 - [ ] `style_with_state(...)` receives correct popup, backdrop, viewport, swipe
       area, content, indent, and indent-background state for open/closed/swiping/
       snap-offset cases.
-- [ ] Drawer style states never regress the Dialog style states of reused parts.
+- [x] Drawer style states never regress the Dialog style states of reused parts.
 
 ## AccessKit accessibility follow-up
 

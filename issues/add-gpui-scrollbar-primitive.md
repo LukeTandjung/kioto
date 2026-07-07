@@ -177,105 +177,105 @@ Alternative filenames are fine if they preserve the same architecture: deep runt
 
 ### Module/API surface
 
-- [ ] Add `crates/base_gpui/src/primitives/scroll/` and export it from `crates/base_gpui/src/primitives/mod.rs`.
-- [ ] Add a public `scrollbar()` constructor function taking `&H where H: ScrollTarget + Clone`.
-- [ ] Add a public `Scrollbar` builder/element type implementing GPUI `Element` and `IntoElement`.
-- [ ] Support `.id(...)` as the stable identity for keyed interaction state, with a code-location default.
-- [ ] Support `.axis(...)` with vertical, horizontal, and both.
-- [ ] Support `.visibility(...)` with `Scrolling`, `Hover`, and `Always`, defaulting to `Scrolling`.
-- [ ] Support `.content_size(...)` as an explicit content-size override.
-- [ ] Support `style_with_state(...)` with a typed style state.
-- [ ] Add a public `ScrollTarget` trait with `offset`, `set_offset`, `content_size`, `viewport_size`, and drag lifecycle hooks.
-- [ ] Implement `ScrollTarget` for `ScrollHandle`.
-- [ ] Implement `ScrollTarget` for `UniformListScrollHandle`.
-- [ ] Implement `ScrollTarget` for `ListState`, wiring its drag start/end hooks.
-- [ ] Re-export ergonomic names from `primitives/scroll/mod.rs` and `primitives/mod.rs`.
+- [x] Add `crates/base_gpui/src/primitives/scroll/` and export it from `crates/base_gpui/src/primitives/mod.rs`.
+- [x] Add a public `scrollbar()` constructor function taking `&H where H: ScrollTarget + Clone`.
+- [x] Add a public `Scrollbar` builder/element type implementing GPUI `Element` and `IntoElement`.
+- [x] Support `.id(...)` as the stable identity for keyed interaction state, with a code-location default.
+- [x] Support `.axis(...)` with vertical, horizontal, and both.
+- [x] Support `.visibility(...)` with `Scrolling`, `Hover`, and `Always`, defaulting to `Scrolling`.
+- [x] Support `.content_size(...)` as an explicit content-size override.
+- [x] Support `style_with_state(...)` with a typed style state.
+- [x] Add a public `ScrollTarget` trait with `offset`, `set_offset`, `content_size`, `viewport_size`, and drag lifecycle hooks.
+- [x] Implement `ScrollTarget` for `ScrollHandle`.
+- [x] Implement `ScrollTarget` for `UniformListScrollHandle`.
+- [x] Implement `ScrollTarget` for `ListState`, wiring its drag start/end hooks.
+- [x] Re-export ergonomic names from `primitives/scroll/mod.rs` and `primitives/mod.rs`.
 
 ### Geometry / thumb math
 
-- [ ] Thumb length is `track_len * viewport_len / content_len`, clamped to a documented `MIN_THUMB_SIZE` minimum.
-- [ ] Thumb offset maps `scroll_ratio` onto `track_len - thumb_len`, accounting for GPUI's zero-or-negative offset convention.
-- [ ] Scrolling to content start places the thumb at the track start; scrolling to content end places it at the track end.
-- [ ] A clamped thumb (at `MIN_THUMB_SIZE`) still reaches both track ends at the scroll extremes.
-- [ ] The axis renders nothing when content does not overflow the viewport on that axis.
-- [ ] When both axes are visible, the horizontal track reserves an end margin equal to the scrollbar thickness and a corner region is defined where the tracks meet.
-- [ ] Geometry is computed in `prepaint` from the target's current offset/content/viewport sizes; no cached copies of scroll position live outside the runtime's last-observed facts.
-- [ ] Drag mapping converts pointer delta over `track_len - thumb_len` back into a clamped `set_offset(...)`, preserving the other axis' offset.
-- [ ] Track click jumps so the thumb centers on the click position, clamped to the valid range.
-- [ ] All geometry functions are pure and unit-testable without a window.
+- [x] Thumb length is `track_len * viewport_len / content_len`, clamped to a documented `MIN_THUMB_SIZE` minimum.
+- [x] Thumb offset maps `scroll_ratio` onto `track_len - thumb_len`, accounting for GPUI's zero-or-negative offset convention.
+- [x] Scrolling to content start places the thumb at the track start; scrolling to content end places it at the track end.
+- [x] A clamped thumb (at `MIN_THUMB_SIZE`) still reaches both track ends at the scroll extremes.
+- [x] The axis renders nothing when content does not overflow the viewport on that axis.
+- [x] When both axes are visible, the horizontal track reserves an end margin equal to the scrollbar thickness and a corner region is defined where the tracks meet.
+- [x] Geometry is computed in `prepaint` from the target's current offset/content/viewport sizes; no cached copies of scroll position live outside the runtime's last-observed facts.
+- [x] Drag mapping converts pointer delta over `track_len - thumb_len` back into a clamped `set_offset(...)`, preserving the other axis' offset.
+- [x] Track click jumps so the thumb centers on the click position, clamped to the valid range.
+- [x] All geometry functions are pure and unit-testable without a window.
 
 ### Pointer interaction behavior
 
-- [ ] Mouse down on the thumb starts a drag, records the grab point inside the thumb, and stops propagation.
-- [ ] Mouse move while dragging updates the scroll offset so the grab point stays under the pointer.
-- [ ] Dragging past the track ends clamps at the scroll extremes without jumping.
-- [ ] Mouse up anywhere ends the drag, including when released outside the scrollbar bounds.
-- [ ] Drag start/end call the target's drag lifecycle hooks (required for `ListState`).
-- [ ] Mouse down on the track outside the thumb jumps to the clicked position.
-- [ ] Scroll-wheel events over the track keep working: the underlying container scrolls and the scrollbar refreshes its visibility facts.
-- [ ] `set_offset` calls during drag are rate-limited to a documented maximum update rate.
-- [ ] Hover facts distinguish pointer-over-track from pointer-over-thumb, per axis.
-- [ ] Painting is clipped to the element bounds via content mask.
-- [ ] Interaction only occurs while the bar is interactable (visible, or in hover mode); a fully faded-out bar does not swallow clicks.
+- [x] Mouse down on the thumb starts a drag, records the grab point inside the thumb, and stops propagation.
+- [x] Mouse move while dragging updates the scroll offset so the grab point stays under the pointer.
+- [x] Dragging past the track ends clamps at the scroll extremes without jumping.
+- [x] Mouse up anywhere ends the drag, including when released outside the scrollbar bounds.
+- [x] Drag start/end call the target's drag lifecycle hooks (required for `ListState`).
+- [x] Mouse down on the track outside the thumb jumps to the clicked position.
+- [x] Scroll-wheel events over the track keep working: the underlying container scrolls and the scrollbar refreshes its visibility facts.
+- [x] `set_offset` calls during drag are rate-limited to a documented maximum update rate.
+- [x] Hover facts distinguish pointer-over-track from pointer-over-thumb, per axis.
+- [x] Painting is clipped to the element bounds via content mask.
+- [x] Interaction only occurs while the bar is interactable (visible, or in hover mode); a fully faded-out bar does not swallow clicks.
 
 ### Visibility / fade behavior
 
-- [ ] `Always` keeps the scrollbar visible whenever content overflows.
-- [ ] `Hover` shows the scrollbar while the pointer is over the scrollbar region and hides it otherwise.
-- [ ] `Scrolling` shows the scrollbar when the observed scroll offset changes.
-- [ ] `Scrolling` keeps the scrollbar fully visible for the idle delay after the last scroll/hover activity.
-- [ ] `Scrolling` fades the scrollbar out over the fade duration after the idle delay, then stops painting.
-- [ ] Hovering the visible bar resets the idle clock; dragging keeps the bar visible regardless of timing.
-- [ ] Fade is driven by `request_animation_frame` during the fade window plus at most one scheduled idle timer; no continuous polling while idle.
-- [ ] Fade timing constants are module-level and documented.
+- [x] `Always` keeps the scrollbar visible whenever content overflows.
+- [x] `Hover` shows the scrollbar while the pointer is over the scrollbar region and hides it otherwise.
+- [x] `Scrolling` shows the scrollbar when the observed scroll offset changes.
+- [x] `Scrolling` keeps the scrollbar fully visible for the idle delay after the last scroll/hover activity.
+- [x] `Scrolling` fades the scrollbar out over the fade duration after the idle delay, then stops painting.
+- [x] Hovering the visible bar resets the idle clock; dragging keeps the bar visible regardless of timing.
+- [x] Fade is driven by `request_animation_frame` during the fade window plus at most one scheduled idle timer; no continuous polling while idle.
+- [x] Fade timing constants are module-level and documented.
 
 ### Architecture / implementation model
 
-- [ ] Implement `Scrollbar` as a custom GPUI `Element`: absolute-positioned, filling its parent in `request_layout`; hitboxes and per-axis geometry in `prepaint`; painting and `window.on_mouse_event(...)` registration in `paint`.
-- [ ] Keep thumb math, drag mapping, and visibility/fade decisions in the deep runtime/geometry module; the element translates events into runtime commands and paints from runtime queries.
-- [ ] Keep interaction state in keyed window state addressed by `.id(...)`; the scrollbar never owns the scroll position.
-- [ ] Access the scroll target only through the `ScrollTarget` trait; no downcasting or handle-specific branches in the element.
-- [ ] Keep the primitive consumer-agnostic: no imports from `select/` or any component module.
-- [ ] Avoid adding generic helpers unless they represent a repeated deep primitive concept.
-- [ ] Add no new dependencies beyond what `base_gpui` already carries.
+- [x] Implement `Scrollbar` as a custom GPUI `Element`: absolute-positioned, filling its parent in `request_layout`; hitboxes and per-axis geometry in `prepaint`; painting and `window.on_mouse_event(...)` registration in `paint`.
+- [x] Keep thumb math, drag mapping, and visibility/fade decisions in the deep runtime/geometry module; the element translates events into runtime commands and paints from runtime queries.
+- [x] Keep interaction state in keyed window state addressed by `.id(...)`; the scrollbar never owns the scroll position.
+- [x] Access the scroll target only through the `ScrollTarget` trait; no downcasting or handle-specific branches in the element.
+- [x] Keep the primitive consumer-agnostic: no imports from `select/` or any component module.
+- [x] Avoid adding generic helpers unless they represent a repeated deep primitive concept.
+- [x] Add no new dependencies beyond what `base_gpui` already carries.
 
 ### Styling/state exposure
 
-- [ ] Add a `ScrollbarStyleState` or equivalent typed style-state struct.
-- [ ] Style state exposes `axis`/orientation, `hovering` (track and thumb), `scrolling` (offset recently changed), `dragging`, `has_overflow`, `at_start`, and `at_end` per axis.
-- [ ] Style state exposes the current fade opacity or an equivalent visibility fact so consumers can style the fade.
-- [ ] `style_with_state(...)` receives the current style state and controls track and thumb appearance (colors, thickness, inset, corner radius) with sensible defaults when omitted.
-- [ ] Do not expose DOM data attributes as the styling API.
-- [ ] Do not expose CSS variable names as the styling API.
+- [x] Add a `ScrollbarStyleState` or equivalent typed style-state struct.
+- [x] Style state exposes `axis`/orientation, `hovering` (track and thumb), `scrolling` (offset recently changed), `dragging`, `has_overflow`, `at_start`, and `at_end` per axis.
+- [x] Style state exposes the current fade opacity or an equivalent visibility fact so consumers can style the fade.
+- [x] `style_with_state(...)` receives the current style state and controls track and thumb appearance (colors, thickness, inset, corner radius) with sensible defaults when omitted.
+- [x] Do not expose DOM data attributes as the styling API.
+- [x] Do not expose CSS variable names as the styling API.
 
 ### Docs/demo
 
-- [ ] Update `crates/base_gpui/src/main.rs` or add an example rendering a scrollable container with a vertical scrollbar over a `ScrollHandle`.
-- [ ] Add a demo of both axes plus the corner over an `.overflow_scroll()` container.
-- [ ] Add a demo or documented example over a `uniform_list` via `UniformListScrollHandle`.
-- [ ] Document the visibility modes and fade timing.
-- [ ] Document the overlay composition pattern (relative container, absolute scrollbar layer) and cross-link the Scroll Area port issue as the intended compound consumer.
+- [x] Update `crates/base_gpui/src/main.rs` or add an example rendering a scrollable container with a vertical scrollbar over a `ScrollHandle`.
+- [x] Add a demo of both axes plus the corner over an `.overflow_scroll()` container.
+- [x] Add a demo or documented example over a `uniform_list` via `UniformListScrollHandle`.
+- [x] Document the visibility modes and fade timing.
+- [x] Document the overlay composition pattern (relative container, absolute scrollbar layer) and cross-link the Scroll Area port issue as the intended compound consumer.
 
 ### Tests / verification
 
 Add behavior tests under `crates/base_gpui/src/primitives/scroll/tests/` where practical; geometry tests need no window.
 
-- [ ] Thumb length is proportional to viewport/content ratio.
-- [ ] Thumb length clamps at `MIN_THUMB_SIZE` for very long content.
-- [ ] Thumb offset is 0 at scroll start and `track_len - thumb_len` at scroll end, including when clamped.
-- [ ] No-overflow content yields no thumb for that axis.
-- [ ] Drag delta maps to the expected scroll offset and clamps at both extremes.
-- [ ] Drag preserves the cross-axis offset.
-- [ ] Track click centers the thumb on the click position, clamped at the ends.
-- [ ] Both-axes layout reserves the horizontal end margin and defines the corner.
-- [ ] Visibility: offset change marks scrolling; idle past delay begins fade; fade completes to hidden.
-- [ ] Hover during the visible window resets the idle clock; drag forces visibility.
-- [ ] Style state reports `has_overflow`, `at_start`, `at_end`, `hovering`, `dragging` correctly from runtime facts.
-- [ ] `ScrollTarget` impl for `ScrollHandle` derives `content_size` as `max_offset() + bounds().size`.
-- [ ] Rendered test (where practical): dragging the thumb scrolls a tracked container; releasing ends the drag.
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui scroll` passes.
-- [ ] `cargo test -p base_gpui` passes.
+- [x] Thumb length is proportional to viewport/content ratio.
+- [x] Thumb length clamps at `MIN_THUMB_SIZE` for very long content.
+- [x] Thumb offset is 0 at scroll start and `track_len - thumb_len` at scroll end, including when clamped.
+- [x] No-overflow content yields no thumb for that axis.
+- [x] Drag delta maps to the expected scroll offset and clamps at both extremes.
+- [x] Drag preserves the cross-axis offset.
+- [x] Track click centers the thumb on the click position, clamped at the ends.
+- [x] Both-axes layout reserves the horizontal end margin and defines the corner.
+- [x] Visibility: offset change marks scrolling; idle past delay begins fade; fade completes to hidden.
+- [x] Hover during the visible window resets the idle clock; drag forces visibility.
+- [x] Style state reports `has_overflow`, `at_start`, `at_end`, `hovering`, `dragging` correctly from runtime facts.
+- [x] `ScrollTarget` impl for `ScrollHandle` derives `content_size` as `max_offset() + bounds().size`.
+- [x] Rendered test (where practical): dragging the thumb scrolls a tracked container; releasing ends the drag.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui scroll` passes.
+- [x] `cargo test -p base_gpui` passes.
 
 ## Follow-ups
 

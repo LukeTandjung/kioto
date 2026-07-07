@@ -28,10 +28,14 @@ pub struct Input {
     required: bool,
     auto_focus: bool,
     tab_index: isize,
+    tab_stop: Option<bool>,
     on_value_change: Option<InputValueChangeHandler>,
     on_enter: Option<InputEnterHandler>,
     on_home: Option<InputBoundaryHandler>,
     on_end: Option<InputBoundaryHandler>,
+    on_edge_left: Option<InputBoundaryHandler>,
+    on_edge_right: Option<InputBoundaryHandler>,
+    select_all_on_focus: bool,
     on_style_state: Option<InputStyleStateHandler>,
     focus_handle: Option<FocusHandle>,
     style_with_state: Option<Rc<dyn Fn(InputStyleState, Div) -> Div + 'static>>,
@@ -51,10 +55,14 @@ impl Default for Input {
             required: false,
             auto_focus: false,
             tab_index: 0,
+            tab_stop: None,
             on_value_change: None,
             on_enter: None,
             on_home: None,
             on_end: None,
+            on_edge_left: None,
+            on_edge_right: None,
+            select_all_on_focus: false,
             on_style_state: None,
             focus_handle: None,
             style_with_state: None,
@@ -98,11 +106,21 @@ impl RenderOnce for Input {
                 self.on_enter.clone(),
                 self.on_home.clone(),
                 self.on_end.clone(),
+                None,
                 cx,
+            );
+            runtime.sync_composite(
+                self.on_edge_left.clone(),
+                self.on_edge_right.clone(),
+                self.select_all_on_focus,
             );
         });
 
         let focus_handle = state.read(cx).focus_handle();
+        let focused_now = focus_handle.is_focused(window);
+        state.update(cx, |runtime, cx| {
+            runtime.sync_focus_observed(focused_now, cx);
+        });
         let auto_focus_done_id = ElementId::NamedChild(
             Arc::new(self.id.clone()),
             SharedString::from("auto-focus-done"),
@@ -125,11 +143,11 @@ impl RenderOnce for Input {
         };
 
         base.id(self.id)
-            .track_focus(&focus_handle.tab_stop(!disabled).tab_index(if disabled {
-                -1
-            } else {
-                self.tab_index
-            }))
+            .track_focus(
+                &focus_handle
+                    .tab_stop(self.tab_stop.unwrap_or(!disabled))
+                    .tab_index(if disabled { -1 } else { self.tab_index }),
+            )
             .key_context(INPUT_KEY_CONTEXT)
             .focusable()
             .on_action(window.listener_for(&state, InputRuntime::left))
@@ -221,6 +239,14 @@ impl Input {
         self
     }
 
+    /// Overrides whether the input participates in window Tab order.
+    /// Composite containers such as the Toolbar use this to keep a single
+    /// roving tab stop. Defaults to `!disabled`.
+    pub fn tab_stop(mut self, tab_stop: bool) -> Self {
+        self.tab_stop = Some(tab_stop);
+        self
+    }
+
     pub fn on_value_change(mut self, on_value_change: impl Fn(SharedString) + 'static) -> Self {
         self.on_value_change = Some(Rc::new(move |value, _window, _cx| on_value_change(value)));
         self
@@ -252,6 +278,35 @@ impl Input {
         on_end: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool + 'static,
     ) -> Self {
         self.on_end = Some(Rc::new(on_end));
+        self
+    }
+
+    /// Consulted when a plain Left arrow is pressed with the caret at
+    /// position 0 and no selection; returning `true` consumes the press.
+    pub fn on_edge_left(
+        mut self,
+        on_edge_left: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool
+            + 'static,
+    ) -> Self {
+        self.on_edge_left = Some(Rc::new(on_edge_left));
+        self
+    }
+
+    /// Consulted when a plain Right arrow is pressed with the caret at the
+    /// end of the text and no selection; returning `true` consumes the press.
+    pub fn on_edge_right(
+        mut self,
+        on_edge_right: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool
+            + 'static,
+    ) -> Self {
+        self.on_edge_right = Some(Rc::new(on_edge_right));
+        self
+    }
+
+    /// Selects the whole text whenever the input gains focus, matching
+    /// composite-container focus behavior.
+    pub fn select_all_on_focus(mut self, select_all_on_focus: bool) -> Self {
+        self.select_all_on_focus = select_all_on_focus;
         self
     }
 

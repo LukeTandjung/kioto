@@ -121,7 +121,7 @@ impl<P: Clone + 'static> DialogChildWiring<P> {
         self.popup_focus_handles.push(focus_handle);
     }
 
-    fn finish(self, children: Vec<DialogChild<P>>) -> WiredDialogChildren<P> {
+    pub fn finish(self, children: Vec<DialogChild<P>>) -> WiredDialogChildren<P> {
         WiredDialogChildren {
             triggers: self.triggers,
             title_ids: self.title_ids,

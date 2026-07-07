@@ -99,58 +99,58 @@ Because the runtime holds no mutable state, it does not need `Entity<...>` / key
 
 ### Module/API surface
 
-- [ ] Add a top-level `progress` module and export it from `crates/base_gpui/src/lib.rs`, including the `ProgressStatus` type.
-- [ ] `ProgressRoot::new()` builder with `.value(Option<f64>)` (default `None` = indeterminate, matching Base UI's `@default null`), `.min(f64)` (default `0.0`), `.max(f64)` (default `100.0`), and `.format(impl Fn(f64) -> String)`.
-- [ ] `ProgressTrack::new()` builder — structural container, accepts `ProgressIndicator` as a typed child.
-- [ ] `ProgressIndicator::new()` builder — no value props; fill width comes from context.
-- [ ] `ProgressValue::new()` builder — renders the formatted value by default (nothing when indeterminate); optional builder closure override receiving `(formatted: Option<&str>, value: Option<f64>)` (the GPUI translation of Base UI's function children; `None` replaces the `'indeterminate'` sentinel string).
-- [ ] `ProgressLabel::new(...)` builder — styled text part, no id plumbing.
-- [ ] `ProgressStatus` enum (`Indeterminate`, `Progressing`, `Complete`) defined in `runtime.rs` and re-exported, mirroring Base UI's exported `Progress.Status` type.
-- [ ] Typed child enum(s) in `child.rs` restrict root children to `Track` / `Value` / `Label` (plus `Indicator` under `Track`), matching the composition shown in Base UI docs, before `AnyElement` erasure.
-- [ ] All parts support normal GPUI styling builders through `Styled` and support `.style_with_state(...)`.
-- [ ] `progress/mod.rs` is barrel exports only.
+- [x] Add a top-level `progress` module and export it from `crates/base_gpui/src/lib.rs`, including the `ProgressStatus` type.
+- [x] `ProgressRoot::new()` builder with `.value(Option<f64>)` (default `None` = indeterminate, matching Base UI's `@default null`), `.min(f64)` (default `0.0`), `.max(f64)` (default `100.0`), and `.format(impl Fn(f64) -> String)`.
+- [x] `ProgressTrack::new()` builder — structural container, accepts `ProgressIndicator` as a typed child.
+- [x] `ProgressIndicator::new()` builder — no value props; fill width comes from context.
+- [x] `ProgressValue::new()` builder — renders the formatted value by default (nothing when indeterminate); optional builder closure override receiving `(formatted: Option<&str>, value: Option<f64>)` (the GPUI translation of Base UI's function children; `None` replaces the `'indeterminate'` sentinel string).
+- [x] `ProgressLabel::new(...)` builder — styled text part, no id plumbing.
+- [x] `ProgressStatus` enum (`Indeterminate`, `Progressing`, `Complete`) defined in `runtime.rs` and re-exported, mirroring Base UI's exported `Progress.Status` type.
+- [x] Typed child enum(s) in `child.rs` restrict root children to `Track` / `Value` / `Label` (plus `Indicator` under `Track`), matching the composition shown in Base UI docs, before `AnyElement` erasure.
+- [x] All parts support normal GPUI styling builders through `Styled` and support `.style_with_state(...)`.
+- [x] `progress/mod.rs` is barrel exports only.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui progress` passes.
-- [ ] `ast-grep scan crates/base_gpui/src/progress` produces no scoped-visibility violations.
-- [ ] Add a small Progress demo to `crates/base_gpui/src/main.rs` (label + value + track/indicator, mirroring the Base UI hero demo; ideally one determinate and one indeterminate instance).
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui progress` passes.
+- [x] `ast-grep scan crates/base_gpui/src/progress` produces no scoped-visibility violations.
+- [x] Add a small Progress demo to `crates/base_gpui/src/main.rs` (label + value + track/indicator, mirroring the Base UI hero demo; ideally one determinate and one indeterminate instance).
 
 ### Value derivation (runtime)
 
-- [ ] Runtime is derivation-only: a plain struct computed from `(value, min, max, format)` at the top of root render; no `Entity`, no commands, no callbacks, no controlled/uncontrolled resolution — same shape as Meter's runtime.
-- [ ] Nullable value: `value: Option<f64>`; `None` (and non-finite `f64` — `NaN`, infinities, matching Base UI's `Number.isFinite` guard) yields no clamped value, no percentage, and no default formatted string.
-- [ ] Clamped value (determinate only): `value` clamped into `[min, max]`, aligned with Meter's clamping so out-of-range inputs cannot render an overflowing fill.
-- [ ] Percentage (determinate only): `((value - min) / (max - min)) * 100`, with `NaN` (including the degenerate `min == max` range) falling back to `0`, then clamped to `[0, 100]` — identical math to Meter.
-- [ ] Default formatting (determinate only): percent-of-range, i.e. the derived percentage rendered as a percent string (e.g. `50%`), keeping the text in sync with the indicator fill for any `min`/`max` — matching the Meter issue's decision, not Base UI's raw `value / 100` Intl percent formatting.
-- [ ] Custom `format` callback receives the raw (unclamped) `f64` value and its output replaces the default string; it is never invoked when indeterminate.
-- [ ] Derivation (clamp, percentage, status, formatting) lives in one place in `runtime.rs`; parts never re-derive any of it.
+- [x] Runtime is derivation-only: a plain struct computed from `(value, min, max, format)` at the top of root render; no `Entity`, no commands, no callbacks, no controlled/uncontrolled resolution — same shape as Meter's runtime.
+- [x] Nullable value: `value: Option<f64>`; `None` (and non-finite `f64` — `NaN`, infinities, matching Base UI's `Number.isFinite` guard) yields no clamped value, no percentage, and no default formatted string.
+- [x] Clamped value (determinate only): `value` clamped into `[min, max]`, aligned with Meter's clamping so out-of-range inputs cannot render an overflowing fill.
+- [x] Percentage (determinate only): `((value - min) / (max - min)) * 100`, with `NaN` (including the degenerate `min == max` range) falling back to `0`, then clamped to `[0, 100]` — identical math to Meter.
+- [x] Default formatting (determinate only): percent-of-range, i.e. the derived percentage rendered as a percent string (e.g. `50%`), keeping the text in sync with the indicator fill for any `min`/`max` — matching the Meter issue's decision, not Base UI's raw `value / 100` Intl percent formatting.
+- [x] Custom `format` callback receives the raw (unclamped) `f64` value and its output replaces the default string; it is never invoked when indeterminate.
+- [x] Derivation (clamp, percentage, status, formatting) lives in one place in `runtime.rs`; parts never re-derive any of it.
 
 ### Status behavior
 
-- [ ] `status` derived once at the root: `Indeterminate` when `value` is `None` or non-finite; `Complete` when the (clamped) value equals `max`; `Progressing` otherwise — matching Base UI's `value === max ? 'complete' : 'progressing'` with the clamping decision applied (raw `value >= max` therefore reads `Complete`).
-- [ ] Degenerate range `min == max` with a determinate value: value clamps to `max`, so status is `Complete` and percentage falls back to `0` without panic/NaN leak — the derivation must not contradict itself (document this case in a test).
-- [ ] No built-in indeterminate animation; the indeterminate treatment is status exposure only, per the decision section above.
+- [x] `status` derived once at the root: `Indeterminate` when `value` is `None` or non-finite; `Complete` when the (clamped) value equals `max`; `Progressing` otherwise — matching Base UI's `value === max ? 'complete' : 'progressing'` with the clamping decision applied (raw `value >= max` therefore reads `Complete`).
+- [x] Degenerate range `min == max` with a determinate value: value clamps to `max`, so status is `Complete` and percentage falls back to `0` without panic/NaN leak — the derivation must not contradict itself (document this case in a test).
+- [x] No built-in indeterminate animation; the indeterminate treatment is status exposure only, per the decision section above.
 
 ### Styling/state exposure
 
-- [ ] `ProgressStyleState` in `style_state.rs` exposes `{ value: Option<f64>, clamped_value: Option<f64>, percentage: Option<f64>, formatted: Option<String>, min, max, status: ProgressStatus }` (the GPUI translation of `ProgressRootContext` plus the state attributes); Base UI's five part states are all identical (`{ status }`), so one shared struct for all five parts is acceptable — same pattern as `MeterStyleState`.
-- [ ] Every part's `.style_with_state(...)` receives the current `ProgressStyleState` — status must be observable on Root, Track, Indicator, Value, and Label alike (Base UI applies the status data attributes to every part).
-- [ ] `ProgressIndicator` fills the track using `w(relative(percentage / 100.0))` by default when determinate; when indeterminate it renders with no default fill width (Base UI's empty style object), leaving appearance entirely to `style_with_state`.
-- [ ] No DOM data attributes or CSS variable API in the public surface.
+- [x] `ProgressStyleState` in `style_state.rs` exposes `{ value: Option<f64>, clamped_value: Option<f64>, percentage: Option<f64>, formatted: Option<String>, min, max, status: ProgressStatus }` (the GPUI translation of `ProgressRootContext` plus the state attributes); Base UI's five part states are all identical (`{ status }`), so one shared struct for all five parts is acceptable — same pattern as `MeterStyleState`.
+- [x] Every part's `.style_with_state(...)` receives the current `ProgressStyleState` — status must be observable on Root, Track, Indicator, Value, and Label alike (Base UI applies the status data attributes to every part).
+- [x] `ProgressIndicator` fills the track using `w(relative(percentage / 100.0))` by default when determinate; when indeterminate it renders with no default fill width (Base UI's empty style object), leaving appearance entirely to `style_with_state`.
+- [x] No DOM data attributes or CSS variable API in the public surface.
 
 ### Tests / verification
 
-- [ ] Clamping: value below `min` clamps to `min` (percentage `0`, status `Progressing`); value above `max` clamps to `max` (percentage `100`, status `Complete`).
-- [ ] Percentage math: mid-range values with default `0..100` and with custom ranges (e.g. `value 30, min 20, max 40` → `50%`).
-- [ ] Status transitions: `None` → `Indeterminate`; `Some(v)` with `v < max` → `Progressing`; `Some(max)` → `Complete`; non-finite `Some(f64::NAN)` → `Indeterminate`.
-- [ ] Default formatting produces the percent-of-range string for non-default `min`/`max`; no formatted string when indeterminate.
-- [ ] Custom `format` callback output is used verbatim, receives the raw unclamped value, and is not called when indeterminate.
-- [ ] Edge cases: `value == min`, `value == max`, `min == max` (percentage `0`, status `Complete`, no panic/NaN leak).
-- [ ] `ProgressValue` default rendering shows the formatted string when determinate and renders nothing when indeterminate; closure override receives `(Some(formatted), Some(value))` when determinate and `(None, None)` when indeterminate, and its output is rendered.
-- [ ] `ProgressIndicator` has no default fill width when indeterminate (empty-style parity) and the correct relative width when determinate, including zero width at `value == min` (Base UI's "sets zero width when value is 0" test).
-- [ ] `style_with_state` on all five parts observes the same `status`, and observes the derived percentage on the indicator/track.
+- [x] Clamping: value below `min` clamps to `min` (percentage `0`, status `Progressing`); value above `max` clamps to `max` (percentage `100`, status `Complete`).
+- [x] Percentage math: mid-range values with default `0..100` and with custom ranges (e.g. `value 30, min 20, max 40` → `50%`).
+- [x] Status transitions: `None` → `Indeterminate`; `Some(v)` with `v < max` → `Progressing`; `Some(max)` → `Complete`; non-finite `Some(f64::NAN)` → `Indeterminate`.
+- [x] Default formatting produces the percent-of-range string for non-default `min`/`max`; no formatted string when indeterminate.
+- [x] Custom `format` callback output is used verbatim, receives the raw unclamped value, and is not called when indeterminate.
+- [x] Edge cases: `value == min`, `value == max`, `min == max` (percentage `0`, status `Complete`, no panic/NaN leak).
+- [x] `ProgressValue` default rendering shows the formatted string when determinate and renders nothing when indeterminate; closure override receives `(Some(formatted), Some(value))` when determinate and `(None, None)` when indeterminate, and its output is rendered.
+- [x] `ProgressIndicator` has no default fill width when indeterminate (empty-style parity) and the correct relative width when determinate, including zero width at `value == min` (Base UI's "sets zero width when value is 0" test).
+- [x] `style_with_state` on all five parts observes the same `status`, and observes the derived percentage on the indicator/track.
 
 ## Ratified cross-component decisions (Meter/Progress)
 

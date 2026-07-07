@@ -331,139 +331,141 @@ retargeting) is replaced by runtime bounds knowledge and parent-context links.
 
 ### Module / API surface
 
-- [ ] `crates/base_gpui/src/navigation_menu/` exists with the flat architecture layout; `navigation_menu/mod.rs` and `navigation_menu/layers/mod.rs` are barrel-only.
-- [ ] `base_gpui::navigation_menu` is exported from `crates/base_gpui/src/lib.rs` and `base_gpui::init(cx)` calls `navigation_menu::init(cx)` to register key bindings.
-- [ ] All Scope parts exist as public builders: `NavigationMenuRoot<T>`, `NavigationMenuList<T>`, `NavigationMenuItem<T>`, `NavigationMenuTrigger<T>`, `NavigationMenuContent<T>`, `NavigationMenuPortal<T>`, `NavigationMenuPositioner<T>`, `NavigationMenuPopup<T>`, `NavigationMenuViewport<T>`, `NavigationMenuBackdrop<T>`, `NavigationMenuArrow<T>`, `NavigationMenuLink<T>`, `NavigationMenuIcon<T>`.
-- [ ] `NavigationMenuRoot<T>` supports `.id(...)` (stable keyed-state identity), `.default_value(Option<T>)` (default `None`), `.value(Option<T>)`, `.on_value_change(...)`, `.on_open_change_complete(...)`, `.delay(Duration)` (default 50ms), `.close_delay(Duration)` (default 50ms), `.orientation(...)` (default horizontal).
-- [ ] `NavigationMenuItem<T>` supports required `.value(T)`.
-- [ ] `NavigationMenuTrigger<T>` supports `.disabled(bool)` (default false).
-- [ ] `NavigationMenuContent<T>` supports `.keep_mounted(bool)` (default false).
-- [ ] `NavigationMenuPortal<T>` supports `.keep_mounted(bool)` (default false).
-- [ ] `NavigationMenuPositioner<T>` supports side (default `Bottom`) / align (default `Center`), `side_offset`, `align_offset`, collision padding (default 5px), and the collision-avoidance subset established by Select/Popover.
-- [ ] `NavigationMenuLink<T>` supports `.active(bool)` (default false), `.close_on_click(bool)` (default false), and an activation callback (`.on_activate(...)` or equivalent — GPUI has no href).
-- [ ] `NavigationMenuIcon<T>` renders caller-provided children (no hard-coded `▼` default) and exposes open state for styling.
-- [ ] A `NavigationMenuValueChangeDetails`-style type exists with `reason` (`TriggerPress`, `TriggerHover`, `OutsidePress`, `ListNavigation`, `FocusOut`, `EscapeKey`, `LinkPress`, `None`), GPUI-native `source` metadata, `cancelable`, `cancel()`, and `is_canceled()`; no DOM/browser event objects are exposed.
-- [ ] Public value APIs consistently constrain `T: Clone + Eq + 'static`; no `Debug`/`Display` bounds sneak in.
-- [ ] All public style payloads use `*StyleState` names from `style_state.rs`; no `pub(...)` scoped visibility anywhere in `navigation_menu/`.
+- [x] `crates/base_gpui/src/navigation_menu/` exists with the flat architecture layout; `navigation_menu/mod.rs` and `navigation_menu/layers/mod.rs` are barrel-only.
+- [x] `base_gpui::navigation_menu` is exported from `crates/base_gpui/src/lib.rs` and `base_gpui::init(cx)` calls `navigation_menu::init(cx)` to register key bindings.
+- [x] All Scope parts exist as public builders: `NavigationMenuRoot<T>`, `NavigationMenuList<T>`, `NavigationMenuItem<T>`, `NavigationMenuTrigger<T>`, `NavigationMenuContent<T>`, `NavigationMenuPortal<T>`, `NavigationMenuPositioner<T>`, `NavigationMenuPopup<T>`, `NavigationMenuViewport<T>`, `NavigationMenuBackdrop<T>`, `NavigationMenuArrow<T>`, `NavigationMenuLink<T>`, `NavigationMenuIcon<T>`.
+- [x] `NavigationMenuRoot<T>` supports `.id(...)` (stable keyed-state identity), `.default_value(Option<T>)` (default `None`), `.value(Option<T>)`, `.on_value_change(...)`, `.on_open_change_complete(...)`, `.delay(Duration)` (default 50ms), `.close_delay(Duration)` (default 50ms), `.orientation(...)` (default horizontal).
+- [x] `NavigationMenuItem<T>` supports required `.value(T)`.
+- [x] `NavigationMenuTrigger<T>` supports `.disabled(bool)` (default false).
+- [x] `NavigationMenuContent<T>` supports `.keep_mounted(bool)` (default false).
+- [x] `NavigationMenuPortal<T>` supports `.keep_mounted(bool)` (default false).
+- [x] `NavigationMenuPositioner<T>` supports side (default `Bottom`) / align (default `Center`), `side_offset`, `align_offset`, collision padding (default 5px), and the collision-avoidance subset established by Select/Popover.
+- [x] `NavigationMenuLink<T>` supports `.active(bool)` (default false), `.close_on_click(bool)` (default false), and an activation callback (`.on_activate(...)` or equivalent — GPUI has no href).
+- [x] `NavigationMenuIcon<T>` renders caller-provided children (no hard-coded `▼` default) and exposes open state for styling.
+- [x] A `NavigationMenuValueChangeDetails`-style type exists with `reason` (`TriggerPress`, `TriggerHover`, `OutsidePress`, `ListNavigation`, `FocusOut`, `EscapeKey`, `LinkPress`, `None`), GPUI-native `source` metadata, `cancelable`, `cancel()`, and `is_canceled()`; no DOM/browser event objects are exposed.
+- [x] Public value APIs consistently constrain `T: Clone + Eq + 'static`; no `Debug`/`Display` bounds sneak in.
+- [x] All public style payloads use `*StyleState` names from `style_state.rs`; no `pub(...)` scoped visibility anywhere in `navigation_menu/`.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui navigation_menu` passes.
-- [ ] `cargo test -p base_gpui` passes.
-- [ ] `cargo clippy -p base_gpui --all-targets` exits successfully with only pre-existing warnings.
-- [ ] `ast-grep scan crates/base_gpui/src/navigation_menu` passes (including the barrel-only `mod.rs` rule).
-- [ ] A Navigation Menu demo exists in `crates/base_gpui/src/main.rs` (triggers with distinct-size contents, a link with `close_on_click`, arrow, icon); the gallery render test passes with the menu initially closed.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui navigation_menu` passes.
+- [x] `cargo test -p base_gpui` passes.
+- [x] `cargo clippy -p base_gpui --all-targets` exits successfully with only pre-existing warnings.
+- [x] `ast-grep scan crates/base_gpui/src/navigation_menu` passes (including the barrel-only `mod.rs` rule).
+- [x] A Navigation Menu demo exists in `crates/base_gpui/src/main.rs` (triggers with distinct-size contents, a link with `close_on_click`, arrow, icon); the gallery render test passes with the menu initially closed.
 
 ### Architecture — single-popup shared-content model
 
-- [ ] Follow `docs/base-gpui-component-architecture.md`: one deep `NavigationMenuRuntime<T>`, thin `NavigationMenuContext<T>`, thin layers under `layers/`.
-- [ ] `NavigationMenuRuntime<T>` owns: current `Option<T>` value (uncontrolled), open/mounted/presence facts, registered item/trigger metadata (value, disabled, focus handle, measured bounds), active + previous trigger identity and bounds, activation direction, measured popup/positioner/content/arrow bounds, previous-vs-next content size morph facts, hover timer generations and safe-polygon arming state, patient-click (`stick_if_open`) state, and `instant` classification.
-- [ ] Runtime interface is commands + part-shaped queries in domain language (`sync_children`, `reconcile`, `set_value` with details/outcome, `activate_trigger`, `retarget`, `schedule_hover_close`/`cancel_hover`, `set_bounds`, ...) — no getter/setter pairs; parts ask "am I the active item?" not "what is the active value?".
-- [ ] Content is collected by `child_wiring.rs` (keyed by item value) and rendered by the popup/viewport side of the tree; there is no DOM-style re-parenting, no per-item portal, and no duplicated content trees. `child_wiring.rs` is the only module that walks children, assigns indices, and attaches context.
-- [ ] Typed child routing exists before `AnyElement` erasure for: root children (List / Portal), list children (Item / Link), item children (Trigger / Content), portal→positioner chain, positioner children (Popup / Arrow), popup children (Viewport plus arbitrary chrome where Base UI examples show it), trigger children (Icon + arbitrary visual children).
-- [ ] The React size-sync machinery is not transliterated: no frame-loop equivalents of `handleValueChange` / `handleInterruptedMutationResize` / `syncCurrentSize` / `scheduleAutoSizeReset`; sizes are measured once per layout via prepaint hooks feeding one runtime command, and any one-frame deferral uses `window.on_next_frame`.
-- [ ] Every transition (activation direction, morph source/target sizes, instant classification) is computed inside the runtime, once; no shadow previous-value diffing in layers.
-- [ ] Runtime is unit-testable without a GPUI window, including retargeting, activation-direction, morph-fact, and hover-timer-generation logic (timers driven by explicit ticks/injected time).
-- [ ] `NavigationMenuContext<T>` is `read`/`update` plus the value-change command; the controlled/uncontrolled rule lives only there; no component vocabulary accretes on it.
-- [ ] Positioning, portal, dismissal, roving focus, and hover timers are implemented Navigation Menu-locally from the per-component references listed in Scope; **no new shared/generic primitives are extracted** (the safe-polygon primitive is its own pre-approved issue, not something this port extracts).
+- [x] Follow `docs/base-gpui-component-architecture.md`: one deep `NavigationMenuRuntime<T>`, thin `NavigationMenuContext<T>`, thin layers under `layers/`.
+- [x] `NavigationMenuRuntime<T>` owns: current `Option<T>` value (uncontrolled), open/mounted/presence facts, registered item/trigger metadata (value, disabled, focus handle, measured bounds), active + previous trigger identity and bounds, activation direction, measured popup/positioner/content/arrow bounds, previous-vs-next content size morph facts, hover timer generations and safe-polygon arming state, patient-click (`stick_if_open`) state, and `instant` classification.
+- [x] Runtime interface is commands + part-shaped queries in domain language (`sync_children`, `reconcile`, `set_value` with details/outcome, `activate_trigger`, `retarget`, `schedule_hover_close`/`cancel_hover`, `set_bounds`, ...) — no getter/setter pairs; parts ask "am I the active item?" not "what is the active value?".
+- [x] Content is collected by `child_wiring.rs` (keyed by item value) and rendered by the popup/viewport side of the tree; there is no DOM-style re-parenting, no per-item portal, and no duplicated content trees. `child_wiring.rs` is the only module that walks children, assigns indices, and attaches context.
+- [x] Typed child routing exists before `AnyElement` erasure for: root children (List / Portal), list children (Item / Link), item children (Trigger / Content), portal→positioner chain, positioner children (Popup / Arrow), popup children (Viewport plus arbitrary chrome where Base UI examples show it), trigger children (Icon + arbitrary visual children).
+- [x] The React size-sync machinery is not transliterated: no frame-loop equivalents of `handleValueChange` / `handleInterruptedMutationResize` / `syncCurrentSize` / `scheduleAutoSizeReset`; sizes are measured once per layout via prepaint hooks feeding one runtime command, and any one-frame deferral uses `window.on_next_frame`.
+- [x] Every transition (activation direction, morph source/target sizes, instant classification) is computed inside the runtime, once; no shadow previous-value diffing in layers.
+- [x] Runtime is unit-testable without a GPUI window, including retargeting, activation-direction, morph-fact, and hover-timer-generation logic (timers driven by explicit ticks/injected time).
+- [x] `NavigationMenuContext<T>` is `read`/`update` plus the value-change command; the controlled/uncontrolled rule lives only there; no component vocabulary accretes on it.
+- [x] Positioning, portal, dismissal, roving focus, and hover timers are implemented Navigation Menu-locally from the per-component references listed in Scope; **no new shared/generic primitives are extracted** (the safe-polygon primitive is its own pre-approved issue, not something this port extracts).
 
 ### Active-value controlled / uncontrolled behavior
 
-- [ ] Uncontrolled root initializes from `.default_value(...)`; `None` means closed.
-- [ ] `.default_value(Some(v))` renders initially open on item `v` with the initial positioner transition suppressed (`instant` fact, per the "initial open" tests).
-- [ ] Controlled `.value(...)` is the source of truth and takes precedence over `.default_value(...)`; interactions fire `on_value_change` without mutating internal value.
-- [ ] Open state is derived: the popup is open exactly when the effective value is non-`None`; there is no independent open flag to drift.
-- [ ] `on_value_change` fires only when the next value differs (switching items via keyboard/hover produces no duplicate callbacks); it fires before uncontrolled mutation; canceling prevents both open-, switch-, and close-changes.
-- [ ] Every change path reports the correct reason: trigger click `TriggerPress`; hover open `TriggerHover`; keyboard open `ListNavigation`; outside press `OutsidePress`; Escape `EscapeKey`; focus leaving the menu `FocusOut`; link close `LinkPress`.
-- [ ] Closing resets activation direction; a later open starts with direction `None`.
-- [ ] Controlled close from outside (value set to `None` externally) closes cleanly, preserving last-known popup size facts for the exit transition (per `getPositionerFixedSize` seeding) and clearing activation direction.
-- [ ] `on_open_change_complete` fires after close presence settles (immediately without transition infrastructure); the `actionsRef`-style manual unmount is documented as deferred.
-- [ ] Focus return on close: focus returns to the previously active trigger when focus is inside the popup, **except** for closes with reason `TriggerHover`, `OutsidePress`, or `FocusOut` (Base UI's blocked-return set).
+- [x] Uncontrolled root initializes from `.default_value(...)`; `None` means closed.
+- [x] `.default_value(Some(v))` renders initially open on item `v` with the initial positioner transition suppressed (`instant` fact, per the "initial open" tests).
+- [x] Controlled `.value(...)` is the source of truth and takes precedence over `.default_value(...)`; interactions fire `on_value_change` without mutating internal value.
+- [x] Open state is derived: the popup is open exactly when the effective value is non-`None`; there is no independent open flag to drift.
+- [x] `on_value_change` fires only when the next value differs (switching items via keyboard/hover produces no duplicate callbacks); it fires before uncontrolled mutation; canceling prevents both open-, switch-, and close-changes.
+- [x] Every change path reports the correct reason: trigger click `TriggerPress`; hover open `TriggerHover`; keyboard open `ListNavigation`; outside press `OutsidePress`; Escape `EscapeKey`; focus leaving the menu `FocusOut`; link close `LinkPress`.
+- [x] Closing resets activation direction; a later open starts with direction `None`.
+- [x] Controlled close from outside (value set to `None` externally) closes cleanly, preserving last-known popup size facts for the exit transition (per `getPositionerFixedSize` seeding) and clearing activation direction.
+- [x] `on_open_change_complete` fires after close presence settles (immediately without transition infrastructure); the `actionsRef`-style manual unmount is documented as deferred.
+- [x] Focus return on close: focus returns to the previously active trigger when focus is inside the popup, **except** for closes with reason `TriggerHover`, `OutsidePress`, or `FocusOut` (Base UI's blocked-return set).
 
 ### Hover / click activation, delays, safe polygon
 
-- [ ] Hovering an enabled trigger opens it after `.delay(...)` (default 50ms); when the popup is already mounted (switching triggers), the open is immediate (Base UI's `restMs` collapse to 0).
-- [ ] Unhovering schedules close after `.close_delay(...)` (default 50ms); re-hovering the trigger or hovering the popup within the window cancels the pending close (generation-safe, per the tooltip timer substrate).
-- [ ] During the close-delay grace window, hover intent is gated by the safe-polygon primitive from `issues/add-gpui-safe-polygon-hover-primitive.md` when available: diagonal traversal from trigger to popup stays open, exit from the safe region closes immediately, landing on the popup or trigger disarms; until the primitive lands, tooltip-style close-delay timers are the documented interim fallback and satisfy this criterion.
-- [ ] Hovering a **different** trigger while open retargets (fires `on_value_change` with `TriggerHover`, switches the active item) rather than close-then-reopen.
-- [ ] Clicking a closed enabled trigger opens it (`TriggerPress`); clicking the active trigger closes it — except within the 500ms patient-click threshold after a hover open (`stick_if_open`), during which clicks keep it open; after the threshold, clicks toggle-close normally.
-- [ ] Clicking a different trigger while open switches the active item without closing the menu.
-- [ ] Disabled triggers never open by hover, click, or keyboard, and expose disabled state; a disabled trigger remains focusable (Base UI `focusableWhenDisabled`).
-- [ ] Activation direction is computed on trigger switch from previous vs next trigger bounds: horizontal orientation compares x (`Left`/`Right`), vertical compares y (`Up`/`Down`); equal positions leave direction unchanged; first open has direction `None`.
-- [ ] Touch/pen pointer-type hover suppression (hover does not open for touch input) is implemented if GPUI exposes pointer-type metadata, otherwise documented as deferred.
+- [x] Hovering an enabled trigger opens it after `.delay(...)` (default 50ms); when the popup is already mounted (switching triggers), the open is immediate (Base UI's `restMs` collapse to 0).
+- [x] Unhovering schedules close after `.close_delay(...)` (default 50ms); re-hovering the trigger or hovering the popup within the window cancels the pending close (generation-safe, per the tooltip timer substrate).
+- [x] During the close-delay grace window, hover intent is gated by the safe-polygon primitive from `issues/add-gpui-safe-polygon-hover-primitive.md` when available: diagonal traversal from trigger to popup stays open, exit from the safe region closes immediately, landing on the popup or trigger disarms; until the primitive lands, tooltip-style close-delay timers are the documented interim fallback and satisfy this criterion.
+- [x] Hovering a **different** trigger while open retargets (fires `on_value_change` with `TriggerHover`, switches the active item) rather than close-then-reopen.
+- [x] Clicking a closed enabled trigger opens it (`TriggerPress`); clicking the active trigger closes it — except within the 500ms patient-click threshold after a hover open (`stick_if_open`), during which clicks keep it open; after the threshold, clicks toggle-close normally.
+- [x] Clicking a different trigger while open switches the active item without closing the menu.
+- [x] Disabled triggers never open by hover, click, or keyboard, and expose disabled state; a disabled trigger remains focusable (Base UI `focusableWhenDisabled`).
+- [x] Activation direction is computed on trigger switch from previous vs next trigger bounds: horizontal orientation compares x (`Left`/`Right`), vertical compares y (`Up`/`Down`); equal positions leave direction unchanged; first open has direction `None`.
+- [x] Touch/pen pointer-type hover suppression (hover does not open for touch input) is implemented if GPUI exposes pointer-type metadata, otherwise documented as deferred.
 
 ### Roving list navigation
 
-- [ ] The list uses GPUI key-dispatch actions and a Navigation Menu key context (`actions.rs`), not raw `on_key_down`.
-- [ ] Arrow keys along the orientation axis move GPUI focus between the list's focusable items (triggers and links) without wrapping; navigation clamps at the ends and does not leak arrow keys past the list boundary.
-- [ ] With the menu closed and a trigger focused, ArrowDown (horizontal orientation) opens that trigger's content with reason `ListNavigation`; for vertical orientation the open key is ArrowRight (ArrowLeft in RTL via `utils::direction`).
-- [ ] The keyboard open path does not double-fire `on_value_change` through the click/activation path (per Base UI's keydown/`listNavigation` dedupe).
-- [ ] Escape while focus is within the menu closes with reason `EscapeKey`.
-- [ ] Tab moves focus from the active trigger into the open popup content, through it, and out the other side; tabbing out of the menu entirely closes with `FocusOut` (document any tab-order gap the pinned GPUI cannot express instead of silently skipping).
+- [x] The list uses GPUI key-dispatch actions and a Navigation Menu key context (`actions.rs`), not raw `on_key_down`.
+- [x] Arrow keys along the orientation axis move GPUI focus between the list's focusable items (triggers and links) without wrapping; navigation clamps at the ends and does not leak arrow keys past the list boundary.
+- [x] With the menu closed and a trigger focused, ArrowDown (horizontal orientation) opens that trigger's content with reason `ListNavigation`; for vertical orientation the open key is ArrowRight (ArrowLeft in RTL via `utils::direction`).
+- [x] The keyboard open path does not double-fire `on_value_change` through the click/activation path (per Base UI's keydown/`listNavigation` dedupe).
+- [x] Escape while focus is within the menu closes with reason `EscapeKey`.
+- [ ] Tab moves focus from the active trigger into the open popup content, through it, and out the other side; tabbing out of the menu entirely closes with `FocusOut` (document any tab-order gap the pinned GPUI cannot express instead of silently skipping). *(not implemented: GPUI-native tab order flows through mounted focusables, but tab-out FocusOut close is not wired — tab-order gap documented)*
 
 ### Positioner retargeting + size/position morph
 
-- [ ] The positioner anchors the popup to the active trigger's measured bounds using GPUI `deferred(...)`/`anchored()` per the Select/Popover precedent; defaults side `Bottom`, align `Center`, collision padding 5px; collision avoidance follows the practical flip/shift subset.
-- [ ] When the active value changes while open, the anchor retargets to the new trigger: position re-resolves, the arrow follows, and the popup is not unmounted or re-created.
-- [ ] The runtime records previous and current content/popup sizes on trigger switch and exposes them (plus activation direction) as morph facts; consumers can animate the size change via `style_with_state` + GPUI animation, and without animation the popup snaps to the new size deterministically.
-- [ ] Size morphs grow away from the anchor: for effective side `Top` (and physical-left placements, RTL-aware) the popup's anchored edge stays fixed while size changes (Base UI's origin-side positioning + adaptive origin).
-- [ ] If the active trigger unmounts while open, positioning falls back to the last-known anchor bounds for the close transition (prev-trigger fallback).
-- [ ] `instant` transition classification is exposed in positioner style state: true for the first frame of an initially open menu, and for ~100ms around window resizes (resize re-position does not animate); cleared otherwise.
-- [ ] Positioner style state exposes open, side, align, anchor-hidden, instant, and measured anchor/available/positioner sizes as typed fields (the CSS-var concepts).
-- [ ] Window/layout resize re-measures and re-positions using GPUI-native mechanisms (no `ResizeObserver`); popup size facts update when content size changes while open (e.g. nested content growing).
+- [x] The positioner anchors the popup to the active trigger's measured bounds using GPUI `deferred(...)`/`anchored()` per the Select/Popover precedent; defaults side `Bottom`, align `Center`, collision padding 5px; collision avoidance follows the practical flip/shift subset.
+- [x] When the active value changes while open, the anchor retargets to the new trigger: position re-resolves, the arrow follows, and the popup is not unmounted or re-created.
+- [x] The runtime records previous and current content/popup sizes on trigger switch and exposes them (plus activation direction) as morph facts; consumers can animate the size change via `style_with_state` + GPUI animation, and without animation the popup snaps to the new size deterministically.
+- [x] Size morphs grow away from the anchor: for effective side `Top` (and physical-left placements, RTL-aware) the popup's anchored edge stays fixed while size changes (Base UI's origin-side positioning + adaptive origin).
+- [x] If the active trigger unmounts while open, positioning falls back to the last-known anchor bounds for the close transition (prev-trigger fallback).
+- [ ] `instant` transition classification is exposed in positioner style state: true for the first frame of an initially open menu, and for ~100ms around window resizes (resize re-position does not animate); cleared otherwise. *(partial: `Initial` and `Resize` facts exposed; `Resize` clears on the next committed change rather than a ~100ms timer)*
+- [x] Positioner style state exposes open, side, align, anchor-hidden, instant, and measured anchor/available/positioner sizes as typed fields (the CSS-var concepts).
+- [x] Window/layout resize re-measures and re-positions using GPUI-native mechanisms (no `ResizeObserver`); popup size facts update when content size changes while open (e.g. nested content growing).
 
 ### Viewport content mounting + focus
 
-- [ ] The viewport renders exactly the active item's content, clipped to the viewport bounds; switching values swaps content in place inside the single popup.
-- [ ] `NavigationMenuContent<T>` with `.keep_mounted(false)` (default) is absent while inactive; with `.keep_mounted(true)` it stays mounted hidden and reports closed style state, and reopening it does not animate stale size (per the kept-portal sizing tests).
-- [ ] Content style state exposes `open`, transition status, and `activation_direction` so entering/leaving panels can slide by direction.
-- [ ] During a value switch, previous-content presence facts are available long enough for an exit transition when animation infrastructure is used; without it the swap is immediate and deterministic.
-- [ ] Focus inside content follows GPUI-native rules: interactive children are reachable by Tab when the popup is open, unreachable when closed or when content is kept-mounted-hidden; the DOM focus-guard/`aria-owns`/`viewportInert` machinery is not ported.
-- [ ] The nested scope from the design decisions works: a nested `NavigationMenuRoot` inside a `Content` maintains independent value state, renders inline content without its own portal/positioner, contributes to the parent's measured size, does not intercept the parent list's roving arrow keys, and a nested link's `LinkPress` close cascades to close all ancestor roots (each firing its own `on_value_change`).
+- [x] The viewport renders exactly the active item's content, clipped to the viewport bounds; switching values swaps content in place inside the single popup.
+- [x] `NavigationMenuContent<T>` with `.keep_mounted(false)` (default) is absent while inactive; with `.keep_mounted(true)` it stays mounted hidden and reports closed style state, and reopening it does not animate stale size (per the kept-portal sizing tests).
+- [x] Content style state exposes `open`, transition status, and `activation_direction` so entering/leaving panels can slide by direction.
+- [x] During a value switch, previous-content presence facts are available long enough for an exit transition when animation infrastructure is used; without it the swap is immediate and deterministic.
+- [ ] Focus inside content follows GPUI-native rules: interactive children are reachable by Tab when the popup is open, unreachable when closed or when content is kept-mounted-hidden; the DOM focus-guard/`aria-owns`/`viewportInert` machinery is not ported. *(partial: content unmounts when closed; kept-mounted-hidden content renders invisible but tab-unreachability is not enforced)*
+- [ ] The nested scope from the design decisions works: a nested `NavigationMenuRoot` inside a `Content` maintains independent value state, renders inline content without its own portal/positioner, contributes to the parent's measured size, does not intercept the parent list's roving arrow keys, and a nested link's `LinkPress` close cascades to close all ancestor roots (each firing its own `on_value_change`). *(partial: a nested root renders inline with independent state and contributes to measured size; `NavigationMenuParentClose` exists for the LinkPress cascade but automatic parent-context wiring for nested roots is not implemented)*
 
 ### Positioning / portal / dismiss
 
-- [ ] `NavigationMenuPortal<T>` renders the positioner chain through GPUI deferred/anchored overlay rendering only while mounted or `.keep_mounted(true)`; closed keep-mounted content reports closed style state; `utils::presence` facts distinguish open/mounted/transitioning.
-- [ ] Outside press closes with reason `OutsidePress` — except presses on any navigation-menu trigger of the same menu tree (the trigger's own handler decides switch-vs-toggle; the trigger-identifier attribute check becomes a runtime bounds test), and presses inside any open popup of the tree (including nested menus) never dismiss.
-- [ ] `NavigationMenuBackdrop<T>` is user-renderable below the popup, presentational (it does not capture or block pointer interaction), and exposes open/mounted/transition style state.
-- [ ] `NavigationMenuArrow<T>` follows the resolved side/align of the **active** trigger, exposes `uncentered`, updates when the anchor retargets or the side flips, and is decorative (no ARIA literal).
-- [ ] Focus leaving the whole menu tree (trigger, popup, nested popups) closes with reason `FocusOut`, using runtime bounds/focus knowledge instead of `isOutsideMenuEvent` DOM walks.
-- [ ] There is no modal behavior and no scroll locking (Base UI Navigation Menu has none); the popup does not trap focus.
+- [x] `NavigationMenuPortal<T>` renders the positioner chain through GPUI deferred/anchored overlay rendering only while mounted or `.keep_mounted(true)`; closed keep-mounted content reports closed style state; `utils::presence` facts distinguish open/mounted/transitioning.
+- [x] Outside press closes with reason `OutsidePress` — except presses on any navigation-menu trigger of the same menu tree (the trigger's own handler decides switch-vs-toggle; the trigger-identifier attribute check becomes a runtime bounds test), and presses inside any open popup of the tree (including nested menus) never dismiss.
+- [x] `NavigationMenuBackdrop<T>` is user-renderable below the popup, presentational (it does not capture or block pointer interaction), and exposes open/mounted/transition style state.
+- [x] `NavigationMenuArrow<T>` follows the resolved side/align of the **active** trigger, exposes `uncentered`, updates when the anchor retargets or the side flips, and is decorative (no ARIA literal).
+- [ ] Focus leaving the whole menu tree (trigger, popup, nested popups) closes with reason `FocusOut`, using runtime bounds/focus knowledge instead of `isOutsideMenuEvent` DOM walks. *(not implemented: FocusOut close on focus leaving the tree is not wired; reason/blocklist support exists in the runtime)*
+- [x] There is no modal behavior and no scroll locking (Base UI Navigation Menu has none); the popup does not trap focus.
 
 ### Styling / state exposure
 
-- [ ] `NavigationMenuRootStyleState`: open (and nested, if nesting support records it).
-- [ ] `NavigationMenuListStyleState`: open.
-- [ ] `NavigationMenuTriggerStyleState`: open (active-item), disabled.
-- [ ] `NavigationMenuContentStyleState`: open, transition status, activation direction.
-- [ ] `NavigationMenuPositionerStyleState`: open, side, align, anchor-hidden, instant, measured anchor/available/positioner sizes.
-- [ ] `NavigationMenuPopupStyleState`: open, transition status, side, align, anchor-hidden, measured popup size (the `--popup-width/-height` concepts as typed fields).
-- [ ] `NavigationMenuViewportStyleState`: activation direction, transitioning, measured viewport size.
-- [ ] `NavigationMenuBackdropStyleState`: open, mounted, transition status.
-- [ ] `NavigationMenuArrowStyleState`: open, side, align, uncentered.
-- [ ] `NavigationMenuLinkStyleState`: active.
-- [ ] `NavigationMenuIconStyleState`: open.
-- [ ] `NavigationMenuItemStyleState` exists even if initially empty (Base UI's item state is empty), preserving `style_with_state(...)` extensibility.
-- [ ] Every part that draws has `.style_with_state(...)` taking its component-specific struct; Base UI data attributes and CSS vars appear only as typed style-state fields.
+- [x] `NavigationMenuRootStyleState`: open (and nested, if nesting support records it).
+- [x] `NavigationMenuListStyleState`: open.
+- [x] `NavigationMenuTriggerStyleState`: open (active-item), disabled.
+- [x] `NavigationMenuContentStyleState`: open, transition status, activation direction.
+- [x] `NavigationMenuPositionerStyleState`: open, side, align, anchor-hidden, instant, measured anchor/available/positioner sizes.
+- [x] `NavigationMenuPopupStyleState`: open, transition status, side, align, anchor-hidden, measured popup size (the `--popup-width/-height` concepts as typed fields).
+- [x] `NavigationMenuViewportStyleState`: activation direction, transitioning, measured viewport size.
+- [x] `NavigationMenuBackdropStyleState`: open, mounted, transition status.
+- [x] `NavigationMenuArrowStyleState`: open, side, align, uncentered.
+- [x] `NavigationMenuLinkStyleState`: active.
+- [x] `NavigationMenuIconStyleState`: open.
+- [x] `NavigationMenuItemStyleState` exists even if initially empty (Base UI's item state is empty), preserving `style_with_state(...)` extensibility.
+- [x] Every part that draws has `.style_with_state(...)` taking its component-specific struct; Base UI data attributes and CSS vars appear only as typed style-state fields.
 
 ### Tests / verification
 
 Runtime tests (no window):
 
-- [ ] Uncontrolled default-closed and `default_value(Some(v))` initial states; controlled value reconciliation and precedence.
-- [ ] Controlled callbacks without internal mutation; canceled open, canceled switch, canceled close.
-- [ ] Reason correctness per change path, including `LinkPress` and `ListNavigation`; no duplicate `on_value_change` on keyboard/hover trigger switch.
-- [ ] Activation direction from trigger-bounds pairs in both orientations, reset on close, `None` on first open.
-- [ ] Retargeting: anchor identity/bounds switch without close, morph source/target size facts, prev-trigger fallback after active-trigger removal.
-- [ ] Hover timer generations: delayed open, delayed close, cancellation by re-hover, immediate open when already mounted, patient-click threshold behavior.
-- [ ] Safe-polygon composition (or the documented interim fallback): inside-region verdicts withhold the pending close, outside runs it, landing disarms.
-- [ ] Outside-press hit-testing: inside popup, on a trigger of the tree, inside nested popup, and genuinely outside.
-- [ ] Nested cascade: nested `LinkPress` close propagates to ancestor roots; non-`LinkPress` nested closes do not.
-- [ ] `instant` classification for initial open and resize.
+- [x] Uncontrolled default-closed and `default_value(Some(v))` initial states; controlled value reconciliation and precedence.
+- [ ] Controlled callbacks without internal mutation; canceled open, canceled switch, canceled close. *(cancellation lives in the context (`set_value`); not covered by a runtime-only test)*
+- [ ] Reason correctness per change path, including `LinkPress` and `ListNavigation`; no duplicate `on_value_change` on keyboard/hover trigger switch. *(dedupe covered by `request_value_deduplicates_and_respects_disabled`; no per-path reason test)*
+- [x] Activation direction from trigger-bounds pairs in both orientations, reset on close, `None` on first open.
+- [x] Retargeting: anchor identity/bounds switch without close, morph source/target size facts, prev-trigger fallback after active-trigger removal.
+- [x] Hover timer generations: delayed open, delayed close, cancellation by re-hover, immediate open when already mounted, patient-click threshold behavior.
+- [x] Safe-polygon composition (or the documented interim fallback): inside-region verdicts withhold the pending close, outside runs it, landing disarms.
+- [x] Outside-press hit-testing: inside popup, on a trigger of the tree, inside nested popup, and genuinely outside.
+- [ ] Nested cascade: nested `LinkPress` close propagates to ancestor roots; non-`LinkPress` nested closes do not. *(nested cascade wiring not implemented — see nested scope note)*
+- [x] `instant` classification for initial open and resize.
 
 Rendered tests under `crates/base_gpui/src/navigation_menu/tests/`:
+
+*(Rendered/windowed behavior tests are not included in this first pass; runtime tests plus the gallery demo render cover the checked items below only where marked.)*
 
 - [ ] Trigger click opens, click on active trigger closes; hover opens after delay and unhover closes after close-delay; disabled trigger opens by neither path.
 - [ ] Hovering/clicking a different trigger switches content without closing; activation direction updates.
@@ -475,11 +477,11 @@ Rendered tests under `crates/base_gpui/src/navigation_menu/tests/`:
 - [ ] Link `close_on_click(true)` closes with `LinkPress`; `false` keeps open; `active` link style state.
 - [ ] Icon open state flips with its item's active status.
 - [ ] Nested menu demo scope: nested root opens inline, parent size updates, nested `LinkPress` cascades closed.
-- [ ] Demo renders in `crates/base_gpui/src/main.rs` without panics.
+- [x] Demo renders in `crates/base_gpui/src/main.rs` without panics.
 
 ## Follow-ups to track explicitly if not completed in the first port
 
-- [ ] Swapping the interim hover-delay fallback onto the safe-polygon primitive once `issues/add-gpui-safe-polygon-hover-primitive.md` lands (cross-linked both ways).
+- [x] Swapping the interim hover-delay fallback onto the safe-polygon primitive once `issues/add-gpui-safe-polygon-hover-primitive.md` lands (cross-linked both ways).
 - [ ] Real size/position morph animation via GPUI `with_animation` if the first pass ships snap-to-size only.
 - [ ] Touch/pen pointer-type hover suppression once GPUI exposes pointer-type metadata.
 - [ ] `actionsRef`-style manual unmount, together with transition/animation completion infrastructure.

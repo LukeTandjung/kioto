@@ -8,8 +8,8 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::primitives::input::{
     InputBackspace, InputBoundaryHandler, InputCopy, InputCut, InputDelete, InputEnd, InputEnter,
-    InputEnterHandler, InputHome, InputLeft, InputPaste, InputRight, InputSelectAll,
-    InputSelectLeft, InputSelectRight, InputStyleState, InputValueChangeHandler,
+    InputEnterHandler, InputHome, InputLeft, InputPaste, InputPasteHandler, InputRight,
+    InputSelectAll, InputSelectLeft, InputSelectRight, InputStyleState, InputValueChangeHandler,
 };
 
 pub struct InputRuntime {
@@ -21,6 +21,7 @@ pub struct InputRuntime {
     marked_range: Option<Range<usize>>,
     last_layout: Option<ShapedLine>,
     last_bounds: Option<gpui::Bounds<gpui::Pixels>>,
+    ime_candidate_bounds: Option<gpui::Bounds<gpui::Pixels>>,
     selecting: bool,
     disabled: bool,
     read_only: bool,
@@ -30,6 +31,11 @@ pub struct InputRuntime {
     on_enter: Option<InputEnterHandler>,
     on_home: Option<InputBoundaryHandler>,
     on_end: Option<InputBoundaryHandler>,
+    on_paste: Option<InputPasteHandler>,
+    on_edge_left: Option<InputBoundaryHandler>,
+    on_edge_right: Option<InputBoundaryHandler>,
+    select_all_on_focus: bool,
+    was_focused: bool,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -59,6 +65,7 @@ impl InputRuntime {
             marked_range: None,
             last_layout: None,
             last_bounds: None,
+            ime_candidate_bounds: None,
             selecting: false,
             disabled: false,
             read_only: false,
@@ -68,8 +75,42 @@ impl InputRuntime {
             on_enter: None,
             on_home: None,
             on_end: None,
+            on_paste: None,
+            on_edge_left: None,
+            on_edge_right: None,
+            select_all_on_focus: false,
+            was_focused: false,
             _subscriptions: subscriptions,
         }
+    }
+
+    /// Syncs composite-container integration hooks: caret-edge boundary
+    /// handlers consulted when a plain arrow press sits at the start/end of
+    /// the text with no selection, and select-all-on-focus behavior used when
+    /// roving focus enters the input. Containers such as the Toolbar call
+    /// this every render; standalone inputs keep the defaults.
+    pub fn sync_composite(
+        &mut self,
+        on_edge_left: Option<InputBoundaryHandler>,
+        on_edge_right: Option<InputBoundaryHandler>,
+        select_all_on_focus: bool,
+    ) {
+        self.on_edge_left = on_edge_left;
+        self.on_edge_right = on_edge_right;
+        self.select_all_on_focus = select_all_on_focus;
+    }
+
+    /// Observes the focus fact each render; when focus newly arrives and
+    /// `select_all_on_focus` is set, the whole text is selected, matching
+    /// composite-container focus behavior.
+    pub fn sync_focus_observed(&mut self, focused: bool, cx: &mut Context<Self>) {
+        if focused && !self.was_focused && self.select_all_on_focus {
+            self.selected_range = 0..self.value.len();
+            self.selection_reversed = false;
+            cx.notify();
+        }
+
+        self.was_focused = focused;
     }
 
     pub fn sync_props(
@@ -82,6 +123,7 @@ impl InputRuntime {
         on_enter: Option<InputEnterHandler>,
         on_home: Option<InputBoundaryHandler>,
         on_end: Option<InputBoundaryHandler>,
+        on_paste: Option<InputPasteHandler>,
         cx: &mut Context<Self>,
     ) {
         let mut changed = false;
@@ -104,6 +146,7 @@ impl InputRuntime {
         self.on_enter = on_enter;
         self.on_home = on_home;
         self.on_end = on_end;
+        self.on_paste = on_paste;
 
         if changed {
             cx.notify();
@@ -177,6 +220,18 @@ impl InputRuntime {
         self.last_bounds = Some(bounds);
     }
 
+    /// Overrides the IME candidate-window anchor used by `bounds_for_range`.
+    ///
+    /// Segmented displays (e.g. OTP fields) have no single shaped line; they anchor
+    /// the IME candidate window to their active segment's bounds instead.
+    pub fn set_ime_candidate_bounds(
+        &mut self,
+        bounds: Option<gpui::Bounds<gpui::Pixels>>,
+        _cx: &mut Context<Self>,
+    ) {
+        self.ime_candidate_bounds = bounds;
+    }
+
     pub fn backspace(&mut self, _: &InputBackspace, window: &mut Window, cx: &mut Context<Self>) {
         if !self.can_edit() {
             return;
@@ -209,16 +264,32 @@ impl InputRuntime {
         self.replace_text_in_range(None, "", window, cx);
     }
 
-    pub fn left(&mut self, _: &InputLeft, _: &mut Window, cx: &mut Context<Self>) {
+    pub fn left(&mut self, _: &InputLeft, window: &mut Window, cx: &mut Context<Self>) {
         if self.selected_range.is_empty() {
+            if self.cursor_offset() == 0 {
+                if let Some(on_edge_left) = self.on_edge_left.clone() {
+                    if on_edge_left(self.value.clone(), window, cx) {
+                        return;
+                    }
+                }
+            }
+
             self.move_to(self.previous_boundary(self.cursor_offset()), cx);
         } else {
             self.move_to(self.selected_range.start, cx);
         }
     }
 
-    pub fn right(&mut self, _: &InputRight, _: &mut Window, cx: &mut Context<Self>) {
+    pub fn right(&mut self, _: &InputRight, window: &mut Window, cx: &mut Context<Self>) {
         if self.selected_range.is_empty() {
+            if self.cursor_offset() == self.value.len() {
+                if let Some(on_edge_right) = self.on_edge_right.clone() {
+                    if on_edge_right(self.value.clone(), window, cx) {
+                        return;
+                    }
+                }
+            }
+
             self.move_to(self.next_boundary(self.cursor_offset()), cx);
         } else {
             self.move_to(self.selected_range.end, cx);
@@ -288,6 +359,13 @@ impl InputRuntime {
             return;
         }
         if let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) {
+            if self
+                .on_paste
+                .clone()
+                .is_some_and(|on_paste| on_paste(SharedString::from(text.clone()), window, cx))
+            {
+                return;
+            }
             self.replace_text_in_range(None, &normalize_single_line(&text), window, cx);
         }
     }
@@ -335,6 +413,16 @@ impl InputRuntime {
     }
 
     fn on_focus(&mut self, _: &mut Window, cx: &mut Context<Self>) {
+        eprintln!(
+            "DBG on_focus select_all={} len={}",
+            self.select_all_on_focus,
+            self.value.len()
+        );
+        if self.select_all_on_focus {
+            self.selected_range = 0..self.value.len();
+            self.selection_reversed = false;
+        }
+
         cx.notify();
     }
 
@@ -588,6 +676,10 @@ impl EntityInputHandler for InputRuntime {
         _: &mut Window,
         _: &mut Context<Self>,
     ) -> Option<gpui::Bounds<gpui::Pixels>> {
+        if let Some(bounds) = self.ime_candidate_bounds {
+            return Some(bounds);
+        }
+
         let layout = self.last_layout.as_ref()?;
         let range = self.range_from_utf16(&range_utf16);
 

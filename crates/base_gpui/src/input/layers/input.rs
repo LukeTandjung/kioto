@@ -1,12 +1,14 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, Div, ElementId, IntoElement, RenderOnce, SharedString, StyleRefinement, Styled, Window,
+    App, Div, ElementId, FocusHandle, IntoElement, RenderOnce, SharedString, StyleRefinement,
+    Styled, Window,
 };
 
 use crate::{
     field::{current_field_context, FieldContext, FieldControl},
     input::InputStyleState,
+    primitives::input::InputRuntime,
 };
 
 #[derive(IntoElement)]
@@ -110,6 +112,48 @@ impl Input {
 
     pub fn tab_index(mut self, tab_index: isize) -> Self {
         self.control = self.control.tab_index(tab_index);
+        self
+    }
+
+    /// Overrides window Tab-order participation; composite containers such
+    /// as the Toolbar use this to keep a single roving tab stop.
+    pub fn tab_stop(mut self, tab_stop: bool) -> Self {
+        self.control = self.control.tab_stop(tab_stop);
+        self
+    }
+
+    /// Overrides the input's focus handle so composite containers can own
+    /// the control's roving focus handle.
+    pub fn focus_handle(mut self, focus_handle: FocusHandle) -> Self {
+        self.control = self.control.focus_handle(focus_handle);
+        self
+    }
+
+    /// Consulted when a plain Left arrow is pressed with the caret at
+    /// position 0 and no selection; returning `true` consumes the press.
+    pub fn on_edge_left(
+        mut self,
+        on_edge_left: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool
+            + 'static,
+    ) -> Self {
+        self.control = self.control.on_edge_left(on_edge_left);
+        self
+    }
+
+    /// Consulted when a plain Right arrow is pressed with the caret at the
+    /// end of the text and no selection; returning `true` consumes the press.
+    pub fn on_edge_right(
+        mut self,
+        on_edge_right: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool
+            + 'static,
+    ) -> Self {
+        self.control = self.control.on_edge_right(on_edge_right);
+        self
+    }
+
+    /// Selects the whole text whenever the input gains focus.
+    pub fn select_all_on_focus(mut self, select_all_on_focus: bool) -> Self {
+        self.control = self.control.select_all_on_focus(select_all_on_focus);
         self
     }
 

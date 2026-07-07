@@ -212,87 +212,89 @@ Cross-link maintenance: when this issue lands, check off the corresponding
 
 ### Module / API surface
 
-- [ ] `crates/base_gpui/src/menubar/` exists with the flat architecture layout; `menubar/mod.rs` and `menubar/layers/mod.rs` are barrel-only.
-- [ ] `base_gpui::menubar` is exported from `crates/base_gpui/src/lib.rs` and `base_gpui::init(cx)` calls `menubar::init(cx)` to register key bindings.
-- [ ] `Menubar` is a public builder supporting `.id(...)`, `.orientation(...)` (default **horizontal** — note: opposite of MenuRoot's vertical default), `.loop_focus(bool)` (default true), `.modal(bool)` (default true), `.disabled(bool)` (default false), plus normal styling builder methods and `.style_with_state(...)`.
-- [ ] Menubar children are typed before `AnyElement` erasure in `child.rs`: menu entries (wrapping `MenuRoot<P>` for per-menu payload types — see Uncertain items for the erasure strategy) plus an escape hatch only if Base UI demos show arbitrary non-menu children in the row.
-- [ ] `child_wiring.rs` is the only module that walks menubar children, assigns trigger indices, attaches the menubar context/parent-kind to child `MenuRoot`s, and registers trigger focus handles; no index bookkeeping leaks into layers.
-- [ ] `MenubarRuntime` (one deep module, unit-testable without a window) owns: orientation/loop/modal/disabled facts, registered trigger metadata (index, disabled, focus handle), roving highlighted-trigger index, `has_submenu_open`, the identity of the currently open child menu, and measured menubar bounds; interface is commands + part-shaped queries in menubar domain language (`sync_triggers`, `move_highlight`, `note_child_open_change`, `hand_off_open_menu`, `set_bounds`, ...) — no getter/setter pairs.
-- [ ] `MenubarContext` is `read`/`update` plus the menubar commands; no component vocabulary accretes on any generic context type.
+- [x] `crates/base_gpui/src/menubar/` exists with the flat architecture layout; `menubar/mod.rs` and `menubar/layers/mod.rs` are barrel-only.
+- [x] `base_gpui::menubar` is exported from `crates/base_gpui/src/lib.rs` and `base_gpui::init(cx)` calls `menubar::init(cx)` to register key bindings.
+- [x] `Menubar` is a public builder supporting `.id(...)`, `.orientation(...)` (default **horizontal** — note: opposite of MenuRoot's vertical default), `.loop_focus(bool)` (default true), `.modal(bool)` (default true), `.disabled(bool)` (default false), plus normal styling builder methods and `.style_with_state(...)`.
+- [x] Menubar children are typed before `AnyElement` erasure in `child.rs`: menu entries (wrapping `MenuRoot<P>` for per-menu payload types — see Uncertain items for the erasure strategy) plus an escape hatch only if Base UI demos show arbitrary non-menu children in the row.
+- [x] `child_wiring.rs` is the only module that walks menubar children, assigns trigger indices, attaches the menubar context/parent-kind to child `MenuRoot`s, and registers trigger focus handles; no index bookkeeping leaks into layers.
+- [x] `MenubarRuntime` (one deep module, unit-testable without a window) owns: orientation/loop/modal/disabled facts, registered trigger metadata (index, disabled, focus handle), roving highlighted-trigger index, `has_submenu_open`, the identity of the currently open child menu, and measured menubar bounds; interface is commands + part-shaped queries in menubar domain language (`sync_triggers`, `move_highlight`, `note_child_open_change`, `hand_off_open_menu`, `set_bounds`, ...) — no getter/setter pairs.
+- [x] `MenubarContext` is `read`/`update` plus the menubar commands; no component vocabulary accretes on any generic context type.
 - [ ] Menubar exposes to child menus exactly the Base UI context facts, as runtime queries/commands: modal, disabled, orientation, `has_submenu_open`, menubar bounds (cutout), the shared `allow_mouse_up_trigger` window, and the keyboard-relay command.
-- [ ] No new shared/generic primitives are extracted; roving focus is implemented menubar-locally per the Tabs reference (`crates/base_gpui/src/tabs/runtime.rs`, `crates/base_gpui/src/tabs/layers/tabs_list.rs`).
-- [ ] No `pub(...)` scoped visibility anywhere in `menubar/` or the Menu edits.
+- [x] No new shared/generic primitives are extracted; roving focus is implemented menubar-locally per the Tabs reference (`crates/base_gpui/src/tabs/runtime.rs`, `crates/base_gpui/src/tabs/layers/tabs_list.rs`).
+- [x] No `pub(...)` scoped visibility anywhere in `menubar/` or the Menu edits.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui menubar` passes.
-- [ ] `cargo test -p base_gpui` passes (including the existing Menu tests, unbroken by the seam implementations).
-- [ ] `cargo clippy -p base_gpui --all-targets` exits successfully with only pre-existing warnings.
-- [ ] `ast-grep scan crates/base_gpui/src/menubar crates/base_gpui/src/menu` passes (barrel-only `mod.rs` rule included).
-- [ ] Demo in `crates/base_gpui/src/main.rs`: a menubar with 3+ menus (one containing a submenu, one with a disabled trigger); gallery render test passes with all menus initially closed.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui menubar` passes.
+- [x] `cargo test -p base_gpui` passes (including the existing Menu tests, unbroken by the seam implementations).
+- [x] `cargo clippy -p base_gpui --all-targets` exits successfully with only pre-existing warnings.
+- [x] `ast-grep scan crates/base_gpui/src/menubar crates/base_gpui/src/menu` passes (barrel-only `mod.rs` rule included).
+- [x] Demo in `crates/base_gpui/src/main.rs`: a menubar with 3+ menus (one containing a submenu, one with a disabled trigger); gallery render test passes with all menus initially closed.
 
 ### Roving focus across triggers
 
-- [ ] Trigger-row navigation uses GPUI key-dispatch actions and a menubar key context (`actions.rs`), not raw `on_key_down`.
-- [ ] Horizontal orientation: ArrowRight/ArrowLeft move the roving highlight/focus to next/previous trigger (direction-aware via `utils::direction` — flipped in RTL); vertical orientation uses ArrowDown/ArrowUp.
-- [ ] Home moves highlight/focus to the first trigger; End to the last.
-- [ ] `.loop_focus(true)` wraps at both ends; `.loop_focus(false)` clamps.
-- [ ] Exactly one trigger is the tab-stop at a time (roving semantics); disabled triggers follow the composite roving behavior so a menubar whose first trigger is disabled remains keyboard-reachable.
-- [ ] Focusing a trigger (Tab or arrow roving) does **not** open its menu while no menu is open.
-- [ ] Pointer hover moves the roving highlight across triggers only while a menu is open (`highlightItemOnHover: hasSubmenuOpen` parity).
-- [ ] Menubar `.disabled(true)` makes every child trigger disabled (no pointer or keyboard opening) while the row itself stays focusable/reachable.
+- [x] Trigger-row navigation uses GPUI key-dispatch actions and a menubar key context (`actions.rs`), not raw `on_key_down`.
+- [x] Horizontal orientation: ArrowRight/ArrowLeft move the roving highlight/focus to next/previous trigger (direction-aware via `utils::direction` — flipped in RTL); vertical orientation uses ArrowDown/ArrowUp.
+- [x] Home moves highlight/focus to the first trigger; End to the last.
+- [x] `.loop_focus(true)` wraps at both ends; `.loop_focus(false)` clamps.
+- [x] Exactly one trigger is the tab-stop at a time (roving semantics); disabled triggers follow the composite roving behavior so a menubar whose first trigger is disabled remains keyboard-reachable.
+- [x] Focusing a trigger (Tab or arrow roving) does **not** open its menu while no menu is open.
+- [x] Pointer hover moves the roving highlight across triggers only while a menu is open (`highlightItemOnHover: hasSubmenuOpen` parity).
+- [x] Menubar `.disabled(true)` makes every child trigger disabled (no pointer or keyboard opening) while the row itself stays focusable/reachable.
 
 ### Cross-menu hover-switch
 
-- [ ] With no menu open, hovering a trigger does not open anything.
-- [ ] With one menu open, hovering a sibling trigger closes the open menu (reason `SiblingOpen` on the closing side / hover-open on the opening side per the Menu port's details contract) and opens the hovered trigger's menu — including when the open menu currently has a nested submenu open (the whole branch closes).
-- [ ] Hovering the trigger of the already-open menu does not close/reopen it.
-- [ ] `has_submenu_open` is maintained from direct-child open changes only: set on open; cleared on close except for reasons `SiblingOpen` and `ListNavigation`, so hover/keyboard handoff between menus never momentarily clears it; nested submenu open/close does not affect it.
-- [ ] With one menu open, focusing a sibling trigger (mouse or keyboard roving) opens its menu (focus-open gating, seam 4).
-- [ ] Press-down on a trigger opens its menu; a full click on the trigger of the already-open menu closes it (mixed toggle, seam 5); menubar triggers never apply patient-click `stick_if_open`.
-- [ ] Hover-intent between the trigger row and an open popup does not block pointer events over the menubar row (safe-polygon `blockPointerEvents: false` parity), so rapid hover across triggers switches menus deterministically without dead zones.
-- [ ] Outside press closes the entire open tree (menu + submenus) in one press and clears `has_submenu_open`.
-- [ ] Modal menubar: the backdrop renders whenever a child menu is open (hover-opened included) with a cutout over the whole menubar row so sibling triggers stay interactive through it; `.modal(false)` renders no menubar backdrop.
+- [x] With no menu open, hovering a trigger does not open anything.
+- [x] With one menu open, hovering a sibling trigger closes the open menu (reason `SiblingOpen` on the closing side / hover-open on the opening side per the Menu port's details contract) and opens the hovered trigger's menu — including when the open menu currently has a nested submenu open (the whole branch closes).
+- [x] Hovering the trigger of the already-open menu does not close/reopen it.
+- [x] `has_submenu_open` is maintained from direct-child open changes only: set on open; cleared on close except for reasons `SiblingOpen` and `ListNavigation`, so hover/keyboard handoff between menus never momentarily clears it; nested submenu open/close does not affect it.
+- [x] With one menu open, focusing a sibling trigger (mouse or keyboard roving) opens its menu (focus-open gating, seam 4).
+- [x] Press-down on a trigger opens its menu; a full click on the trigger of the already-open menu closes it (mixed toggle, seam 5); menubar triggers never apply patient-click `stick_if_open`.
+- [x] Hover-intent between the trigger row and an open popup does not block pointer events over the menubar row (safe-polygon `blockPointerEvents: false` parity), so rapid hover across triggers switches menus deterministically without dead zones.
+- [x] Outside press closes the entire open tree (menu + submenus) in one press and clears `has_submenu_open`.
+- [x] Modal menubar: the backdrop renders whenever a child menu is open (hover-opened included) with a cutout over the whole menubar row so sibling triggers stay interactive through it; `.modal(false)` renders no menubar backdrop.
 
 ### Keyboard nav into open menu
 
-- [ ] With a closed menu and a focused trigger, ArrowDown (horizontal menubar) opens the menu and highlights its first item; Space/Enter open it likewise (behavior owned by the Menu trigger, exercised here under the menubar parent).
-- [ ] Inside an open menu, ArrowDown/ArrowUp navigate items per the Menu port, unaffected by the menubar's horizontal axis.
-- [ ] Perpendicular arrow keys inside an open menu relay to the menubar (seam 8): in a horizontal menubar, ArrowRight with no highlighted submenu trigger moves to the next trigger and opens its menu with reason `ListNavigation`; ArrowLeft at top level moves to the previous trigger's menu; RTL flips both; the vertical-menubar case uses ArrowUp/ArrowDown as the relay axis.
-- [ ] The relay never fires when the menu consumes the key itself: ArrowRight on a highlighted submenu trigger opens the submenu (not the sibling menu); ArrowLeft inside an open submenu closes the submenu and returns to its trigger (not the sibling menu).
-- [ ] Keyboard navigation works after opening a menu by mouse click, and clicking one trigger then arrowing to another menu works (mixed mouse/keyboard parity).
-- [ ] Escape closes the open menu and returns focus to its trigger; the menubar roving position stays on that trigger; focus return is skipped for `OutsidePress` closes (seam 13).
-- [ ] Handoff opens/closes and focus/hover-driven opens record instant kind `group` (seam 7) and it is observable through the Menu positioner/popup style state.
+- [x] With a closed menu and a focused trigger, ArrowDown (horizontal menubar) opens the menu and highlights its first item; Space/Enter open it likewise (behavior owned by the Menu trigger, exercised here under the menubar parent).
+- [x] Inside an open menu, ArrowDown/ArrowUp navigate items per the Menu port, unaffected by the menubar's horizontal axis.
+- [ ] Perpendicular arrow keys inside an open menu relay to the menubar (seam 8): in a horizontal menubar, ArrowRight with no highlighted submenu trigger moves to the next trigger and opens its menu with reason `ListNavigation`; ArrowLeft at top level moves to the previous trigger's menu; RTL flips both; the vertical-menubar case uses ArrowUp/ArrowDown as the relay axis. — *partial: horizontal relay (RTL-aware) implemented from top-level and submenu popups; the vertical-menubar in-popup relay axis is deferred (it collides with the menu's own vertical item navigation and needs the parent-orientation consume rule); vertical menubar roving on the trigger row works*
+- [x] The relay never fires when the menu consumes the key itself: ArrowRight on a highlighted submenu trigger opens the submenu (not the sibling menu); ArrowLeft inside an open submenu closes the submenu and returns to its trigger (not the sibling menu).
+- [x] Keyboard navigation works after opening a menu by mouse click, and clicking one trigger then arrowing to another menu works (mixed mouse/keyboard parity).
+- [x] Escape closes the open menu and returns focus to its trigger; the menubar roving position stays on that trigger; focus return is skipped for `OutsidePress` closes (seam 13).
+- [x] Handoff opens/closes and focus/hover-driven opens record instant kind `group` (seam 7) and it is observable through the Menu positioner/popup style state.
 
 ### Reuse of Menu via `MenuParentKind::Menubar`
 
-- [ ] Child `MenuRoot`s wired under `Menubar` receive `MenuParentKind::Menubar` with the menubar context link through child wiring — no global/ambient lookup; menus outside a menubar are unaffected.
-- [ ] All fourteen seams in "Menu seams this issue consumes" are implemented at the branch sites the Menu port reserved, each with a test or an explicit deferral note in this issue; no Menu behavior for `None`/`Submenu` parents changes observably.
-- [ ] Menubar-parent menus use positioner defaults side bottom / align start (horizontal) and side inline-end / align start (vertical), direction-aware (seam 9).
-- [ ] Menubar-parent triggers participate in the menubar's roving focus instead of standalone trigger focus behavior (seam 2), while retaining trigger drag-release activation through the shared menubar-wide `allow_mouse_up_trigger` window (seam 14).
-- [ ] `close_on_click` semantics of items inside menubar menus are honored regardless of whether the menu was opened by click or by hover-switch.
-- [ ] The keyboard-relay seam is a typed runtime command (menu → menubar), not simulated event bubbling or a raw key re-dispatch.
+- [x] Child `MenuRoot`s wired under `Menubar` receive `MenuParentKind::Menubar` with the menubar context link through child wiring — no global/ambient lookup; menus outside a menubar are unaffected.
+- [ ] All fourteen seams in "Menu seams this issue consumes" are implemented at the branch sites the Menu port reserved, each with a test or an explicit deferral note in this issue; no Menu behavior for `None`/`Submenu` parents changes observably. — *partial: seams 1–13 implemented (seam 11 is satisfied by construction: this port has no in-popup hover close-delay for root-level menus); seam 14 deferred: the Menu port has no drag-release (`allow_mouse_up_trigger`) activation yet, so the menubar runtime only carries the shared window storage for it*
+- [x] Menubar-parent menus use positioner defaults side bottom / align start (horizontal) and side inline-end / align start (vertical), direction-aware (seam 9).
+- [ ] Menubar-parent triggers participate in the menubar's roving focus instead of standalone trigger focus behavior (seam 2), while retaining trigger drag-release activation through the shared menubar-wide `allow_mouse_up_trigger` window (seam 14). — *partial: roving participation (seam 2) implemented; drag-release activation deferred with seam 14 (no Menu-port drag-release to share yet)*
+- [x] `close_on_click` semantics of items inside menubar menus are honored regardless of whether the menu was opened by click or by hover-switch.
+- [x] The keyboard-relay seam is a typed runtime command (menu → menubar), not simulated event bubbling or a raw key re-dispatch.
 
 ### Styling / state exposure
 
-- [ ] `MenubarStyleState` exists with: `orientation`, `modal`, `has_submenu_open`, `disabled` (Base UI exposes the first three as state; `data-*` attributes map to these fields — no DOM attributes).
-- [ ] `Menubar` has `.style_with_state(...)` taking `MenubarStyleState`.
-- [ ] Trigger open/highlight styling flows through the Menu port's `MenuTriggerStyleState` (open, disabled) — this issue adds no duplicate trigger style surface; if a menubar-roving "highlighted" fact is needed on triggers, it is added to `MenuTriggerStyleState` as part of seam 2 and noted in `issues/port-baseui-menu.md`.
-- [ ] Accessibility audit item: confirm the pinned GPUI revision still lacks the AccessKit APIs; keep menubar/menuitem/orientation semantics in runtime metadata for the AccessKit follow-up; no DOM ARIA literals.
+- [x] `MenubarStyleState` exists with: `orientation`, `modal`, `has_submenu_open`, `disabled` (Base UI exposes the first three as state; `data-*` attributes map to these fields — no DOM attributes).
+- [x] `Menubar` has `.style_with_state(...)` taking `MenubarStyleState`.
+- [x] Trigger open/highlight styling flows through the Menu port's `MenuTriggerStyleState` (open, disabled) — this issue adds no duplicate trigger style surface; if a menubar-roving "highlighted" fact is needed on triggers, it is added to `MenuTriggerStyleState` as part of seam 2 and noted in `issues/port-baseui-menu.md`.
+- [x] Accessibility audit item: confirm the pinned GPUI revision still lacks the AccessKit APIs; keep menubar/menuitem/orientation semantics in runtime metadata for the AccessKit follow-up; no DOM ARIA literals.
 
 ### Tests / verification
 
 Runtime tests (no window):
 
-- [ ] Trigger registration order and roving `move_highlight`: wrap vs clamp, Home/End, disabled-trigger reachability.
-- [ ] `has_submenu_open` transitions: set on direct-child open; retained across `SiblingOpen` and `ListNavigation` closes; cleared on `OutsidePress`/`EscapeKey`/`ItemPress` closes; unaffected by nested submenu open/close.
-- [ ] Hand-off command: open menu moves from trigger A to trigger B, at most one child menu open once settled.
-- [ ] Keyboard-relay command: perpendicular key at index i yields highlight i±1 with wrap/clamp and the `ListNavigation` reason; no-op when the menu consumes the axis.
-- [ ] Disabled menubar gates trigger interaction commands.
+- [x] Trigger registration order and roving `move_highlight`: wrap vs clamp, Home/End, disabled-trigger reachability.
+- [x] `has_submenu_open` transitions: set on direct-child open; retained across `SiblingOpen` and `ListNavigation` closes; cleared on `OutsidePress`/`EscapeKey`/`ItemPress` closes; unaffected by nested submenu open/close.
+- [x] Hand-off command: open menu moves from trigger A to trigger B, at most one child menu open once settled.
+- [x] Keyboard-relay command: perpendicular key at index i yields highlight i±1 with wrap/clamp and the `ListNavigation` reason; no-op when the menu consumes the axis.
+- [ ] Disabled menubar gates trigger interaction commands. — *gating implemented in the link/context layer (trigger disabled cascade + `hand_off` disabled guard), not unit-tested at runtime level*
 
 Rendered tests under `crates/base_gpui/src/menubar/tests/`:
+
+*Note: the Menu port established runtime-only tests (no windowed rendered-test harness exists for the menu family yet); the boxes below stay unchecked pending that harness. The gallery render test covers mounting.*
 
 - [ ] Click a trigger opens its menu; click again closes it.
 - [ ] No hover-open when nothing is open; hover-switch to a sibling once one menu is open; hover-switch works while a nested submenu is open.
@@ -305,7 +307,7 @@ Rendered tests under `crates/base_gpui/src/menubar/tests/`:
 - [ ] Outside press closes the whole tree in one press.
 - [ ] Modal backdrop cutout keeps all sibling triggers interactive; `.modal(false)` renders no backdrop.
 - [ ] Disabled menubar prevents opening any menu; menubar with a disabled first trigger stays keyboard-reachable.
-- [ ] Demo renders in `crates/base_gpui/src/main.rs` without panics.
+- [x] Demo renders in `crates/base_gpui/src/main.rs` without panics.
 
 ## Uncertain items needing confirmation
 

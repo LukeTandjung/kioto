@@ -163,139 +163,139 @@ Plus the small extensions inside `crates/base_gpui/src/primitives/input/runtime.
 
 ### Module/API surface
 
-- [ ] Add an `otp_field` module and export it from `crates/base_gpui/src/lib.rs`.
-- [ ] Register OTP Field key bindings from `base_gpui::init(cx)`.
-- [ ] Add public `OTPFieldRoot` and `OTPFieldInput` layer types.
-- [ ] Re-export the ported `Separator` from `otp_field/mod.rs`, matching Base UI's `index.parts.ts`.
-- [ ] Add a typed `OTPFieldChild` enum routing `OTPFieldInput` and `Separator` root children.
-- [ ] Support root `.id(...)` as the stable keyed identity; slot element ids derive from it.
-- [ ] Support `.length(usize)` as a required prop.
-- [ ] Support `.name(...)` metadata.
-- [ ] Support uncontrolled `.default_value(...)`.
-- [ ] Support controlled `.value(...)`.
-- [ ] Support `.on_value_change(...)` with Rust-native change details (reason enum, no DOM events).
-- [ ] Support `.on_value_complete(...)` with Rust-native complete details.
-- [ ] Support `.on_value_invalid(...)` with Rust-native invalid details and the raw attempted string.
-- [ ] Support `.validation_type(...)` with `Numeric` (default), `Alpha`, `Alphanumeric`, `None` variants.
-- [ ] Support `.normalize_value(...)` as an optional `Fn(String) -> String` hook.
-- [ ] Support `.mask(bool)`, defaulting to `false`.
-- [ ] Support `.auto_submit(bool)`, defaulting to `false`.
-- [ ] Support `.disabled(bool)`, `.read_only(bool)`, `.required(bool)`, each defaulting to `false`.
-- [ ] Support `style_with_state(...)` on root and slot with typed style states.
-- [ ] Expose ergonomic barrel exports from `otp_field/mod.rs`; `mod.rs` files contain only module declarations and re-exports.
-- [ ] Do not expose `className`, web style props, CSS variables, or DOM data attributes.
+- [x] Add an `otp_field` module and export it from `crates/base_gpui/src/lib.rs`.
+- [x] Register OTP Field key bindings from `base_gpui::init(cx)`.
+- [x] Add public `OTPFieldRoot` and `OTPFieldInput` layer types.
+- [x] Re-export the ported `Separator` from `otp_field/mod.rs`, matching Base UI's `index.parts.ts`.
+- [x] Add a typed `OTPFieldChild` enum routing `OTPFieldInput` and `Separator` root children.
+- [x] Support root `.id(...)` as the stable keyed identity; slot element ids derive from it.
+- [x] Support `.length(usize)` as a required prop.
+- [x] Support `.name(...)` metadata.
+- [x] Support uncontrolled `.default_value(...)`.
+- [x] Support controlled `.value(...)`.
+- [x] Support `.on_value_change(...)` with Rust-native change details (reason enum, no DOM events).
+- [x] Support `.on_value_complete(...)` with Rust-native complete details.
+- [x] Support `.on_value_invalid(...)` with Rust-native invalid details and the raw attempted string.
+- [x] Support `.validation_type(...)` with `Numeric` (default), `Alpha`, `Alphanumeric`, `None` variants.
+- [x] Support `.normalize_value(...)` as an optional `Fn(String) -> String` hook.
+- [x] Support `.mask(bool)`, defaulting to `false`.
+- [x] Support `.auto_submit(bool)`, defaulting to `false`.
+- [x] Support `.disabled(bool)`, `.read_only(bool)`, `.required(bool)`, each defaulting to `false`.
+- [x] Support `style_with_state(...)` on root and slot with typed style states.
+- [x] Expose ergonomic barrel exports from `otp_field/mod.rs`; `mod.rs` files contain only module declarations and re-exports.
+- [x] Do not expose `className`, web style props, CSS variables, or DOM data attributes.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui otp` passes.
-- [ ] `cargo test -p base_gpui` passes.
-- [ ] `cargo clippy -p base_gpui --all-targets` passes.
-- [ ] `ast-grep scan` passes; no `pub(crate)`, `pub(super)`, or other `pub(...)` scoped visibility anywhere in the new code.
-- [ ] `crates/base_gpui/src/main.rs` (or an example) renders an OTP Field demo, including a `FieldRoot` + `FieldLabel` + `OTPFieldRoot` + slots + `Separator` + `FieldError` composition.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui otp` passes.
+- [x] `cargo test -p base_gpui` passes.
+- [x] `cargo clippy -p base_gpui --all-targets` passes.
+- [x] `ast-grep scan` passes; no `pub(crate)`, `pub(super)`, or other `pub(...)` scoped visibility anywhere in the new code.
+- [x] `crates/base_gpui/src/main.rs` (or an example) renders an OTP Field demo, including a `FieldRoot` + `FieldLabel` + `OTPFieldRoot` + slots + `Separator` + `FieldError` composition.
 
 ### Architecture / internal model
 
-- [ ] Add `OTPFieldRuntime` as the single deep module owning: the normalized OTP value (uncontrolled), `length`, active/focused slot index, focused/touched/dirty facts, per-slot bounds, and pending complete/focus intents; plain `&mut self` methods, unit-testable without a window.
-- [ ] Runtime interface is commands + queries only: no getter/setter pairs; slot parts ask slot-shaped questions (e.g. `input_state(index)`) and emit event-shaped commands.
-- [ ] Add `OTPFieldProps` for stable props/callbacks and `OTPFieldContext` as thin `read`/`update`/value-command plumbing; the controlled/uncontrolled rule lives only in the context's value-changing method and the `reconcile` input.
-- [ ] The root owns ONE group `FocusHandle` and injects it into a keyed `Entity<InputRuntime>` via `InputRuntime::new_with_focus_handle(...)`; no per-slot focus handles, no roving tab stops.
-- [ ] `InputRuntime` runs in controlled mode: OTP normalizes on the value-change hook and re-syncs the normalized value through `sync_props`; the cursor is kept at the end of the value so platform insertions append.
-- [ ] Printable characters and IME composition flow exclusively through `InputRuntime`'s `EntityInputHandler` (`replace_text_in_range` / `replace_and_mark_text_in_range`); no raw `on_key_down` character insertion.
-- [ ] Exactly one platform input handler is installed per OTP field, via `window.handle_input(...)` with `ElementInputHandler` during the segmented element's paint, gated on the group focus handle.
-- [ ] The segmented display is a component-local custom element under `otp_field/layers/` that paints slot characters (or mask characters), a blinking caret in the active slot while focused, and records slot bounds; it is not a new primitive.
-- [ ] Add the `primitives/input` paste-interception hook (`on_paste`-style, returns handled `bool`) and route OTP paste through it.
-- [ ] Add the `primitives/input` IME-candidate-bounds override so `bounds_for_range` reports the active slot's bounds; the IME candidate window anchors to the active slot.
-- [ ] Add a public end-of-value cursor command to `InputRuntime` only if the existing public surface cannot force the cursor to the end after controlled sync; document the decision in the code.
-- [ ] Input primitive extensions stay OTP-agnostic: `primitives/input` must not import or know about `otp_field` or `field`.
-- [ ] Child wiring assigns slot indices in one private `child_wiring.rs` pass; no index counters threaded through parts; emit a debug warning when the number of rendered `OTPFieldInput` children differs from `length`, and when `length` is zero.
-- [ ] Keyboard behavior uses `actions.rs` + an OTP-specific key context + `on_action(...)`, not raw key matching in layers.
-- [ ] Pure value helpers live in `otp_field/otp.rs` as plain functions (no GPUI types): whitespace stripping, validation-type filtering, normalize-with-rejection-details, replace-at-index, remove-at-index.
+- [x] Add `OTPFieldRuntime` as the single deep module owning: the normalized OTP value (uncontrolled), `length`, active/focused slot index, focused/touched/dirty facts, per-slot bounds, and pending complete/focus intents; plain `&mut self` methods, unit-testable without a window.
+- [x] Runtime interface is commands + queries only: no getter/setter pairs; slot parts ask slot-shaped questions (e.g. `input_state(index)`) and emit event-shaped commands.
+- [x] Add `OTPFieldProps` for stable props/callbacks and `OTPFieldContext` as thin `read`/`update`/value-command plumbing; the controlled/uncontrolled rule lives only in the context's value-changing method and the `reconcile` input.
+- [x] The root owns ONE group `FocusHandle` and injects it into a keyed `Entity<InputRuntime>` via `InputRuntime::new_with_focus_handle(...)`; no per-slot focus handles, no roving tab stops.
+- [x] `InputRuntime` runs in controlled mode: OTP normalizes on the value-change hook and re-syncs the normalized value through `sync_props`; the cursor is kept at the end of the value so platform insertions append.
+- [x] Printable characters and IME composition flow exclusively through `InputRuntime`'s `EntityInputHandler` (`replace_text_in_range` / `replace_and_mark_text_in_range`); no raw `on_key_down` character insertion.
+- [x] Exactly one platform input handler is installed per OTP field, via `window.handle_input(...)` with `ElementInputHandler` during the segmented element's paint, gated on the group focus handle.
+- [x] The segmented display is a component-local custom element under `otp_field/layers/` that paints slot characters (or mask characters), a blinking caret in the active slot while focused, and records slot bounds; it is not a new primitive.
+- [x] Add the `primitives/input` paste-interception hook (`on_paste`-style, returns handled `bool`) and route OTP paste through it.
+- [x] Add the `primitives/input` IME-candidate-bounds override so `bounds_for_range` reports the active slot's bounds; the IME candidate window anchors to the active slot.
+- [x] Add a public end-of-value cursor command to `InputRuntime` only if the existing public surface cannot force the cursor to the end after controlled sync; document the decision in the code.
+- [x] Input primitive extensions stay OTP-agnostic: `primitives/input` must not import or know about `otp_field` or `field`.
+- [x] Child wiring assigns slot indices in one private `child_wiring.rs` pass; no index counters threaded through parts; emit a debug warning when the number of rendered `OTPFieldInput` children differs from `length`, and when `length` is zero.
+- [x] Keyboard behavior uses `actions.rs` + an OTP-specific key context + `on_action(...)`, not raw key matching in layers.
+- [x] Pure value helpers live in `otp_field/otp.rs` as plain functions (no GPUI types): whitespace stripping, validation-type filtering, normalize-with-rejection-details, replace-at-index, remove-at-index.
 
 ### Value normalization / validation type / clamping
 
-- [ ] Whitespace (all Unicode whitespace) is stripped from every incoming value.
-- [ ] `Numeric` filters to ASCII digits; `Alpha` filters to ASCII letters; `Alphanumeric` filters to ASCII letters and digits; `None` applies no character filter.
-- [ ] The `normalize_value` hook runs after whitespace/validation filtering; its output is filtered by `validation_type` again, then clamped.
-- [ ] Values are clamped to `length` by Unicode code points, never splitting a multi-byte character across the clamp boundary.
-- [ ] Normalization reports whether characters were rejected at any stage (validation filter, custom hook shrinkage, post-hook re-filter, clamping) for `on_value_invalid`.
-- [ ] Controlled `.value(...)` and `.default_value(...)` are normalized before display, exactly like user edits.
-- [ ] Replace-at-index normalizes the inserted fragment, splices prefix/insert/suffix, and re-normalizes the final value so paste and multi-character edits stay contiguous and length-bounded.
-- [ ] Remove-at-index removes exactly one code point and leaves the value unchanged for out-of-bounds indices.
-- [ ] A non-positive or missing `length` renders no editable slots and warns in debug builds instead of panicking.
+- [x] Whitespace (all Unicode whitespace) is stripped from every incoming value.
+- [x] `Numeric` filters to ASCII digits; `Alpha` filters to ASCII letters; `Alphanumeric` filters to ASCII letters and digits; `None` applies no character filter.
+- [x] The `normalize_value` hook runs after whitespace/validation filtering; its output is filtered by `validation_type` again, then clamped.
+- [x] Values are clamped to `length` by Unicode code points, never splitting a multi-byte character across the clamp boundary.
+- [x] Normalization reports whether characters were rejected at any stage (validation filter, custom hook shrinkage, post-hook re-filter, clamping) for `on_value_invalid`.
+- [x] Controlled `.value(...)` and `.default_value(...)` are normalized before display, exactly like user edits.
+- [x] Replace-at-index normalizes the inserted fragment, splices prefix/insert/suffix, and re-normalizes the final value so paste and multi-character edits stay contiguous and length-bounded.
+- [x] Remove-at-index removes exactly one code point and leaves the value unchanged for out-of-bounds indices.
+- [x] A non-positive or missing `length` renders no editable slots and warns in debug builds instead of panicking.
 
 ### Controlled/uncontrolled behavior
 
-- [ ] Uncontrolled root initializes from normalized `.default_value(...)` and updates internal state on accepted edits.
-- [ ] Controlled root reflects normalized `.value(...)` from props; user edits call `.on_value_change(...)` without treating internal state as the source of truth.
-- [ ] Changing controlled `.value(...)` across renders updates the displayed slots and the unfocused active-slot derivation.
-- [ ] Re-rendering with changed unrelated props does not reset uncontrolled value, active index, or focus unless the keyed `.id(...)` changes.
-- [ ] `on_value_change` fires exactly once per accepted normalized value change and never when normalization yields the current value.
+- [x] Uncontrolled root initializes from normalized `.default_value(...)` and updates internal state on accepted edits.
+- [x] Controlled root reflects normalized `.value(...)` from props; user edits call `.on_value_change(...)` without treating internal state as the source of truth.
+- [x] Changing controlled `.value(...)` across renders updates the displayed slots and the unfocused active-slot derivation.
+- [x] Re-rendering with changed unrelated props does not reset uncontrolled value, active index, or focus unless the keyed `.id(...)` changes.
+- [x] `on_value_change` fires exactly once per accepted normalized value change and never when normalization yields the current value.
 
 ### Slot navigation, distribution, and paste
 
-- [ ] Mouse down on a slot focuses the group and sets the active index to that slot, clamped to `min(value_code_points, length - 1)`; disabled fields ignore pointer activation.
-- [ ] While focused, the active index is `min(focused_index, length - 1)`; while unfocused, the styling-active slot is `min(value_code_points, length - 1)`.
-- [ ] Typing a character distributes it (and any multi-character IME commit) forward from the active index via replace-at-index, then advances the active index by the number of accepted characters, clamped to the last slot.
-- [ ] Typing the same character a filled, fully-selected slot already contains advances to the next slot without changing the value and without firing `on_value_change`.
-- [ ] Typing characters fully rejected by validation leaves the value and active index unchanged and fires `on_value_invalid` (reason `InputChange`).
-- [ ] Paste normalizes clipboard text, fires `on_value_invalid` (reason `InputPaste`) when characters are rejected, distributes accepted characters forward from the active index, and advances the active index past the pasted run (clamped to the last slot); an all-rejected paste is a no-op.
-- [ ] `on_value_complete` fires after the value update when the value becomes `length` code points long (reasons `InputChange` / `InputPaste`), and also when pasting a complete value identical to the current complete value (without `on_value_change`).
-- [ ] `auto_submit == true` inside a `FormRoot` calls `FormContext::submit(...)` immediately after `on_value_complete`; outside a form it is a no-op.
-- [ ] Disabled fields ignore all editing and navigation; read-only fields allow focus and navigation but ignore all value-changing interactions.
+- [x] Mouse down on a slot focuses the group and sets the active index to that slot, clamped to `min(value_code_points, length - 1)`; disabled fields ignore pointer activation.
+- [x] While focused, the active index is `min(focused_index, length - 1)`; while unfocused, the styling-active slot is `min(value_code_points, length - 1)`.
+- [x] Typing a character distributes it (and any multi-character IME commit) forward from the active index via replace-at-index, then advances the active index by the number of accepted characters, clamped to the last slot.
+- [x] Typing the same character a filled, fully-selected slot already contains advances to the next slot without changing the value and without firing `on_value_change`.
+- [x] Typing characters fully rejected by validation leaves the value and active index unchanged and fires `on_value_invalid` (reason `InputChange`).
+- [x] Paste normalizes clipboard text, fires `on_value_invalid` (reason `InputPaste`) when characters are rejected, distributes accepted characters forward from the active index, and advances the active index past the pasted run (clamped to the last slot); an all-rejected paste is a no-op.
+- [x] `on_value_complete` fires after the value update when the value becomes `length` code points long (reasons `InputChange` / `InputPaste`), and also when pasting a complete value identical to the current complete value (without `on_value_change`).
+- [x] `auto_submit == true` inside a `FormRoot` calls `FormContext::submit(...)` immediately after `on_value_complete`; outside a form it is a no-op.
+- [x] Disabled fields ignore all editing and navigation; read-only fields allow focus and navigation but ignore all value-changing interactions.
 
 ### Keyboard contract
 
 All items via OTP actions bound in `actions.rs` (LTR only in phase 1):
 
-- [ ] Left moves the active index back one slot, stopping at the first slot.
-- [ ] Right moves the active index forward one slot, stopping at the last slot and never beyond `min(value_code_points, length - 1)`.
-- [ ] Ctrl/Cmd+Left (without Alt) moves to the first slot; Ctrl/Cmd+Right moves to the end-of-value slot.
-- [ ] Home and ArrowUp move to the first slot; End and ArrowDown move to the end-of-value slot.
-- [ ] Backspace on a filled slot removes that slot's character and moves the active index back one slot.
-- [ ] Backspace on an empty slot removes the previous slot's character and moves the active index back one slot.
-- [ ] Ctrl/Cmd+Backspace clears the entire value and moves the active index to the first slot.
-- [ ] Delete removes the character at the active index (later characters shift left) and keeps the active index in place.
-- [ ] Keyboard-driven value changes fire `on_value_change` with reason `Keyboard`; clearing via text input uses reason `InputClear`.
-- [ ] Navigation keys work when read-only; editing keys are ignored when read-only or disabled.
+- [x] Left moves the active index back one slot, stopping at the first slot.
+- [x] Right moves the active index forward one slot, stopping at the last slot and never beyond `min(value_code_points, length - 1)`.
+- [x] Ctrl/Cmd+Left (without Alt) moves to the first slot; Ctrl/Cmd+Right moves to the end-of-value slot.
+- [x] Home and ArrowUp move to the first slot; End and ArrowDown move to the end-of-value slot.
+- [x] Backspace on a filled slot removes that slot's character and moves the active index back one slot.
+- [x] Backspace on an empty slot removes the previous slot's character and moves the active index back one slot.
+- [x] Ctrl/Cmd+Backspace clears the entire value and moves the active index to the first slot.
+- [x] Delete removes the character at the active index (later characters shift left) and keeps the active index in place.
+- [x] Keyboard-driven value changes fire `on_value_change` with reason `Keyboard`; clearing via text input uses reason `InputClear`.
+- [x] Navigation keys work when read-only; editing keys are ignored when read-only or disabled.
 
 ### Field / Form integration
 
-- [ ] OTP Field rendered inside `FieldRoot` consumes root disabled state; rendering inside a disabled `FieldItem` disables it.
-- [ ] The root registers exactly one `FieldControlRegistration` with a stable key, `FieldValue::Text(value)`, `name` metadata (with `FieldRoot::name(...)` as override), `required`, merged disabled, focused state, and the group focus handle.
-- [ ] `FieldLabel` click focuses the OTP group.
-- [ ] Field becomes filled when the value is non-empty and unfilled when empty.
-- [ ] Field becomes dirty when the value differs from its initial registered value.
-- [ ] Field becomes focused while the group focus handle is focused and touched when it blurs.
-- [ ] `FieldValidationMode::OnChange` validates on value changes; `FieldValidationMode::OnBlur` validates when the group blurs.
-- [ ] Required-only Field validation reports `value_missing` for an empty required OTP Field.
+- [x] OTP Field rendered inside `FieldRoot` consumes root disabled state; rendering inside a disabled `FieldItem` disables it.
+- [x] The root registers exactly one `FieldControlRegistration` with a stable key, `FieldValue::Text(value)`, `name` metadata (with `FieldRoot::name(...)` as override), `required`, merged disabled, focused state, and the group focus handle.
+- [x] `FieldLabel` click focuses the OTP group.
+- [x] Field becomes filled when the value is non-empty and unfilled when empty.
+- [x] Field becomes dirty when the value differs from its initial registered value.
+- [x] Field becomes focused while the group focus handle is focused and touched when it blurs.
+- [x] `FieldValidationMode::OnChange` validates on value changes; `FieldValidationMode::OnBlur` validates when the group blurs.
+- [x] Required-only Field validation reports `value_missing` for an empty required OTP Field.
 
 ### Styling / state exposure
 
-- [ ] Add `OTPFieldRootStyleState` exposing at least `value`, `length`, `complete`, `filled`, `focused`, `disabled`, `read_only`, `required`, `dirty`, `touched`, and field-derived `valid`/`invalid` when available.
-- [ ] Add `OTPFieldInputStyleState` exposing at least the slot's `value` character (empty when unfilled), `index`, `filled` (this slot has a character), `active` (this slot is the active slot), `masked`, plus the inherited root facts (`complete`, `focused`, `disabled`, `read_only`, `required`, `valid`/`invalid`).
-- [ ] `mask == true` renders a mask character in filled slots while the underlying value, clipboard, and callbacks keep real characters.
-- [ ] The active slot renders a blinking caret while the group is focused; unfocused fields render no caret.
-- [ ] `style_with_state(...)` receives the typed state for root and each slot; per-slot styling can vary by `filled`, `active`, and `index`.
-- [ ] Base UI data attributes (`data-active`, `data-filled`, `data-complete`, ...) map into these style-state structs, not attribute APIs.
+- [x] Add `OTPFieldRootStyleState` exposing at least `value`, `length`, `complete`, `filled`, `focused`, `disabled`, `read_only`, `required`, `dirty`, `touched`, and field-derived `valid`/`invalid` when available.
+- [x] Add `OTPFieldInputStyleState` exposing at least the slot's `value` character (empty when unfilled), `index`, `filled` (this slot has a character), `active` (this slot is the active slot), `masked`, plus the inherited root facts (`complete`, `focused`, `disabled`, `read_only`, `required`, `valid`/`invalid`).
+- [x] `mask == true` renders a mask character in filled slots while the underlying value, clipboard, and callbacks keep real characters.
+- [x] The active slot renders a blinking caret while the group is focused; unfocused fields render no caret.
+- [x] `style_with_state(...)` receives the typed state for root and each slot; per-slot styling can vary by `filled`, `active`, and `index`.
+- [x] Base UI data attributes (`data-active`, `data-filled`, `data-complete`, ...) map into these style-state structs, not attribute APIs.
 
 ### Tests / verification
 
 Add behavior tests under `crates/base_gpui/src/otp_field/tests/` and pure unit tests beside `otp.rs`.
 
-- [ ] The pure `otp.rs` helpers are unit-tested without GPUI, porting the cases from `otp.test.ts`: whitespace stripping (including nullish/empty), numeric/alpha/alphanumeric filtering, `None` with custom normalization, custom normalization ordering and re-filtering, clamping after custom normalization, non-positive lengths, replace at first/middle/last slot, suffix preservation when normalization shrinks a middle replacement, remove at first/last/out-of-bounds index, code-point clamping of multi-byte characters, and rejection-details reporting.
-- [ ] Uncontrolled default value renders across slots; controlled value updates slots across renders.
-- [ ] Typing distributes characters forward and advances the active slot.
-- [ ] Same-character overtype advances without a value change.
-- [ ] Paste distributes from the active slot, clamps to `length`, and reports rejected characters.
-- [ ] Backspace/Delete/Ctrl+Backspace behavior matches the keyboard contract.
-- [ ] Left/Right/Home/End/ArrowUp/ArrowDown navigation matches the keyboard contract, including end-of-value clamping.
-- [ ] `on_value_change`, `on_value_complete`, and `on_value_invalid` fire with the specified reasons and ordering, including complete-paste-over-complete-value.
-- [ ] Disabled and read-only behavior matches the contract.
-- [ ] Mask rendering hides characters without changing the underlying value.
-- [ ] Field registration drives filled/dirty/focused/touched and required validation; label click focuses the group.
-- [ ] `auto_submit` submits the surrounding form on completion and is a no-op outside a form.
-- [ ] IME composition through `replace_and_mark_text_in_range` commits into slots, and IME candidate bounds resolve to the active slot's bounds.
+- [x] The pure `otp.rs` helpers are unit-tested without GPUI, porting the cases from `otp.test.ts`: whitespace stripping (including nullish/empty), numeric/alpha/alphanumeric filtering, `None` with custom normalization, custom normalization ordering and re-filtering, clamping after custom normalization, non-positive lengths, replace at first/middle/last slot, suffix preservation when normalization shrinks a middle replacement, remove at first/last/out-of-bounds index, code-point clamping of multi-byte characters, and rejection-details reporting.
+- [x] Uncontrolled default value renders across slots; controlled value updates slots across renders.
+- [x] Typing distributes characters forward and advances the active slot.
+- [x] Same-character overtype advances without a value change.
+- [x] Paste distributes from the active slot, clamps to `length`, and reports rejected characters.
+- [x] Backspace/Delete/Ctrl+Backspace behavior matches the keyboard contract.
+- [x] Left/Right/Home/End/ArrowUp/ArrowDown navigation matches the keyboard contract, including end-of-value clamping.
+- [x] `on_value_change`, `on_value_complete`, and `on_value_invalid` fire with the specified reasons and ordering, including complete-paste-over-complete-value.
+- [x] Disabled and read-only behavior matches the contract.
+- [x] Mask rendering hides characters without changing the underlying value.
+- [x] Field registration drives filled/dirty/focused/touched and required validation; label click focuses the group.
+- [x] `auto_submit` submits the surrounding form on completion and is a no-op outside a form.
+- [ ] IME composition through `replace_and_mark_text_in_range` commits into slots, and IME candidate bounds resolve to the active slot's bounds. (Note: implemented — preedit/commit flows through the bridge diff and `set_ime_candidate_bounds` anchors to the active slot — but no rendered IME behavior test yet; the keyed `InputRuntime` entity is not reachable from the test harness.)
 
 ## Follow-ups
 
@@ -306,7 +306,7 @@ Add behavior tests under `crates/base_gpui/src/otp_field/tests/` and pure unit t
 
 ## Uncertain items
 
-- [ ] Whether the existing public `InputRuntime` surface (`sync_props` selection clamping + the public `end(...)` command) is enough to force the end-of-value cursor, or whether the small `move_cursor_to_end`-style extension is needed — decide during implementation.
-- [ ] Exact shape of the IME-candidate-bounds override (`set_ime_candidate_bounds(Bounds<Pixels>)` vs. an alternative `set_last_layout` variant) — pick whichever keeps `EntityInputHandler` glue smallest.
-- [ ] Whether ArrowUp/ArrowDown should be claimed by OTP actions on all platforms or left unbound where they conflict with other bindings registered in `base_gpui::init(cx)`.
-- [ ] Whether the debug warning for slot-count/`length` mismatch should be a `log` warning or a `debug_assert!`-style check, matching whatever convention other `base_gpui` components use.
+- [x] Whether the existing public `InputRuntime` surface (`sync_props` selection clamping + the public `end(...)` command) is enough to force the end-of-value cursor, or whether the small `move_cursor_to_end`-style extension is needed — decide during implementation.
+- [x] Exact shape of the IME-candidate-bounds override (`set_ime_candidate_bounds(Bounds<Pixels>)` vs. an alternative `set_last_layout` variant) — pick whichever keeps `EntityInputHandler` glue smallest.
+- [x] Whether ArrowUp/ArrowDown should be claimed by OTP actions on all platforms or left unbound where they conflict with other bindings registered in `base_gpui::init(cx)`.
+- [x] Whether the debug warning for slot-count/`length` mismatch should be a `log` warning or a `debug_assert!`-style check, matching whatever convention other `base_gpui` components use.

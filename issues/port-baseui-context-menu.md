@@ -215,69 +215,71 @@ that must keep working through the Context Menu names; verify, do not reimplemen
 
 ### Module / API surface
 
-- [ ] `crates/base_gpui/src/context_menu/` exists with the flat layout above; `context_menu/mod.rs` and `context_menu/layers/mod.rs` are barrel-only.
-- [ ] `base_gpui::context_menu` is registered in `crates/base_gpui/src/lib.rs`.
-- [ ] `ContextMenuRoot<P>` builder exists with `P: Clone + 'static`; it renders no element of its own (children pass through to the wrapped Menu root tree).
-- [ ] `ContextMenuRoot<P>` exposes the `MenuRoot` surface **minus** `modal`, `open_on_hover`, `delay`, `close_delay`, `handle`, `trigger_id`, and `default_trigger_id`: `.id(...)`, `.default_open(bool)`, `.open(bool)`, `.on_open_change(...)`, `.on_open_change_complete(...)`, `.disabled(bool)`, `.loop_focus(bool)`, `.orientation(...)`, `.close_parent_on_esc(bool)`, `.highlight_item_on_hover(bool)`, children.
-- [ ] `ContextMenuRoot<P>` does **not** expose `modal` (context menus are unconditionally modal) or any hover-open configuration.
-- [ ] `ContextMenuTrigger<P>` builder exists: an area `div` supporting `.id(...)`, arbitrary visual children, and `.style_with_state(...)`; it has no `disabled` prop of its own (disabling is the root's `.disabled(bool)`, parity with Base UI).
-- [ ] `context_menu/mod.rs` re-exports the full Menu part list under Context Menu names: `ContextMenuBackdrop`, `ContextMenuPortal`, `ContextMenuPositioner`, `ContextMenuPopup`, `ContextMenuArrow`, `ContextMenuGroup`, `ContextMenuGroupLabel`, `ContextMenuItem`, `ContextMenuLinkItem`, `ContextMenuCheckboxItem`, `ContextMenuCheckboxItemIndicator`, `ContextMenuRadioGroup`, `ContextMenuRadioItem`, `ContextMenuRadioItemIndicator`, `ContextMenuSubmenuRoot`, `ContextMenuSubmenuTrigger`, `ContextMenuSeparator` — as `pub use` re-exports of the `menu` parts, not reimplementations.
-- [ ] `ContextMenuTriggerStyleState` exists in `style_state.rs` with `open` and `pressed` facts; `.style_with_state(...)` on the trigger takes it.
-- [ ] No `pub(...)` scoped visibility anywhere in `context_menu/`; payload generics stay `P: Clone + 'static` (and `V: Clone + Eq + 'static` via the radio re-exports) with no extra bounds.
+- [x] `crates/base_gpui/src/context_menu/` exists with the flat layout above; `context_menu/mod.rs` and `context_menu/layers/mod.rs` are barrel-only.
+- [x] `base_gpui::context_menu` is registered in `crates/base_gpui/src/lib.rs`.
+- [x] `ContextMenuRoot<P>` builder exists with `P: Clone + 'static`; it renders no element of its own (children pass through to the wrapped Menu root tree).
+- [x] `ContextMenuRoot<P>` exposes the `MenuRoot` surface **minus** `modal`, `open_on_hover`, `delay`, `close_delay`, `handle`, `trigger_id`, and `default_trigger_id`: `.id(...)`, `.default_open(bool)`, `.open(bool)`, `.on_open_change(...)`, `.on_open_change_complete(...)`, `.disabled(bool)`, `.loop_focus(bool)`, `.orientation(...)`, `.close_parent_on_esc(bool)`, `.highlight_item_on_hover(bool)`, children.
+- [x] `ContextMenuRoot<P>` does **not** expose `modal` (context menus are unconditionally modal) or any hover-open configuration.
+- [x] `ContextMenuTrigger<P>` builder exists: an area `div` supporting `.id(...)`, arbitrary visual children, and `.style_with_state(...)`; it has no `disabled` prop of its own (disabling is the root's `.disabled(bool)`, parity with Base UI).
+- [x] `context_menu/mod.rs` re-exports the full Menu part list under Context Menu names: `ContextMenuBackdrop`, `ContextMenuPortal`, `ContextMenuPositioner`, `ContextMenuPopup`, `ContextMenuArrow`, `ContextMenuGroup`, `ContextMenuGroupLabel`, `ContextMenuItem`, `ContextMenuLinkItem`, `ContextMenuCheckboxItem`, `ContextMenuCheckboxItemIndicator`, `ContextMenuRadioGroup`, `ContextMenuRadioItem`, `ContextMenuRadioItemIndicator`, `ContextMenuSubmenuRoot`, `ContextMenuSubmenuTrigger`, `ContextMenuSeparator` — as `pub use` re-exports of the `menu` parts, not reimplementations.
+- [x] `ContextMenuTriggerStyleState` exists in `style_state.rs` with `open` and `pressed` facts; `.style_with_state(...)` on the trigger takes it.
+- [x] No `pub(...)` scoped visibility anywhere in `context_menu/`; payload generics stay `P: Clone + 'static` (and `V: Clone + Eq + 'static` via the radio re-exports) with no extra bounds.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui context_menu` passes.
-- [ ] `cargo test -p base_gpui` passes.
-- [ ] `cargo clippy -p base_gpui --all-targets` exits successfully with only pre-existing warnings.
-- [ ] `ast-grep scan crates/base_gpui/src/context_menu` passes (including barrel-only `mod.rs` rule).
-- [ ] No duplication of Menu runtime/context/layer logic; `git grep` shows Context Menu layers delegating to `menu::` types.
-- [ ] Demo in `crates/base_gpui/src/main.rs`: a right-click surface opening a menu with items, a separator, a checkbox item, and a submenu; gallery render test passes with the menu initially closed.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui context_menu` passes.
+- [x] `cargo test -p base_gpui` passes.
+- [x] `cargo clippy -p base_gpui --all-targets` exits successfully with only pre-existing warnings.
+- [x] `ast-grep scan crates/base_gpui/src/context_menu` passes (including barrel-only `mod.rs` rule).
+- [x] No duplication of Menu runtime/context/layer logic; `git grep` shows Context Menu layers delegating to `menu::` types.
+- [x] Demo in `crates/base_gpui/src/main.rs`: a right-click surface opening a menu with items, a separator, a checkbox item, and a submenu; gallery render test passes with the menu initially closed.
 
 ### Right-click / cursor-anchor open behavior
 
-- [ ] Right mouse-down (`MouseButton::Right`) inside the trigger area opens the menu with reason `TriggerPress`, anchored at the exact cursor window position via a zero-size virtual anchor (`anchored().position(point)` semantics), not at the trigger's bounds.
-- [ ] The initial cursor point is recorded in the runtime on every open gesture; right-clicking at a new position while open re-anchors the menu at the new point (single open state, updated anchor).
-- [ ] Positioner defaults under the ContextMenu parent kind: align `start`, and when no explicit side is set (and align is not `center`), `align_offset` defaults to `2` and `side_offset` to `-5`, so the popup's corner sits at/under the cursor; explicit positioner props override these defaults.
-- [ ] Root `.disabled(true)` makes right-click a no-op: menu does not open and `on_open_change` never fires.
-- [ ] ArrowDown/ArrowUp never open the menu from the trigger (Menu's `openOnArrowKeyDown` suppression under the ContextMenu parent kind); the trigger area is not a focusable button.
-- [ ] Left-click and hover on the trigger area do nothing (no hover-open, no click-open, no click-toggle).
-- [ ] Collision avoidance still applies to the cursor anchor: with no space on the default side the popup flips (Menu positioner behavior at a point anchor).
-- [ ] Touch long-press open is documented as deferred (no runtime panic path; the open command is gesture-source-agnostic so long-press can be added later).
+- [x] Right mouse-down (`MouseButton::Right`) inside the trigger area opens the menu with reason `TriggerPress`, anchored at the exact cursor window position via a zero-size virtual anchor (`anchored().position(point)` semantics), not at the trigger's bounds.
+- [x] The initial cursor point is recorded in the runtime on every open gesture; right-clicking at a new position while open re-anchors the menu at the new point (single open state, updated anchor).
+- [x] Positioner defaults under the ContextMenu parent kind: align `start`, and when no explicit side is set (and align is not `center`), `align_offset` defaults to `2` and `side_offset` to `-5`, so the popup's corner sits at/under the cursor; explicit positioner props override these defaults.
+- [x] Root `.disabled(true)` makes right-click a no-op: menu does not open and `on_open_change` never fires.
+- [x] ArrowDown/ArrowUp never open the menu from the trigger (Menu's `openOnArrowKeyDown` suppression under the ContextMenu parent kind); the trigger area is not a focusable button.
+- [x] Left-click and hover on the trigger area do nothing (no hover-open, no click-open, no click-toggle).
+- [x] Collision avoidance still applies to the cursor anchor: with no space on the default side the popup flips (Menu positioner behavior at a point anchor).
+- [x] Touch long-press open is documented as deferred (no runtime panic path; the open command is gesture-source-agnostic so long-press can be added later).
 
 ### Post-open outside-press / mouseup grace behavior
 
-- [ ] Opening arms a ~500ms grace timer in the ContextMenu parent branch (grace state lives with Menu's outside-press handling per `utils/overlay.rs` layering, not in the trigger layer's render state).
-- [ ] A window mouse-up before the grace deadline never closes the menu (the release of the opening right-click is inert).
-- [ ] After the grace deadline, a mouse-up outside the open tree (union of all open popups plus nothing else — there is no button trigger) closes with reason `CancelOpen`.
-- [ ] A mouse-up within ±1px of the initial cursor point does not activate the item that spawned under the cursor and does not close the menu; the recorded initial point is consumed after the first mouse-up check.
-- [ ] After real cursor movement away from the initial point, a right-button mouse-up over an enabled item activates it via drag-release and closes the whole tree with reason `ItemPress` (overriding `close_on_click`), including closing open submenus. **(inherited drag-release, right-button variant)**
-- [ ] Outside-press (mouse-down based) dismissal against the open tree still works after open: clicking empty space closes with reason `OutsidePress`; clicking inside any open popup of the tree does not. **(inherited)**
-- [ ] Closing clears grace state and the initial cursor point; a subsequent open re-arms both deterministically (no stale timers, no panics on rapid open/close).
+- [x] Opening arms a ~500ms grace timer in the ContextMenu parent branch (grace state lives with Menu's outside-press handling per `utils/overlay.rs` layering, not in the trigger layer's render state).
+- [x] A window mouse-up before the grace deadline never closes the menu (the release of the opening right-click is inert).
+- [x] After the grace deadline, a mouse-up outside the open tree (union of all open popups plus nothing else — there is no button trigger) closes with reason `CancelOpen`.
+- [x] A mouse-up within ±1px of the initial cursor point does not activate the item that spawned under the cursor and does not close the menu; the recorded initial point is consumed after the first mouse-up check.
+- [x] After real cursor movement away from the initial point, a right-button mouse-up over an enabled item activates it via drag-release and closes the whole tree with reason `ItemPress` (overriding `close_on_click`), including closing open submenus. **(inherited drag-release, right-button variant)**
+- [x] Outside-press (mouse-down based) dismissal against the open tree still works after open: clicking empty space closes with reason `OutsidePress`; clicking inside any open popup of the tree does not. **(inherited)**
+- [x] Closing clears grace state and the initial cursor point; a subsequent open re-arms both deterministically (no stale timers, no panics on rapid open/close).
 
 ### Reuse of Menu behavior via `MenuParentKind::ContextMenu`
 
-- [ ] `ContextMenuRoot<P>` constructs the Menu tree with `MenuParentKind::ContextMenu`; no context-menu conditionals are added to `context_menu/` layers that Menu already branches on.
-- [ ] The menu is unconditionally modal (Menu's modal selector treats the ContextMenu parent as modal-by-default with no opt-out), and the internal modal backdrop has **no trigger cutout** (unlike standalone menus — there is no button trigger to keep clickable).
-- [ ] Escape closes and focus/highlight behavior, submenu trees (hover-open delay, ArrowLeft/ArrowRight, sibling-close, parent-close cascade), typeahead, checkbox/radio state, groups/labels/separators, portal keep-mounted, arrow, and backdrop behavior all work unchanged through the Context Menu re-exports. **(inherited)**
-- [ ] Submenus inside a context menu use the ContextMenu-rooted tree for outside-press hit-testing and close cascades (Menu's tree logic keyed off the root parent kind). **(inherited)**
-- [ ] `on_open_change` details flow through with Menu's reason set (`TriggerPress` open, `OutsidePress` / `EscapeKey` / `ItemPress` / `CancelOpen` closes); controlled `.open(...)` and uncontrolled `.default_open(...)` precedence and cancellation semantics are Menu's. **(inherited)**
-- [ ] The trigger's `pressed`/`open` style facts come from a runtime query (part-shaped: "is my menu open?"), not from local trigger state.
-- [ ] Any seam this issue needs that `menu/` does not yet provide (cursor-anchor command, grace state, positioner defaults, arrow-key-open suppression, modal-without-cutout) is added to `menu/` under its ContextMenu branch and checked off against `issues/port-baseui-menu.md`'s reserved-seam criteria — not implemented as a `context_menu/` special case.
+- [x] `ContextMenuRoot<P>` constructs the Menu tree with `MenuParentKind::ContextMenu`; no context-menu conditionals are added to `context_menu/` layers that Menu already branches on.
+- [x] The menu is unconditionally modal (Menu's modal selector treats the ContextMenu parent as modal-by-default with no opt-out), and the internal modal backdrop has **no trigger cutout** (unlike standalone menus — there is no button trigger to keep clickable).
+- [x] Escape closes and focus/highlight behavior, submenu trees (hover-open delay, ArrowLeft/ArrowRight, sibling-close, parent-close cascade), typeahead, checkbox/radio state, groups/labels/separators, portal keep-mounted, arrow, and backdrop behavior all work unchanged through the Context Menu re-exports. **(inherited)**
+- [x] Submenus inside a context menu use the ContextMenu-rooted tree for outside-press hit-testing and close cascades (Menu's tree logic keyed off the root parent kind). **(inherited)**
+- [x] `on_open_change` details flow through with Menu's reason set (`TriggerPress` open, `OutsidePress` / `EscapeKey` / `ItemPress` / `CancelOpen` closes); controlled `.open(...)` and uncontrolled `.default_open(...)` precedence and cancellation semantics are Menu's. **(inherited)**
+- [x] The trigger's `pressed`/`open` style facts come from a runtime query (part-shaped: "is my menu open?"), not from local trigger state.
+- [x] Any seam this issue needs that `menu/` does not yet provide (cursor-anchor command, grace state, positioner defaults, arrow-key-open suppression, modal-without-cutout) is added to `menu/` under its ContextMenu branch and checked off against `issues/port-baseui-menu.md`'s reserved-seam criteria — not implemented as a `context_menu/` special case.
 
 ### Tests / verification
 
 Runtime tests (no window, driving the Menu runtime with `MenuParentKind::ContextMenu`):
 
-- [ ] Open-at-cursor command records the anchor point and initial cursor point; reopening at a new point re-anchors.
-- [ ] Grace window: mouse-up before deadline is inert; after deadline, outside mouse-up produces a `CancelOpen` close outcome; inside-tree mouse-up does not.
-- [ ] ±1px initial-cursor-point mouse-up suppression, consumed after first check; movement beyond the threshold re-enables drag-release activation.
-- [ ] Disabled root ignores the open command; no callback outcome.
-- [ ] Modal fact is true regardless of configuration under the ContextMenu parent kind; positioner default side/align/offset facts match the ContextMenu branch.
+- [x] Open-at-cursor command records the anchor point and initial cursor point; reopening at a new point re-anchors.
+- [x] Grace window: mouse-up before deadline is inert; after deadline, outside mouse-up produces a `CancelOpen` close outcome; inside-tree mouse-up does not.
+- [x] ±1px initial-cursor-point mouse-up suppression, consumed after first check; movement beyond the threshold re-enables drag-release activation.
+- [ ] Disabled root ignores the open command; no callback outcome. — *not unit-tested: the disabled fact lives in `MenuProps`/`MenuContext`, which requires a window; enforced in `ContextMenuTrigger` and `MenuContext::set_open`.*
+- [ ] Modal fact is true regardless of configuration under the ContextMenu parent kind; positioner default side/align/offset facts match the ContextMenu branch. — *implemented in `menu_positioner.rs` render branches, which are not unit-reachable without a window; no runtime-level fact to assert.*
 
 Rendered tests under `crates/base_gpui/src/context_menu/tests/`:
+
+*Deferred: the menu family has no windowed pointer-simulation harness (menu/menubar ship runtime-only tests); behavior is covered by the runtime tests above plus the green menu suite through the re-exports.*
 
 - [ ] Right-click on the trigger area opens the popup anchored at the cursor position (assert positioner placement derives from the click point, not trigger bounds).
 - [ ] Right-click at a second position while open moves the popup to the new point.
@@ -287,13 +289,13 @@ Rendered tests under `crates/base_gpui/src/context_menu/tests/`:
 - [ ] Escape closes; keyboard navigation, typeahead, and submenu ArrowRight/ArrowLeft work through the `ContextMenu*` re-exported parts.
 - [ ] Left-click and hover on the trigger never open; disabled root never opens and fires no callbacks.
 - [ ] Trigger `style_with_state` reflects `open`/`pressed` transitions.
-- [ ] Demo renders in `crates/base_gpui/src/main.rs` without panics.
+- [x] Demo renders in `crates/base_gpui/src/main.rs` without panics.
 
 ## Follow-ups to track explicitly if not completed in the first pass
 
 - [ ] Touch long-press open (500ms, 10px move-cancel threshold, 10×10 touch anchor rect) once GPUI exposes touch/pointer-type metadata.
 - [ ] AccessKit semantics — nothing beyond the Menu issue's follow-up; confirm the context menu popup inherits the Menu role mapping when that lands.
-- [ ] If the Menu port deferred any ContextMenu seam (grace state slot, cursor-anchor positioner defaults, arrow-key-open suppression), land those in `menu/` as part of this issue and update `issues/port-baseui-menu.md`'s checklist.
+- [x] If the Menu port deferred any ContextMenu seam (grace state slot, cursor-anchor positioner defaults, arrow-key-open suppression), land those in `menu/` as part of this issue and update `issues/port-baseui-menu.md`'s checklist.
 
 ## Uncertain items needing confirmation
 

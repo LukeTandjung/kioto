@@ -76,132 +76,132 @@ Implementation precedents (no new shared primitive is needed):
 
 ### Module/API surface
 
-- [ ] Add a `toggle_group` module and export it from `crates/base_gpui/src/lib.rs`.
-- [ ] Register Toggle Group key bindings from `base_gpui::init(cx)`.
-- [ ] Add a public `ToggleGroup<T>` layer type with `T: Clone + Eq + 'static`; the same `T` is `Toggle<T>`'s membership value type.
-- [ ] Add a typed `ToggleGroupChild<T>` enum in `child.rs` that routes `Toggle<T>` children before `AnyElement` erasure; do not add an `AnyElement` escape hatch unless Base UI examples require arbitrary group children.
-- [ ] Support uncontrolled construction with `.default_value(Vec<T>)`, defaulting to an empty `Vec` when not called.
-- [ ] Support controlled construction with `.value(Vec<T>)`; calling the builder marks the group controlled even when the supplied `Vec` is empty.
-- [ ] Support `.on_value_change(...)` with a Rust-native cancelable change-details API, e.g. `Fn(&[T], &mut ToggleGroupValueChangeDetails, &mut Window, &mut App)`, called with the proposed next group value.
-- [ ] The group change details are the same details object the activating Toggle's `on_pressed_change` receives (shared cancellation state), with `reason()`, `source()`, `cancelable()`, `cancel()`, and `is_canceled()` APIs matching the Switch/Radio Group details shape; reason is the single `None` reason and source is `{Pointer, Keyboard}`.
-- [ ] Support `.disabled(bool)`, defaulting to `false`.
-- [ ] Support `.orientation(...)` with a horizontal/vertical orientation type, defaulting to horizontal.
-- [ ] Support `.loop_focus(bool)`, defaulting to `true`.
-- [ ] Support `.multiple(bool)`, defaulting to `false`.
-- [ ] Support `.style_with_state(...)` taking `ToggleGroupStyleState`.
-- [ ] Consume the shared ambient direction primitive (`crates/base_gpui/src/utils/direction.rs`) instead of adding a one-off `.direction(...)` builder.
-- [ ] `toggle_group/mod.rs` exposes ergonomic barrel exports for the component name, style state, context, props, runtime, actions, child, and change-details types; `mod.rs` is barrel-only.
+- [x] Add a `toggle_group` module and export it from `crates/base_gpui/src/lib.rs`.
+- [x] Register Toggle Group key bindings from `base_gpui::init(cx)`.
+- [x] Add a public `ToggleGroup<T>` layer type with `T: Clone + Eq + 'static`; the same `T` is `Toggle<T>`'s membership value type.
+- [x] Add a typed `ToggleGroupChild<T>` enum in `child.rs` that routes `Toggle<T>` children before `AnyElement` erasure; do not add an `AnyElement` escape hatch unless Base UI examples require arbitrary group children.
+- [x] Support uncontrolled construction with `.default_value(Vec<T>)`, defaulting to an empty `Vec` when not called.
+- [x] Support controlled construction with `.value(Vec<T>)`; calling the builder marks the group controlled even when the supplied `Vec` is empty.
+- [x] Support `.on_value_change(...)` with a Rust-native cancelable change-details API, e.g. `Fn(&[T], &mut ToggleGroupValueChangeDetails, &mut Window, &mut App)`, called with the proposed next group value.
+- [x] The group change details are the same details object the activating Toggle's `on_pressed_change` receives (shared cancellation state), with `reason()`, `source()`, `cancelable()`, `cancel()`, and `is_canceled()` APIs matching the Switch/Radio Group details shape; reason is the single `None` reason and source is `{Pointer, Keyboard}`.
+- [x] Support `.disabled(bool)`, defaulting to `false`.
+- [x] Support `.orientation(...)` with a horizontal/vertical orientation type, defaulting to horizontal.
+- [x] Support `.loop_focus(bool)`, defaulting to `true`.
+- [x] Support `.multiple(bool)`, defaulting to `false`.
+- [x] Support `.style_with_state(...)` taking `ToggleGroupStyleState`.
+- [x] Consume the shared ambient direction primitive (`crates/base_gpui/src/utils/direction.rs`) instead of adding a one-off `.direction(...)` builder.
+- [x] `toggle_group/mod.rs` exposes ergonomic barrel exports for the component name, style state, context, props, runtime, actions, child, and change-details types; `mod.rs` is barrel-only.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui toggle_group` passes.
-- [ ] The component compiles without adding web/React-specific concepts to public APIs.
-- [ ] The implementation follows `docs/base-gpui-component-architecture.md`: flat module layout (no `child/context/{props,runtime,state}` taxonomy), no `pub(...)` visibility qualifiers, and clean under the repo's ast-grep rules.
-- [ ] `issues/port-baseui-toggle.md` is reconciled to the generic value type: `Toggle<T>` with `.value(T)` where `T: Clone + Eq + 'static`, replacing that issue's `SharedString` membership value, before or together with implementation.
-- [ ] Add a small example/demo in `crates/base_gpui/src/main.rs` or a dedicated example that renders a Toggle Group of toggles.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui toggle_group` passes.
+- [x] The component compiles without adding web/React-specific concepts to public APIs.
+- [x] The implementation follows `docs/base-gpui-component-architecture.md`: flat module layout (no `child/context/{props,runtime,state}` taxonomy), no `pub(...)` visibility qualifiers, and clean under the repo's ast-grep rules.
+- [x] `issues/port-baseui-toggle.md` is reconciled to the generic value type: `Toggle<T>` with `.value(T)` where `T: Clone + Eq + 'static`, replacing that issue's `SharedString` membership value, before or together with implementation.
+- [x] Add a small example/demo in `crates/base_gpui/src/main.rs` or a dedicated example that renders a Toggle Group of toggles.
 
 ### Architecture / internal primitives
 
-- [ ] Add `ToggleGroupRuntime<T>` as the single owner of Toggle Group business state: uncontrolled group value `Vec<T>`, registered toggle metadata in source order (value `Option<T>`, disabled, index, focus handle), the highlighted/roving tab-stop index, and group-level facts (disabled, orientation, multiple, loop_focus as needed by commands); commands return outcomes and the runtime never calls user callbacks.
-- [ ] The group-commit command computes the next `Vec<T>` inside the runtime: `multiple=false` replaces the whole value with `[value]` on press and `[]` on unpress; `multiple=true` appends the value on press and removes its first occurrence on unpress.
-- [ ] Add `ToggleGroupProps<T>` for stable props and callbacks.
-- [ ] Add `ToggleGroupContext<T>` as a thin injection/plumbing type with only `read(...)`, `update(...)`, and a single value-changing method (e.g. `commit_toggle(value, next_pressed, details, window, cx)`); controlled/uncontrolled resolution and group-callback firing live there, not in layers.
-- [ ] Keep Toggle Group behavior on `ToggleGroupRuntime<T>`; do not grow component vocabulary on `ToggleGroupContext<T>` beyond the value-changing method.
-- [ ] Grouped toggles receive the group context through child wiring owned by the `ToggleGroup` root (`child_wiring.rs`, the Radio Group precedent), which assigns indices and collects metadata/focus handles for `sync_children`; no index bookkeeping in layers or public helpers on `Toggle`.
-- [ ] Add `ToggleGroupStyleState` in `style_state.rs` as the query result the group layer feeds to `style_with_state`; grouped-toggle style state stays `ToggleStyleState` from the Toggle issue.
-- [ ] Reuse `crates/base_gpui/src/utils/direction.rs` for RTL-aware horizontal arrows; do not add a `utils/` folder or new shared primitives for Toggle Group.
+- [x] Add `ToggleGroupRuntime<T>` as the single owner of Toggle Group business state: uncontrolled group value `Vec<T>`, registered toggle metadata in source order (value `Option<T>`, disabled, index, focus handle), the highlighted/roving tab-stop index, and group-level facts (disabled, orientation, multiple, loop_focus as needed by commands); commands return outcomes and the runtime never calls user callbacks.
+- [x] The group-commit command computes the next `Vec<T>` inside the runtime: `multiple=false` replaces the whole value with `[value]` on press and `[]` on unpress; `multiple=true` appends the value on press and removes its first occurrence on unpress.
+- [x] Add `ToggleGroupProps<T>` for stable props and callbacks.
+- [x] Add `ToggleGroupContext<T>` as a thin injection/plumbing type with only `read(...)`, `update(...)`, and a single value-changing method (e.g. `commit_toggle(value, next_pressed, details, window, cx)`); controlled/uncontrolled resolution and group-callback firing live there, not in layers.
+- [x] Keep Toggle Group behavior on `ToggleGroupRuntime<T>`; do not grow component vocabulary on `ToggleGroupContext<T>` beyond the value-changing method.
+- [x] Grouped toggles receive the group context through child wiring owned by the `ToggleGroup` root (`child_wiring.rs`, the Radio Group precedent), which assigns indices and collects metadata/focus handles for `sync_children`; no index bookkeeping in layers or public helpers on `Toggle`.
+- [x] Add `ToggleGroupStyleState` in `style_state.rs` as the query result the group layer feeds to `style_with_state`; grouped-toggle style state stays `ToggleStyleState` from the Toggle issue.
+- [x] Reuse `crates/base_gpui/src/utils/direction.rs` for RTL-aware horizontal arrows; do not add a `utils/` folder or new shared primitives for Toggle Group.
 
 ### Controlled/uncontrolled group value
 
-- [ ] Uncontrolled group initializes the group value from `default_value`, defaulting to empty (no toggle pressed).
-- [ ] Uncontrolled group mutates the internal group value on accepted user activation.
-- [ ] Controlled group reflects the external `value`; external changes update every grouped toggle's pressed style state.
-- [ ] Controlled group calls `on_value_change` on valid user activation without mutating internal group value as the source of truth.
-- [ ] A grouped `Toggle<T>` derives pressed purely from membership: pressed iff the group value contains its `value`. Its `pressed`/`default_pressed` props do not drive state inside a group.
-- [ ] A controlled or default group value containing an entry that matches no mounted toggle leaves all toggles consistent (unmatched entries are preserved in the value, no toggle presses).
-- [ ] A grouped toggle without an explicit `value` never joins the group value; when the group value was initialized (via `value` or `default_value`), a debug-time warning mirrors Base UI's dev error recommending an explicit `value`.
-- [ ] Re-rendering with changed props does not reset uncontrolled group value except when the keyed instance id changes.
+- [x] Uncontrolled group initializes the group value from `default_value`, defaulting to empty (no toggle pressed).
+- [x] Uncontrolled group mutates the internal group value on accepted user activation.
+- [x] Controlled group reflects the external `value`; external changes update every grouped toggle's pressed style state.
+- [x] Controlled group calls `on_value_change` on valid user activation without mutating internal group value as the source of truth.
+- [x] A grouped `Toggle<T>` derives pressed purely from membership: pressed iff the group value contains its `value`. Its `pressed`/`default_pressed` props do not drive state inside a group.
+- [x] A controlled or default group value containing an entry that matches no mounted toggle leaves all toggles consistent (unmatched entries are preserved in the value, no toggle presses).
+- [x] A grouped toggle without an explicit `value` never joins the group value; when the group value was initialized (via `value` or `default_value`), a debug-time warning mirrors Base UI's dev error recommending an explicit `value`.
+- [x] Re-rendering with changed props does not reset uncontrolled group value except when the keyed instance id changes.
 
 ### Selection semantics (single vs multiple)
 
-- [ ] `multiple=false` (default): pressing an unpressed toggle replaces the group value with exactly that toggle's value; all other toggles unpress.
-- [ ] `multiple=false`: pressing the already-pressed toggle empties the group value (deselect-to-empty is allowed; the group may have no pressed toggle).
-- [ ] `multiple=true`: pressing an unpressed toggle appends its value; other pressed toggles stay pressed.
-- [ ] `multiple=true`: pressing a pressed toggle removes the first occurrence of its value from the group value.
-- [ ] `on_value_change` receives the full next group value (e.g. `["one"]`, then `["one", "two"]` in multiple mode), not a delta.
+- [x] `multiple=false` (default): pressing an unpressed toggle replaces the group value with exactly that toggle's value; all other toggles unpress.
+- [x] `multiple=false`: pressing the already-pressed toggle empties the group value (deselect-to-empty is allowed; the group may have no pressed toggle).
+- [x] `multiple=true`: pressing an unpressed toggle appends its value; other pressed toggles stay pressed.
+- [x] `multiple=true`: pressing a pressed toggle removes the first occurrence of its value from the group value.
+- [x] `on_value_change` receives the full next group value (e.g. `["one"]`, then `["one", "two"]` in multiple mode), not a delta.
 
 ### Cancelable shared change details + veto ordering
 
-- [ ] On grouped activation, the Toggle's `on_pressed_change(next_pressed, details, ...)` fires first; if it cancels, neither the group value nor the toggle changes and `on_value_change` is not called.
-- [ ] If the toggle callback does not cancel, the commit routes to the group: the runtime computes the next group value and the group's `on_value_change(next_value, details, ...)` fires with the same shared details object; if the group cancels, the group value does not change and the local pressed commit is also skipped.
-- [ ] Each callback fires at most once per activation; the group commit does not re-enter the toggle callback.
-- [ ] Uncontrolled mode mutates the group value only after both callbacks have run uncanceled; controlled mode never mutates internal group value.
-- [ ] Disabled activation attempts (group-disabled or toggle-disabled) call neither callback.
-- [ ] Details expose the `None` reason and pointer-vs-keyboard source; no DOM `event`/`trigger`/propagation APIs.
+- [x] On grouped activation, the Toggle's `on_pressed_change(next_pressed, details, ...)` fires first; if it cancels, neither the group value nor the toggle changes and `on_value_change` is not called.
+- [x] If the toggle callback does not cancel, the commit routes to the group: the runtime computes the next group value and the group's `on_value_change(next_value, details, ...)` fires with the same shared details object; if the group cancels, the group value does not change and the local pressed commit is also skipped.
+- [x] Each callback fires at most once per activation; the group commit does not re-enter the toggle callback.
+- [x] Uncontrolled mode mutates the group value only after both callbacks have run uncanceled; controlled mode never mutates internal group value.
+- [x] Disabled activation attempts (group-disabled or toggle-disabled) call neither callback.
+- [x] Details expose the `None` reason and pointer-vs-keyboard source; no DOM `event`/`trigger`/propagation APIs.
 
 ### Keyboard/focus behavior (roving focus)
 
-- [ ] The group owns roving focus over its registered toggles; grouped toggles are composite items, not independent tab stops. Exactly one enabled toggle holds the tab stop at a time.
-- [ ] The initial tab stop is the first enabled toggle (Base UI composite starts at index 0); after tabbing away and back, focus returns to the current roving tab stop rather than resetting.
-- [ ] Toggle Group uses GPUI actions/key dispatch and a Toggle Group key context instead of raw key handlers; bindings register from `base_gpui::init(cx)`.
-- [ ] Horizontal orientation (default): ArrowRight/ArrowLeft move focus to the next/previous enabled toggle in ambient LTR; ambient RTL flips them (via `current_direction()` + `HorizontalArrowKey`). ArrowUp/ArrowDown are ignored.
-- [ ] Vertical orientation: ArrowDown/ArrowUp move focus to the next/previous enabled toggle; ArrowLeft/ArrowRight are ignored. RTL does not affect the vertical axis.
-- [ ] Arrow navigation moves focus/tab stop only; it never changes pressed state (unlike Radio Group's select-on-navigate).
-- [ ] With `loop_focus=true` (default), arrow navigation wraps past either end; with `loop_focus=false`, it clamps at the ends.
-- [ ] Home moves focus to the first enabled toggle; End moves focus to the last enabled toggle (Base UI passes `enableHomeAndEndKeys` for Toggle Group — the opposite of Radio Group).
-- [ ] Disabled toggles are skipped by arrow navigation, Home, and End, and never hold the tab stop.
-- [ ] Space and Enter activate the focused enabled toggle through the Toggle's own activation path (which routes the commit to the group); activation does not double-fire if GPUI exposes both key-down and key-up dispatch.
-- [ ] Pointer activation and keyboard activation share the same runtime commit command; source is reported in change details.
+- [x] The group owns roving focus over its registered toggles; grouped toggles are composite items, not independent tab stops. Exactly one enabled toggle holds the tab stop at a time.
+- [x] The initial tab stop is the first enabled toggle (Base UI composite starts at index 0); after tabbing away and back, focus returns to the current roving tab stop rather than resetting.
+- [x] Toggle Group uses GPUI actions/key dispatch and a Toggle Group key context instead of raw key handlers; bindings register from `base_gpui::init(cx)`.
+- [x] Horizontal orientation (default): ArrowRight/ArrowLeft move focus to the next/previous enabled toggle in ambient LTR; ambient RTL flips them (via `current_direction()` + `HorizontalArrowKey`). ArrowUp/ArrowDown are ignored.
+- [x] Vertical orientation: ArrowDown/ArrowUp move focus to the next/previous enabled toggle; ArrowLeft/ArrowRight are ignored. RTL does not affect the vertical axis.
+- [x] Arrow navigation moves focus/tab stop only; it never changes pressed state (unlike Radio Group's select-on-navigate).
+- [x] With `loop_focus=true` (default), arrow navigation wraps past either end; with `loop_focus=false`, it clamps at the ends.
+- [x] Home moves focus to the first enabled toggle; End moves focus to the last enabled toggle (Base UI passes `enableHomeAndEndKeys` for Toggle Group — the opposite of Radio Group).
+- [x] Disabled toggles are skipped by arrow navigation, Home, and End, and never hold the tab stop.
+- [x] Space and Enter activate the focused enabled toggle through the Toggle's own activation path (which routes the commit to the group); activation does not double-fire if GPUI exposes both key-down and key-up dispatch.
+- [x] Pointer activation and keyboard activation share the same runtime commit command; source is reported in change details.
 
 ### Item registration + disabled cascade
 
-- [ ] The group root's child wiring registers every `Toggle<T>` descendant in source order with its value, resolved disabled fact, index, and focus handle via a runtime `sync_children`-style command before reconciliation and style queries, so initial pressed/tab-stop states are correct on first render.
-- [ ] Group `disabled=true` cascades: every grouped toggle is effectively disabled (a toggle's effective disabled is its own prop OR the group's), does not activate from pointer or keyboard, fires no callbacks, and reports disabled in its style state.
-- [ ] Per-toggle `disabled=true` disables only that toggle; the rest of the group interacts normally.
-- [ ] Per-item disabled facts remain queryable from the runtime so a future Toolbar port can consume them as item metadata without new API.
-- [ ] Toggles keep working standalone with no group present; grouping adds no cost or API burden to standalone `Toggle` use.
+- [x] The group root's child wiring registers every `Toggle<T>` descendant in source order with its value, resolved disabled fact, index, and focus handle via a runtime `sync_children`-style command before reconciliation and style queries, so initial pressed/tab-stop states are correct on first render.
+- [x] Group `disabled=true` cascades: every grouped toggle is effectively disabled (a toggle's effective disabled is its own prop OR the group's), does not activate from pointer or keyboard, fires no callbacks, and reports disabled in its style state.
+- [x] Per-toggle `disabled=true` disables only that toggle; the rest of the group interacts normally.
+- [x] Per-item disabled facts remain queryable from the runtime so a future Toolbar port can consume them as item metadata without new API.
+- [x] Toggles keep working standalone with no group present; grouping adds no cost or API burden to standalone `Toggle` use.
 
 ### Styling/state exposure
 
-- [ ] `ToggleGroupStyleState` includes at least `disabled`, `orientation`, and `multiple` (Base UI's `data-disabled`/`data-orientation`/`data-multiple`).
-- [ ] Expose state-aware styling through `style_with_state(...)` on the group; grouped toggles style through the Toggle issue's `ToggleStyleState` (`pressed`/`disabled`), which must reflect membership-derived pressed state.
-- [ ] Map Base UI state/data attributes into typed style-state fields, not DOM attributes; do not expose CSS variable names.
-- [ ] The docs styling pattern is recreatable with GPUI builder methods: a bordered group container laying out toggles along its orientation, with pressed/disabled toggle styling from the Toggle side.
+- [x] `ToggleGroupStyleState` includes at least `disabled`, `orientation`, and `multiple` (Base UI's `data-disabled`/`data-orientation`/`data-multiple`).
+- [x] Expose state-aware styling through `style_with_state(...)` on the group; grouped toggles style through the Toggle issue's `ToggleStyleState` (`pressed`/`disabled`), which must reflect membership-derived pressed state.
+- [x] Map Base UI state/data attributes into typed style-state fields, not DOM attributes; do not expose CSS variable names.
+- [x] The docs styling pattern is recreatable with GPUI builder methods: a bordered group container laying out toggles along its orientation, with pressed/disabled toggle styling from the Toggle side.
 
 ### Tests / verification
 
 Add one behavior per file under `crates/base_gpui/src/toggle_group/tests/`.
 
-- [ ] Uncontrolled initial state: empty default value, no toggle pressed.
-- [ ] Uncontrolled `default_value` presses the matching toggle initially.
-- [ ] Controlled group reflects the external value; external value changes flip toggles' pressed style state.
-- [ ] Controlled activation calls `on_value_change` without mutating internal group value.
-- [ ] Single-select: clicking an unpressed toggle presses it and unpresses the previously pressed toggle.
-- [ ] Single-select deselect: clicking the pressed toggle empties the group value.
-- [ ] Multiple: clicking a second toggle presses it while the first stays pressed; group value contains both.
-- [ ] Multiple deselect: clicking a pressed toggle removes only its value.
-- [ ] `on_value_change` receives the full next group value exactly once per accepted activation.
-- [ ] Toggle-side cancellation: canceling `on_pressed_change` prevents the group commit and `on_value_change` is never called.
-- [ ] Group-side cancellation: canceling `on_value_change` leaves the group value and the toggle's pressed state unchanged (uncontrolled), and both callbacks saw the same shared details object.
-- [ ] Canceled controlled activation still calls both callbacks but mutates no internal state.
-- [ ] Keyboard activation: Space and Enter toggle the focused toggle and fire `on_value_change` with the keyboard source.
-- [ ] Horizontal LTR roving focus: ArrowRight/ArrowLeft move focus, wrap with `loop_focus=true`, and ArrowUp/ArrowDown are ignored.
-- [ ] Horizontal RTL roving focus (DirectionProvider-wrapped): ArrowLeft/ArrowRight are flipped.
-- [ ] Vertical roving focus: ArrowDown/ArrowUp move focus and horizontal arrows are ignored.
-- [ ] `loop_focus=false` clamps at both ends.
-- [ ] Home focuses the first enabled toggle; End focuses the last enabled toggle.
-- [ ] Arrow navigation alone never changes pressed state or fires callbacks.
-- [ ] Group `disabled=true` cascade: no toggle activates from pointer or keyboard, no callbacks fire, all toggles report disabled style state.
-- [ ] Per-toggle disabled: the disabled toggle is skipped by roving focus and cannot activate; siblings work.
-- [ ] Grouped toggle without `value` never affects the group value; debug warning fires when the group value is initialized.
-- [ ] Group `style_with_state(...)` receives correct `disabled`/`orientation`/`multiple` state.
-- [ ] Membership-derived pressed: grouped toggle `style_with_state(...)` reports pressed iff the group value contains its value (closes the seam test deferred from `issues/port-baseui-toggle.md`).
+- [x] Uncontrolled initial state: empty default value, no toggle pressed.
+- [x] Uncontrolled `default_value` presses the matching toggle initially.
+- [x] Controlled group reflects the external value; external value changes flip toggles' pressed style state.
+- [x] Controlled activation calls `on_value_change` without mutating internal group value.
+- [x] Single-select: clicking an unpressed toggle presses it and unpresses the previously pressed toggle.
+- [x] Single-select deselect: clicking the pressed toggle empties the group value.
+- [x] Multiple: clicking a second toggle presses it while the first stays pressed; group value contains both.
+- [x] Multiple deselect: clicking a pressed toggle removes only its value.
+- [x] `on_value_change` receives the full next group value exactly once per accepted activation.
+- [x] Toggle-side cancellation: canceling `on_pressed_change` prevents the group commit and `on_value_change` is never called.
+- [x] Group-side cancellation: canceling `on_value_change` leaves the group value and the toggle's pressed state unchanged (uncontrolled), and both callbacks saw the same shared details object.
+- [x] Canceled controlled activation still calls both callbacks but mutates no internal state.
+- [x] Keyboard activation: Space and Enter toggle the focused toggle and fire `on_value_change` with the keyboard source.
+- [x] Horizontal LTR roving focus: ArrowRight/ArrowLeft move focus, wrap with `loop_focus=true`, and ArrowUp/ArrowDown are ignored.
+- [x] Horizontal RTL roving focus (DirectionProvider-wrapped): ArrowLeft/ArrowRight are flipped.
+- [x] Vertical roving focus: ArrowDown/ArrowUp move focus and horizontal arrows are ignored.
+- [x] `loop_focus=false` clamps at both ends.
+- [x] Home focuses the first enabled toggle; End focuses the last enabled toggle.
+- [x] Arrow navigation alone never changes pressed state or fires callbacks.
+- [x] Group `disabled=true` cascade: no toggle activates from pointer or keyboard, no callbacks fire, all toggles report disabled style state.
+- [x] Per-toggle disabled: the disabled toggle is skipped by roving focus and cannot activate; siblings work.
+- [x] Grouped toggle without `value` never affects the group value; debug warning fires when the group value is initialized.
+- [x] Group `style_with_state(...)` receives correct `disabled`/`orientation`/`multiple` state.
+- [x] Membership-derived pressed: grouped toggle `style_with_state(...)` reports pressed iff the group value contains its value (closes the seam test deferred from `issues/port-baseui-toggle.md`).
 
 ### Uncertain / needs confirmation
 
-- [ ] Value type is decided here as `T: Clone + Eq + 'static` (shared by `Toggle<T>` and `ToggleGroup<T>`); confirm and update `issues/port-baseui-toggle.md`'s Module/API surface (`.value(T)` instead of `SharedString`), its grouped-mode auto-identity item (dropped: explicit `value` required, warning only), and its Uncertain section before implementation.
-- [ ] Shared details naming: whether `ToggleGroupValueChangeDetails` is a distinct type or an alias of the Toggle issue's `TogglePressedChangeDetails`. Behaviorally they must be one object per activation with shared cancellation state; pick the simplest representation during implementation.
-- [ ] Whether standalone `Toggle` becomes generic (`Toggle<T>`) with a defaulted parameter or the group wraps toggles in a way that keeps standalone use monomorphic; decide during implementation so standalone Toggle stays ergonomic without turbofish noise.
-- [ ] Duplicate values in `multiple` mode: Base UI removes only the first occurrence on unpress and never deduplicates on press. Mirror that literally or debug-warn on duplicate registration; confirm during implementation.
-- [ ] Toolbar seam: when a Toolbar port exists, a nested Toggle Group must hand roving focus to the Toolbar (Base UI renders a plain group container inside a Toolbar). Out of scope here; revisit in the future `issues/port-baseui-toolbar.md`.
+- [x] Value type is decided here as `T: Clone + Eq + 'static` (shared by `Toggle<T>` and `ToggleGroup<T>`); confirm and update `issues/port-baseui-toggle.md`'s Module/API surface (`.value(T)` instead of `SharedString`), its grouped-mode auto-identity item (dropped: explicit `value` required, warning only), and its Uncertain section before implementation.
+- [x] Shared details naming: whether `ToggleGroupValueChangeDetails` is a distinct type or an alias of the Toggle issue's `TogglePressedChangeDetails`. Behaviorally they must be one object per activation with shared cancellation state; pick the simplest representation during implementation.
+- [x] Whether standalone `Toggle` becomes generic (`Toggle<T>`) with a defaulted parameter or the group wraps toggles in a way that keeps standalone use monomorphic; decide during implementation so standalone Toggle stays ergonomic without turbofish noise.
+- [x] Duplicate values in `multiple` mode: Base UI removes only the first occurrence on unpress and never deduplicates on press. Mirror that literally or debug-warn on duplicate registration; confirm during implementation.
+- [ ] Toolbar seam: when a Toolbar port exists, a nested Toggle Group must hand roving focus to the Toolbar (Base UI renders a plain group container inside a Toolbar). Out of scope here; revisit in the future `issues/port-baseui-toolbar.md`. (Update: the Toolbar port now exists with the shared `ToolbarItemMetadata` registration channel and documented flattening contract; the actual `ToolbarChild::ToggleGroup(...)` wiring is still pending.)

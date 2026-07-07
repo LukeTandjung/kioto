@@ -129,110 +129,110 @@ New issue — all items unchecked.
 
 ### Module/API surface
 
-- [ ] Add a `button` module and export it from `crates/base_gpui/src/lib.rs`
+- [x] Add a `button` module and export it from `crates/base_gpui/src/lib.rs`
       (`pub mod button;` + `button::init(cx);`).
-- [ ] Add a public `ButtonRoot` layer type constructed with `ButtonRoot::new()`.
-- [ ] `ButtonRoot` supports `.id(impl Into<ElementId>)` with a stable default id,
+- [x] Add a public `ButtonRoot` layer type constructed with `ButtonRoot::new()`.
+- [x] `ButtonRoot` supports `.id(impl Into<ElementId>)` with a stable default id,
       following `SwitchRoot`.
-- [ ] `ButtonRoot` supports `.disabled(bool)`, defaulting to `false`.
-- [ ] `ButtonRoot` supports `.focusable_when_disabled(bool)`, defaulting to `false`.
-- [ ] `ButtonRoot` supports `.on_click(...)` taking a Rust-native activation
+- [x] `ButtonRoot` supports `.disabled(bool)`, defaulting to `false`.
+- [x] `ButtonRoot` supports `.focusable_when_disabled(bool)`, defaulting to `false`.
+- [x] `ButtonRoot` supports `.on_click(...)` taking a Rust-native activation
       handler, e.g. `impl Fn(&ClickEvent, &mut Window, &mut App) + 'static`; both
       pointer and keyboard activation route through this one handler.
-- [ ] `ButtonRoot` supports `.style_with_state(impl Fn(ButtonRootStyleState, Div) -> Div + 'static)`.
-- [ ] `ButtonRoot` implements `Styled` for plain builder styling and accepts
+- [x] `ButtonRoot` supports `.style_with_state(impl Fn(ButtonRootStyleState, Div) -> Div + 'static)`.
+- [x] `ButtonRoot` implements `Styled` for plain builder styling and accepts
       arbitrary element children via `child(...)` / `children(...)` (no typed child
       enum — Button has no compound subparts in Base UI).
-- [ ] `button/mod.rs` is barrel exports only: `ButtonRoot`, `ButtonRootStyleState`,
+- [x] `button/mod.rs` is barrel exports only: `ButtonRoot`, `ButtonRootStyleState`,
       `ButtonActivate`, `BUTTON_ROOT_KEY_CONTEXT`, `init`.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui button` passes.
-- [ ] No web/React concepts (`nativeButton`, ARIA, className, render props) appear
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui button` passes.
+- [x] No web/React concepts (`nativeButton`, ARIA, className, render props) appear
       in the public API.
-- [ ] Flat module layout per `docs/base-gpui-component-architecture.md`; no
+- [x] Flat module layout per `docs/base-gpui-component-architecture.md`; no
       `child/context/{props,runtime,state}` taxonomy, no `utils/` folder, no new
       shared generic pressable primitive.
-- [ ] No Rust scoped visibility syntax (`pub(...)`);
+- [x] No Rust scoped visibility syntax (`pub(...)`);
       `ast-grep scan crates/base_gpui/src/button` produces no violations.
-- [ ] Add a small example/demo in `crates/base_gpui/src/main.rs` (or the existing
+- [x] Add a small example/demo in `crates/base_gpui/src/main.rs` (or the existing
       demo surface) rendering an enabled button, a disabled button, and a
       focusable-when-disabled button.
 
 ### Pressable behavior
 
-- [ ] Clicking an enabled `ButtonRoot` invokes `on_click` exactly once per click.
-- [ ] Keyboard activation dispatches a single `ButtonActivate` action (bound to
+- [x] Clicking an enabled `ButtonRoot` invokes `on_click` exactly once per click.
+- [x] Keyboard activation dispatches a single `ButtonActivate` action (bound to
       Space and Enter under `BUTTON_ROOT_KEY_CONTEXT` in `actions.rs`, registered
       from `base_gpui::init(cx)`), which invokes the same `on_click` handler.
-- [ ] Pointer and keyboard activation do not double-fire: mirror
+- [x] Pointer and keyboard activation do not double-fire: mirror
       `switch_root.rs` by filtering the `.on_click` handler to
       `ClickEvent::Mouse(_)` and letting keyboard go through the action.
-- [ ] Disabled `ButtonRoot` ignores pointer activation and never calls `on_click`.
-- [ ] Disabled `ButtonRoot` ignores keyboard activation (Space and Enter) and never
+- [x] Disabled `ButtonRoot` ignores pointer activation and never calls `on_click`.
+- [x] Disabled `ButtonRoot` ignores keyboard activation (Space and Enter) and never
       calls `on_click`.
-- [ ] `focusable_when_disabled(true)` does not re-enable activation: pointer and
+- [x] `focusable_when_disabled(true)` does not re-enable activation: pointer and
       keyboard activation remain no-ops while disabled, matching Base UI's
       `focusableWhenDisabled` tests (focus is received, handlers never fire).
-- [ ] The disabled guard lives in one place (the activation path), not duplicated
+- [x] The disabled guard lives in one place (the activation path), not duplicated
       per event source.
 
 ### Keyboard/focus behavior
 
-- [ ] `ButtonRoot` owns a stable keyed `FocusHandle`
+- [x] `ButtonRoot` owns a stable keyed `FocusHandle`
       (`window.use_keyed_state` keyed off the root `ElementId`, per
       `switch_root.rs` lines 96-101).
-- [ ] The root renders with
+- [x] The root renders with
       `.track_focus(&focus_handle.tab_stop(...).tab_index(...))`,
       `.key_context(BUTTON_ROOT_KEY_CONTEXT)`, and `.focusable()`.
-- [ ] Enabled: `tab_stop(true)` and `tab_index(0)` — the button participates in the
+- [x] Enabled: `tab_stop(true)` and `tab_index(0)` — the button participates in the
       window tab order (Base UI default `tabIndex = 0`).
-- [ ] Disabled with `focusable_when_disabled == false`: `tab_stop(false)` and
+- [x] Disabled with `focusable_when_disabled == false`: `tab_stop(false)` and
       `tab_index(-1)` — removed from the tab order and not click-focusable into an
       interactive state.
-- [ ] Disabled with `focusable_when_disabled == true`: `tab_stop(true)` and
+- [x] Disabled with `focusable_when_disabled == true`: `tab_stop(true)` and
       `tab_index(0)` — the button stays in the tab order and can receive focus
       while all activation stays inert (Base UI: `tabindex="0"` retained).
-- [ ] Keyboard behavior uses GPUI actions/key dispatch only; no raw
+- [x] Keyboard behavior uses GPUI actions/key dispatch only; no raw
       `on_key_down` handlers.
 
 ### Styling/state exposure
 
-- [ ] Add `ButtonRootStyleState` in `style_state.rs` with at least `disabled` and
+- [x] Add `ButtonRootStyleState` in `style_state.rs` with at least `disabled` and
       `focused` fields. `disabled` maps Base UI's single `ButtonState`
       field / `data-disabled` attribute; `focused` follows the established
       `SwitchRootStyleState` precedent (`focus_handle.is_focused(window)` computed
       at render — no runtime needed for a stateless part).
-- [ ] `style_with_state(...)` receives the correct `ButtonRootStyleState` and its
+- [x] `style_with_state(...)` receives the correct `ButtonRootStyleState` and its
       result styles the root `Div`.
-- [ ] Keyboard-only focus-visible styling is achievable through gpui's native
+- [x] Keyboard-only focus-visible styling is achievable through gpui's native
       `.focus_visible(|style| ...)` builder on the root (see
       `gpui/examples/focus_visible.rs`); document this in the demo rather than
       adding a `focus_visible` field unless gpui exposes a queryable
       focus-visible fact at render time.
-- [ ] Do not expose DOM data attributes, CSS variables, or class names.
+- [x] Do not expose DOM data attributes, CSS variables, or class names.
 
 ### Tests / verification
 
 Add one behavior per file under `crates/base_gpui/src/button/tests/`, following the
 Switch test layout.
 
-- [ ] Click invokes `on_click` exactly once.
-- [ ] Space invokes `on_click` when focused.
-- [ ] Enter invokes `on_click` when focused.
-- [ ] Disabled click is a no-op (`on_click` never called).
-- [ ] Disabled Space/Enter is a no-op (`on_click` never called).
-- [ ] Disabled button is not a tab stop (tab traversal skips it).
-- [ ] `focusable_when_disabled` button remains a tab stop and can receive focus.
-- [ ] `focusable_when_disabled` button still never calls `on_click` for click,
+- [x] Click invokes `on_click` exactly once.
+- [x] Space invokes `on_click` when focused.
+- [x] Enter invokes `on_click` when focused.
+- [x] Disabled click is a no-op (`on_click` never called).
+- [x] Disabled Space/Enter is a no-op (`on_click` never called).
+- [x] Disabled button is not a tab stop (tab traversal skips it).
+- [x] `focusable_when_disabled` button remains a tab stop and can receive focus.
+- [x] `focusable_when_disabled` button still never calls `on_click` for click,
       Space, or Enter.
-- [ ] `style_with_state(...)` receives `disabled == true` for a disabled button and
+- [x] `style_with_state(...)` receives `disabled == true` for a disabled button and
       `disabled == false` otherwise.
-- [ ] `style_with_state(...)` receives `focused == true` when the root focus handle
+- [x] `style_with_state(...)` receives `focused == true` when the root focus handle
       is focused and `focused == false` after blur.
-- [ ] A single pointer click does not double-fire through both the click handler
+- [x] A single pointer click does not double-fire through both the click handler
       and the keyboard action path.
 
 ## AccessKit accessibility follow-up

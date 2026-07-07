@@ -5,6 +5,7 @@ use crate::{
     },
     input::Input,
     number_field::NumberFieldRoot,
+    otp_field::OTPFieldRoot,
 };
 
 pub trait FieldChildNode: Sized {
@@ -43,6 +44,8 @@ impl FieldChildNode for FieldChild {
             Self::NumberField(number_field) => {
                 Self::NumberField(number_field.with_field_context(context))
             }
+            Self::OTPField(otp_field) => Self::OTPField(otp_field.with_field_context(context)),
+            Self::Slider(slider) => Self::Slider(slider.with_field_context(context)),
             Self::CheckboxGroup(checkbox_group) => Self::CheckboxGroup(checkbox_group),
             Self::Any(any) => Self::Any(any),
         }
@@ -63,6 +66,8 @@ impl FieldChildNode for FieldItemChild {
             Self::NumberField(number_field) => {
                 Self::NumberField(number_field.with_field_context(context))
             }
+            Self::OTPField(otp_field) => Self::OTPField(otp_field.with_field_context(context)),
+            Self::Slider(slider) => Self::Slider(slider.with_field_context(context)),
             Self::CheckboxGroup(checkbox_group) => Self::CheckboxGroup(checkbox_group),
             Self::Any(any) => Self::Any(any),
         }
@@ -112,6 +117,12 @@ impl FieldChildNode for FieldValidity {
 }
 
 impl FieldChildNode for NumberFieldRoot {
+    fn with_field_context(self, context: FieldContext) -> Self {
+        self.with_field_context(context)
+    }
+}
+
+impl FieldChildNode for OTPFieldRoot {
     fn with_field_context(self, context: FieldContext) -> Self {
         self.with_field_context(context)
     }

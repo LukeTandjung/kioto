@@ -13,6 +13,8 @@ pub use actions::{
     INPUT_KEY_CONTEXT,
 };
 pub use layers::{input, Input};
-pub use props::{InputBoundaryHandler, InputEnterHandler, InputValueChangeHandler};
+pub use props::{
+    InputBoundaryHandler, InputEnterHandler, InputPasteHandler, InputValueChangeHandler,
+};
 pub use runtime::InputRuntime;
 pub use style_state::InputStyleState;

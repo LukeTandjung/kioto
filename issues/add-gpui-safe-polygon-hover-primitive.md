@@ -147,78 +147,78 @@ Alternative filenames are fine if they preserve the same architecture: deep geom
 
 ### Module/API surface
 
-- [ ] Add `crates/base_gpui/src/primitives/safe_polygon/` and export it from `crates/base_gpui/src/primitives/mod.rs`.
-- [ ] Add a public `SafePolygon` tracker type with `new(config)`, `arm(...)`, `evaluate(...)`, `disarm()`, and an `is_armed()` query.
-- [ ] Add a public `SafePolygonVerdict` enum with `Inside`, `Outside`, `LandedPopup`, and `LandedTrigger` variants.
-- [ ] Add a public `SafePolygonSide` enum (`Top`, `Bottom`, `Left`, `Right`) local to the primitive; no dependency on `tooltip` types.
-- [ ] Add a public `SafePolygonConfig` with polygon buffer, cursor speed threshold, and inside-polygon grace duration, defaulting to Floating UI's constants (0.5px, 0.1 px/ms, 40ms).
-- [ ] Expose the trough-rectangle test as a standalone public function usable as the documented cheap fallback.
-- [ ] `evaluate` takes an injected timestamp so no test needs real time or a window.
-- [ ] The primitive uses only `gpui::{Point, Pixels, Bounds}` (and std); no entities, no `Window`, no `App`, no timers.
+- [x] Add `crates/base_gpui/src/primitives/safe_polygon/` and export it from `crates/base_gpui/src/primitives/mod.rs`.
+- [x] Add a public `SafePolygon` tracker type with `new(config)`, `arm(...)`, `evaluate(...)`, `disarm()`, and an `is_armed()` query.
+- [x] Add a public `SafePolygonVerdict` enum with `Inside`, `Outside`, `LandedPopup`, and `LandedTrigger` variants.
+- [x] Add a public `SafePolygonSide` enum (`Top`, `Bottom`, `Left`, `Right`) local to the primitive; no dependency on `tooltip` types.
+- [x] Add a public `SafePolygonConfig` with polygon buffer, cursor speed threshold, and inside-polygon grace duration, defaulting to Floating UI's constants (0.5px, 0.1 px/ms, 40ms).
+- [x] Expose the trough-rectangle test as a standalone public function usable as the documented cheap fallback.
+- [x] `evaluate` takes an injected timestamp so no test needs real time or a window.
+- [x] The primitive uses only `gpui::{Point, Pixels, Bounds}` (and std); no entities, no `Window`, no `App`, no timers.
 
 ### Geometry behavior
 
-- [ ] Point-in-quadrilateral uses an edge-crossing containment test and is correct for non-convex vertex orderings produced by the corner selection.
-- [ ] For each side (`Top`, `Bottom`, `Left`, `Right`), the quadrilateral connects two buffer-offset points at the exit position to the popup's near-edge corners, matching Base UI's corner selection including the wider/taller-popup and exit-half adjustments.
-- [ ] A pointer inside the trough rectangle between trigger and popup near edges yields `Inside` regardless of cursor speed.
-- [ ] An exit point on the opposite side of the trigger from the popup yields `Outside` on the next evaluation (with the 1px rounding tolerance).
-- [ ] A pointer inside the popup bounds yields `LandedPopup`.
-- [ ] A pointer inside the trigger bounds yields `LandedTrigger`.
-- [ ] A pointer outside the quadrilateral, trough, trigger, and popup yields `Outside`.
-- [ ] A straight diagonal path from a trigger's edge to the near corner of a popup positioned on any of the four sides evaluates `Inside` at every sampled point.
-- [ ] Popup bounds that do not overlap the trigger on either axis (diagonal placements) degrade sanely: the side parameter picks the governing axis and the region still covers the direct path.
+- [x] Point-in-quadrilateral uses an edge-crossing containment test and is correct for non-convex vertex orderings produced by the corner selection.
+- [x] For each side (`Top`, `Bottom`, `Left`, `Right`), the quadrilateral connects two buffer-offset points at the exit position to the popup's near-edge corners, matching Base UI's corner selection including the wider/taller-popup and exit-half adjustments.
+- [x] A pointer inside the trough rectangle between trigger and popup near edges yields `Inside` regardless of cursor speed.
+- [x] An exit point on the opposite side of the trigger from the popup yields `Outside` on the next evaluation (with the 1px rounding tolerance).
+- [x] A pointer inside the popup bounds yields `LandedPopup`.
+- [x] A pointer inside the trigger bounds yields `LandedTrigger`.
+- [x] A pointer outside the quadrilateral, trough, trigger, and popup yields `Outside`.
+- [x] A straight diagonal path from a trigger's edge to the near corner of a popup positioned on any of the four sides evaluates `Inside` at every sampled point.
+- [x] Popup bounds that do not overlap the trigger on either axis (diagonal placements) degrade sanely: the side parameter picks the governing axis and the region still covers the direct path.
 
 ### Intent/lifecycle behavior
 
-- [ ] Consecutive samples moving slower than the configured speed threshold while inside the quadrilateral (and not in the trough) yield `Outside`.
-- [ ] The first sample after arming never fails the velocity check (no previous sample to compare).
-- [ ] `Inside` is documented and tested as requiring the consumer to re-schedule the short grace close; the tracker itself never suppresses a close indefinitely.
-- [ ] After `LandedPopup` or `LandedTrigger`, the tracker is disarmed and subsequent `evaluate` calls report the unarmed behavior until re-armed.
-- [ ] `arm` while already armed replaces the previous region and resets the velocity sample history.
-- [ ] `disarm` clears all state; an unarmed tracker's `evaluate` is side-effect free.
-- [ ] Zero-duration or degenerate inputs (empty bounds, exit point inside the popup) do not panic and produce a defined verdict.
+- [x] Consecutive samples moving slower than the configured speed threshold while inside the quadrilateral (and not in the trough) yield `Outside`.
+- [x] The first sample after arming never fails the velocity check (no previous sample to compare).
+- [x] `Inside` is documented and tested as requiring the consumer to re-schedule the short grace close; the tracker itself never suppresses a close indefinitely.
+- [x] After `LandedPopup` or `LandedTrigger`, the tracker is disarmed and subsequent `evaluate` calls report the unarmed behavior until re-armed.
+- [x] `arm` while already armed replaces the previous region and resets the velocity sample history.
+- [x] `disarm` clears all state; an unarmed tracker's `evaluate` is side-effect free.
+- [x] Zero-duration or degenerate inputs (empty bounds, exit point inside the popup) do not panic and produce a defined verdict.
 
 ### Integration contract (documented, and exercised by consumer issues)
 
-- [ ] Module docs specify the arm-on-unhover / evaluate-per-move / verdict-to-generation-timer protocol, referencing the `schedule_hover` / `cancel_hover` / `take_scheduled_hover` generation pattern from `crates/base_gpui/src/tooltip/runtime.rs`.
-- [ ] Module docs specify that `Inside` maps to cancel-and-reschedule of a short grace close, `Outside` maps to letting/forcing the pending close through its generation check, and `Landed*` maps to disarm plus the consumer's existing hover keep-open paths.
-- [ ] Module docs specify that mouse moves must be observed at the consumer's root (or window) scope while armed, since the pointer traverses space owned by neither trigger nor popup, and record the chosen GPUI listener mechanism once the first consumer lands.
-- [ ] Module docs name the consumers and cross-link `issues/port-baseui-menu.md`, `issues/port-baseui-menubar.md`, and `issues/port-baseui-navigation-menu.md`.
-- [ ] Module docs record the trough-only + extended close delay approximation (tooltip's current `point_in_safe_gap` behavior) as the sanctioned lower-fidelity fallback.
-- [ ] Side/align coverage: consumers with align offsets (e.g. submenu aligned to item top) only need side; verify the region is align-agnostic because it is built from popup bounds, not anchor math.
+- [x] Module docs specify the arm-on-unhover / evaluate-per-move / verdict-to-generation-timer protocol, referencing the `schedule_hover` / `cancel_hover` / `take_scheduled_hover` generation pattern from `crates/base_gpui/src/tooltip/runtime.rs`.
+- [x] Module docs specify that `Inside` maps to cancel-and-reschedule of a short grace close, `Outside` maps to letting/forcing the pending close through its generation check, and `Landed*` maps to disarm plus the consumer's existing hover keep-open paths.
+- [x] Module docs specify that mouse moves must be observed at the consumer's root (or window) scope while armed, since the pointer traverses space owned by neither trigger nor popup, and record the chosen GPUI listener mechanism once the first consumer lands.
+- [x] Module docs name the consumers and cross-link `issues/port-baseui-menu.md`, `issues/port-baseui-menubar.md`, and `issues/port-baseui-navigation-menu.md`.
+- [x] Module docs record the trough-only + extended close delay approximation (tooltip's current `point_in_safe_gap` behavior) as the sanctioned lower-fidelity fallback.
+- [x] Side/align coverage: consumers with align offsets (e.g. submenu aligned to item top) only need side; verify the region is align-agnostic because it is built from popup bounds, not anchor math.
 
 ### Architecture / implementation model
 
-- [ ] All geometric and intent knowledge lives in the primitive; consumers see only `arm`/`evaluate`/`disarm` and verdicts.
-- [ ] No getter/setter pairs exposing internal region state; queries are verdict- or fact-shaped (`is_armed`).
-- [ ] No dependency from `primitives/safe_polygon` on any component module (`tooltip`, future `menu`, etc.); dependencies point inward only.
-- [ ] `mod.rs` files are barrel exports only.
-- [ ] No new external crate dependencies; the math is std + gpui geometry types.
+- [x] All geometric and intent knowledge lives in the primitive; consumers see only `arm`/`evaluate`/`disarm` and verdicts.
+- [x] No getter/setter pairs exposing internal region state; queries are verdict- or fact-shaped (`is_armed`).
+- [x] No dependency from `primitives/safe_polygon` on any component module (`tooltip`, future `menu`, etc.); dependencies point inward only.
+- [x] `mod.rs` files are barrel exports only.
+- [x] No new external crate dependencies; the math is std + gpui geometry types.
 
 ### Docs/demo
 
-- [ ] Add a short demo or doc example showing a hover popup that stays open across a diagonal traversal (can live behind the existing `crates/base_gpui/src/main.rs` demo shell), or explicitly defer the visual demo to the first consumer issue with a note in this issue.
-- [ ] Document the configuration defaults and what each knob trades off.
+- [x] Add a short demo or doc example showing a hover popup that stays open across a diagonal traversal (can live behind the existing `crates/base_gpui/src/main.rs` demo shell), or explicitly defer the visual demo to the first consumer issue with a note in this issue. *Note: visual demo deferred to the first consumer issue (Menu submenus, `issues/port-baseui-menu.md`) — the primitive renders nothing, so a meaningful demo requires a hover-popup consumer.*
+- [x] Document the configuration defaults and what each knob trades off.
 
 ### Tests / verification
 
 Add unit tests under `crates/base_gpui/src/primitives/safe_polygon/tests/`; all pure math, no window.
 
-- [ ] Quadrilateral containment: interior point inside, exterior point outside, for all four sides.
-- [ ] Trough containment for all four sides, including the 1px insets.
-- [ ] Opposite-side exit yields `Outside` for all four sides.
-- [ ] Diagonal traversal sample paths (trigger corner to popup near corner) stay `Inside` for all four sides.
-- [ ] Perpendicular exit away from the popup yields `Outside`.
-- [ ] Slow-cursor samples inside the polygon yield `Outside`; the same positions at high speed yield `Inside`.
-- [ ] Trough position with slow cursor still yields `Inside`.
-- [ ] Landing transitions: entering popup bounds yields `LandedPopup` and disarms; entering trigger bounds yields `LandedTrigger` and disarms.
-- [ ] Re-arm replaces region and resets velocity history.
-- [ ] Unarmed `evaluate` behavior is stable and documented.
-- [ ] Degenerate bounds (zero-size popup, exit point already inside popup) do not panic.
-- [ ] Wider-popup and narrower-popup corner-selection variants both tested against expected containment.
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui safe_polygon` passes.
-- [ ] `cargo test -p base_gpui` passes.
+- [x] Quadrilateral containment: interior point inside, exterior point outside, for all four sides.
+- [x] Trough containment for all four sides, including the 1px insets.
+- [x] Opposite-side exit yields `Outside` for all four sides.
+- [x] Diagonal traversal sample paths (trigger corner to popup near corner) stay `Inside` for all four sides.
+- [x] Perpendicular exit away from the popup yields `Outside`.
+- [x] Slow-cursor samples inside the polygon yield `Outside`; the same positions at high speed yield `Inside`.
+- [x] Trough position with slow cursor still yields `Inside`.
+- [x] Landing transitions: entering popup bounds yields `LandedPopup` and disarms; entering trigger bounds yields `LandedTrigger` and disarms.
+- [x] Re-arm replaces region and resets velocity history.
+- [x] Unarmed `evaluate` behavior is stable and documented.
+- [x] Degenerate bounds (zero-size popup, exit point already inside popup) do not panic.
+- [x] Wider-popup and narrower-popup corner-selection variants both tested against expected containment.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui safe_polygon` passes.
+- [x] `cargo test -p base_gpui` passes.
 
 ## Follow-ups
 

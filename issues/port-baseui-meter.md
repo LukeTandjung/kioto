@@ -80,45 +80,45 @@ Base UI Progress has a near-identical part topology (Root/Track/Indicator/Value/
 
 ### Module/API surface
 
-- [ ] Add a top-level `meter` module and export it from `crates/base_gpui/src/lib.rs`.
-- [ ] `MeterRoot::new()` builder with `.value(f64)` (required input), `.min(f64)` (default `0.0`), `.max(f64)` (default `100.0`), and `.format(impl Fn(f64) -> String)`.
-- [ ] `MeterTrack::new()` builder — structural container, accepts `MeterIndicator` as a typed child.
-- [ ] `MeterIndicator::new()` builder — no value props; fill width comes from context.
-- [ ] `MeterValue::new()` builder — renders the formatted value by default; optional builder closure override receiving `(formatted: &str, value: f64)` (the GPUI translation of Base UI's function children).
-- [ ] `MeterLabel::new(...)` builder — styled text part, no id plumbing.
-- [ ] Typed child enum(s) in `child.rs` restrict root children to `Track` / `Value` / `Label` (plus `Indicator` under `Track`), matching the composition shown in Base UI docs, before `AnyElement` erasure.
-- [ ] All parts support normal GPUI styling builders through `Styled` and support `.style_with_state(...)`.
-- [ ] `meter/mod.rs` is barrel exports only.
+- [x] Add a top-level `meter` module and export it from `crates/base_gpui/src/lib.rs`.
+- [x] `MeterRoot::new()` builder with `.value(f64)` (required input), `.min(f64)` (default `0.0`), `.max(f64)` (default `100.0`), and `.format(impl Fn(f64) -> String)`.
+- [x] `MeterTrack::new()` builder — structural container, accepts `MeterIndicator` as a typed child.
+- [x] `MeterIndicator::new()` builder — no value props; fill width comes from context.
+- [x] `MeterValue::new()` builder — renders the formatted value by default; optional builder closure override receiving `(formatted: &str, value: f64)` (the GPUI translation of Base UI's function children).
+- [x] `MeterLabel::new(...)` builder — styled text part, no id plumbing.
+- [x] Typed child enum(s) in `child.rs` restrict root children to `Track` / `Value` / `Label` (plus `Indicator` under `Track`), matching the composition shown in Base UI docs, before `AnyElement` erasure.
+- [x] All parts support normal GPUI styling builders through `Styled` and support `.style_with_state(...)`.
+- [x] `meter/mod.rs` is barrel exports only.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui meter` passes.
-- [ ] `ast-grep scan crates/base_gpui/src/meter` produces no scoped-visibility violations.
-- [ ] Add a small Meter demo to `crates/base_gpui/src/main.rs` (label + value + track/indicator, mirroring the Base UI hero demo).
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui meter` passes.
+- [x] `ast-grep scan crates/base_gpui/src/meter` produces no scoped-visibility violations.
+- [x] Add a small Meter demo to `crates/base_gpui/src/main.rs` (label + value + track/indicator, mirroring the Base UI hero demo).
 
 ### Value derivation (runtime)
 
-- [ ] Runtime is derivation-only: a plain struct computed from `(value, min, max, format)` at the top of root render; no `Entity`, no commands, no callbacks, no controlled/uncontrolled resolution.
-- [ ] Clamped value: `value` clamped into `[min, max]`; `NaN` value falls back to `min` before clamping (matches Base UI).
-- [ ] Percentage: `((value - min) / (max - min)) * 100`, with `NaN` (including the degenerate `min == max` range) falling back to `0`, then clamped to `[0, 100]`.
-- [ ] Default formatting: percent-of-range, i.e. the derived percentage rendered as a percent string (e.g. `50%`), so the text stays in sync with the indicator fill for any `min`/`max` — not the raw value.
-- [ ] Custom `format` callback receives the raw (unclamped) `value`, matching Base UI, and its output replaces the default string.
-- [ ] Derivation lives in one place in `runtime.rs`; parts never re-derive percentage or formatting.
+- [x] Runtime is derivation-only: a plain struct computed from `(value, min, max, format)` at the top of root render; no `Entity`, no commands, no callbacks, no controlled/uncontrolled resolution.
+- [x] Clamped value: `value` clamped into `[min, max]`; `NaN` value falls back to `min` before clamping (matches Base UI).
+- [x] Percentage: `((value - min) / (max - min)) * 100`, with `NaN` (including the degenerate `min == max` range) falling back to `0`, then clamped to `[0, 100]`.
+- [x] Default formatting: percent-of-range, i.e. the derived percentage rendered as a percent string (e.g. `50%`), so the text stays in sync with the indicator fill for any `min`/`max` — not the raw value.
+- [x] Custom `format` callback receives the raw (unclamped) `value`, matching Base UI, and its output replaces the default string.
+- [x] Derivation lives in one place in `runtime.rs`; parts never re-derive percentage or formatting.
 
 ### Styling/state exposure
 
-- [ ] `MeterStyleState` in `style_state.rs` exposes `{ value, clamped_value, percentage, formatted, min, max }` (the GPUI translation of `MeterRootContext`); Base UI's part states are all empty, so one shared struct for all five parts is acceptable.
-- [ ] Every part's `.style_with_state(...)` receives the current `MeterStyleState`.
-- [ ] `MeterIndicator` fills the track using `w(relative(percentage / 100.0))` by default; user styling via `style_with_state` can restyle but the default fill requires no configuration and no measurement.
-- [ ] No DOM data attributes or CSS variable API in the public surface.
+- [x] `MeterStyleState` in `style_state.rs` exposes `{ value, clamped_value, percentage, formatted, min, max }` (the GPUI translation of `MeterRootContext`); Base UI's part states are all empty, so one shared struct for all five parts is acceptable.
+- [x] Every part's `.style_with_state(...)` receives the current `MeterStyleState`.
+- [x] `MeterIndicator` fills the track using `w(relative(percentage / 100.0))` by default; user styling via `style_with_state` can restyle but the default fill requires no configuration and no measurement.
+- [x] No DOM data attributes or CSS variable API in the public surface.
 
 ### Tests / verification
 
-- [ ] Clamping: value below `min` clamps to `min` (percentage `0`); value above `max` clamps to `max` (percentage `100`).
-- [ ] Percentage math: mid-range values with default `0..100` and with custom ranges (e.g. `value 30, min 20, max 40` → `50%`).
-- [ ] Default formatting produces the percent-of-range string for non-default `min`/`max`.
-- [ ] Custom `format` callback output is used verbatim and receives the raw unclamped value.
-- [ ] Edge cases: `value == min`, `value == max`, `min == max` (percentage `0`, no panic/NaN leak), `NaN` value falls back to `min` / percentage `0`.
-- [ ] `MeterValue` closure override receives `(formatted, value)` and its output is rendered.
-- [ ] `style_with_state` on indicator/track observes the derived percentage.
+- [x] Clamping: value below `min` clamps to `min` (percentage `0`); value above `max` clamps to `max` (percentage `100`).
+- [x] Percentage math: mid-range values with default `0..100` and with custom ranges (e.g. `value 30, min 20, max 40` → `50%`).
+- [x] Default formatting produces the percent-of-range string for non-default `min`/`max`.
+- [x] Custom `format` callback output is used verbatim and receives the raw unclamped value.
+- [x] Edge cases: `value == min`, `value == max`, `min == max` (percentage `0`, no panic/NaN leak), `NaN` value falls back to `min` / percentage `0`.
+- [x] `MeterValue` closure override receives `(formatted, value)` and its output is rendered.
+- [x] `style_with_state` on indicator/track observes the derived percentage.

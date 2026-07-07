@@ -312,171 +312,171 @@ type for Base UI parity.
 
 ### Module / API surface
 
-- [ ] `crates/base_gpui/src/menu/` exists with the flat architecture layout; `menu/mod.rs` and `menu/layers/mod.rs` are barrel-only.
-- [ ] `base_gpui::menu` is exported from `crates/base_gpui/src/lib.rs` and `base_gpui::init(cx)` calls `menu::init(cx)` to register key bindings.
-- [ ] All Scope parts exist as public builders: `MenuRoot<P>`, `MenuTrigger<P>`, `MenuPortal<P>`, `MenuBackdrop<P>`, `MenuPositioner<P>`, `MenuPopup<P>`, `MenuArrow<P>`, `MenuItem<P>`, `MenuLinkItem<P>`, `MenuGroup<P>`, `MenuGroupLabel<P>`, `MenuCheckboxItem<P>`, `MenuCheckboxItemIndicator<P>`, `MenuRadioGroup<P, V>`, `MenuRadioItem<P, V>`, `MenuRadioItemIndicator<P, V>`, `MenuSubmenuRoot<P>`, `MenuSubmenuTrigger<P>`, `MenuSeparator`.
-- [ ] `MenuRoot<P>` supports `.id(...)`, `.default_open(bool)` (default false), `.open(bool)`, `.on_open_change(...)`, `.on_open_change_complete(...)`, `.disabled(bool)` (default false), `.modal(bool)` (default **true**), `.loop_focus(bool)` (default true), `.orientation(...)` (default vertical), `.close_parent_on_esc(bool)` (default false), `.highlight_item_on_hover(bool)` (default true), `.trigger_id(...)`, `.default_trigger_id(...)`.
-- [ ] `MenuTrigger<P>` supports `.id(...)`, `.disabled(bool)`, `.payload(P)`, `.open_on_hover(bool)`, `.delay(Duration)` (default 100ms), `.close_delay(Duration)` (default 0).
-- [ ] `MenuItem<P>` supports `.label(...)` (typeahead label override), `.disabled(bool)`, `.close_on_click(bool)` (default **true**), and an activation callback (`.on_click(...)` or equivalent).
-- [ ] `MenuLinkItem<P>` supports `.label(...)`, `.close_on_click(bool)` (default **false**), and `.on_activate(...)` navigation callback; it has no disabled prop (parity with Base UI).
-- [ ] `MenuCheckboxItem<P>` supports `.checked(bool)`, `.default_checked(bool)` (default false), `.on_checked_change(...)` (cancelable), `.disabled(bool)`, `.label(...)`, `.close_on_click(bool)` (default **false**).
-- [ ] `MenuCheckboxItemIndicator<P>` supports `.keep_mounted(bool)` (default false).
-- [ ] `MenuRadioGroup<P, V>` supports `.value(Option<V>)`, `.default_value(Option<V>)`, `.on_value_change(...)` (cancelable), `.disabled(bool)` with `V: Clone + Eq + 'static`.
-- [ ] `MenuRadioItem<P, V>` supports required `.value(V)`, `.disabled(bool)`, `.label(...)`, `.close_on_click(bool)` (default **false**); `MenuRadioItemIndicator<P, V>` supports `.keep_mounted(bool)`.
-- [ ] `MenuSubmenuRoot<P>` supports the `MenuRoot` surface **minus** `modal`, `handle`, `trigger_id`, and `default_trigger_id` (Base UI omits these on submenus), plus `.close_parent_on_esc(bool)`.
-- [ ] `MenuSubmenuTrigger<P>` supports `.label(...)`, `.disabled(bool)`, `.open_on_hover(bool)` (default **true**), `.delay(Duration)` (default 100ms), `.close_delay(Duration)` (default 0).
-- [ ] `MenuPositioner<P>` supports side/align, `side_offset`, `align_offset`, collision padding, and the collision-avoidance subset established by Select/Popover; `MenuPortal<P>` supports `.keep_mounted(bool)`.
-- [ ] `MenuPopup<P>` supports a `final_focus`-equivalent override or documents its deferral (matching Popover's audit).
-- [ ] `MenuSeparator` reuses `base_gpui::separator::Separator` behavior.
-- [ ] Payload generic is `P: Clone + 'static`; no `Debug`/`Display` bounds sneak in.
-- [ ] Stretch: `MenuHandle<P>` + `create_menu_handle<P>()` with `open(trigger_id)` (deterministic failure on unknown id), `close()`, `is_open()`, and root/trigger `.handle(...)` binding — or the deferral is documented in this issue before implementation starts.
-- [ ] Stretch: `MenuViewport<P>` with activation-direction facts per `PopoverViewport` — or documented deferral.
-- [ ] Imperative `actionsRef` equivalent (`close`, `unmount`) is exposed through the handle or documented as deferred alongside transition infrastructure.
-- [ ] All public style payloads use `*StyleState` names from `style_state.rs`; no `pub(...)` scoped visibility anywhere in `menu/`.
+- [x] `crates/base_gpui/src/menu/` exists with the flat architecture layout; `menu/mod.rs` and `menu/layers/mod.rs` are barrel-only.
+- [x] `base_gpui::menu` is exported from `crates/base_gpui/src/lib.rs` and `base_gpui::init(cx)` calls `menu::init(cx)` to register key bindings.
+- [x] All Scope parts exist as public builders: `MenuRoot<P>`, `MenuTrigger<P>`, `MenuPortal<P>`, `MenuBackdrop<P>`, `MenuPositioner<P>`, `MenuPopup<P>`, `MenuArrow<P>`, `MenuItem<P>`, `MenuLinkItem<P>`, `MenuGroup<P>`, `MenuGroupLabel<P>`, `MenuCheckboxItem<P>`, `MenuCheckboxItemIndicator<P>`, `MenuRadioGroup<P, V>`, `MenuRadioItem<P, V>`, `MenuRadioItemIndicator<P, V>`, `MenuSubmenuRoot<P>`, `MenuSubmenuTrigger<P>`, `MenuSeparator`.
+- [x] `MenuRoot<P>` supports `.id(...)`, `.default_open(bool)` (default false), `.open(bool)`, `.on_open_change(...)`, `.on_open_change_complete(...)`, `.disabled(bool)` (default false), `.modal(bool)` (default **true**), `.loop_focus(bool)` (default true), `.orientation(...)` (default vertical), `.close_parent_on_esc(bool)` (default false), `.highlight_item_on_hover(bool)` (default true), `.trigger_id(...)`, `.default_trigger_id(...)`.
+- [x] `MenuTrigger<P>` supports `.id(...)`, `.disabled(bool)`, `.payload(P)`, `.open_on_hover(bool)`, `.delay(Duration)` (default 100ms), `.close_delay(Duration)` (default 0).
+- [x] `MenuItem<P>` supports `.label(...)` (typeahead label override), `.disabled(bool)`, `.close_on_click(bool)` (default **true**), and an activation callback (`.on_click(...)` or equivalent).
+- [x] `MenuLinkItem<P>` supports `.label(...)`, `.close_on_click(bool)` (default **false**), and `.on_activate(...)` navigation callback; it has no disabled prop (parity with Base UI).
+- [x] `MenuCheckboxItem<P>` supports `.checked(bool)`, `.default_checked(bool)` (default false), `.on_checked_change(...)` (cancelable), `.disabled(bool)`, `.label(...)`, `.close_on_click(bool)` (default **false**).
+- [x] `MenuCheckboxItemIndicator<P>` supports `.keep_mounted(bool)` (default false).
+- [x] `MenuRadioGroup<P, V>` supports `.value(Option<V>)`, `.default_value(Option<V>)`, `.on_value_change(...)` (cancelable), `.disabled(bool)` with `V: Clone + Eq + 'static`.
+- [x] `MenuRadioItem<P, V>` supports required `.value(V)`, `.disabled(bool)`, `.label(...)`, `.close_on_click(bool)` (default **false**); `MenuRadioItemIndicator<P, V>` supports `.keep_mounted(bool)`.
+- [x] `MenuSubmenuRoot<P>` supports the `MenuRoot` surface **minus** `modal`, `handle`, `trigger_id`, and `default_trigger_id` (Base UI omits these on submenus), plus `.close_parent_on_esc(bool)`.
+- [x] `MenuSubmenuTrigger<P>` supports `.label(...)`, `.disabled(bool)`, `.open_on_hover(bool)` (default **true**), `.delay(Duration)` (default 100ms), `.close_delay(Duration)` (default 0).
+- [x] `MenuPositioner<P>` supports side/align, `side_offset`, `align_offset`, collision padding, and the collision-avoidance subset established by Select/Popover; `MenuPortal<P>` supports `.keep_mounted(bool)`.
+- [x] `MenuPopup<P>` supports a `final_focus`-equivalent override or documents its deferral (matching Popover's audit).
+- [x] `MenuSeparator` reuses `base_gpui::separator::Separator` behavior.
+- [x] Payload generic is `P: Clone + 'static`; no `Debug`/`Display` bounds sneak in.
+- [x] Stretch: `MenuHandle<P>` + `create_menu_handle<P>()` with `open(trigger_id)` (deterministic failure on unknown id), `close()`, `is_open()`, and root/trigger `.handle(...)` binding — or the deferral is documented in this issue before implementation starts.
+- [x] Stretch: `MenuViewport<P>` with activation-direction facts per `PopoverViewport` — or documented deferral.
+- [x] Imperative `actionsRef` equivalent (`close`, `unmount`) is exposed through the handle or documented as deferred alongside transition infrastructure.
+- [x] All public style payloads use `*StyleState` names from `style_state.rs`; no `pub(...)` scoped visibility anywhere in `menu/`.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui menu` passes.
-- [ ] `cargo test -p base_gpui` passes.
-- [ ] `cargo clippy -p base_gpui --all-targets` exits successfully with only pre-existing warnings.
-- [ ] `ast-grep scan crates/base_gpui/src/menu` passes (including barrel-only `mod.rs` rule).
-- [ ] Demos in `crates/base_gpui/src/main.rs`: basic menu (trigger/portal/positioner/popup/items/separator/group), checkbox+radio menu, and a nested submenu demo; gallery render test passes with menus initially closed.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui menu` passes.
+- [x] `cargo test -p base_gpui` passes.
+- [x] `cargo clippy -p base_gpui --all-targets` exits successfully with only pre-existing warnings.
+- [x] `ast-grep scan crates/base_gpui/src/menu` passes (including barrel-only `mod.rs` rule).
+- [x] Demos in `crates/base_gpui/src/main.rs`: basic menu (trigger/portal/positioner/popup/items/separator/group), checkbox+radio menu, and a nested submenu demo; gallery render test passes with menus initially closed.
 
 ### Architecture / internal primitives
 
-- [ ] Follow `docs/base-gpui-component-architecture.md`: one deep `MenuRuntime<P>`, thin `MenuContext<P>`, thin layers under `layers/`.
-- [ ] `MenuRuntime<P>` owns: open/mounted/presence state, `MenuParentKind`, active trigger id/metadata/payload, registered item metadata (kind, label, disabled, `close_on_click`, focus handle, bounds), highlighted index, checkbox/radio state, typeahead buffer + typing flag, hover facts (`hover_enabled`, `allow_mouse_enter`, `stick_if_open`, pending timers' state), `instant` classification, measured trigger/positioner/popup/arrow bounds, and submenu tree links (children handles/entities, pending sibling-close state).
-- [ ] Runtime interface is commands + part-shaped queries in Menu domain language (`sync_children`, `reconcile`, `request_open`/`request_close` with details, `activate_item`, `move_highlight`, `apply_typeahead`, `open_submenu`, `close_descendants`, `notify_parent_item_highlight`, `set_bounds`, ...) — no getter/setter pairs, no "what is the highlighted index" queries (parts ask "am I highlighted?").
-- [ ] Runtime is unit-testable without a GPUI window, including tree-coordination logic (parent-close cascades, sibling-open, pending delayed closes driven by injected clocks/explicit ticks).
-- [ ] `MenuContext<P>` is `read`/`update` plus the open/close/toggle and item-activation commands; the controlled/uncontrolled rule for open state (and only that rule) lives in the context; no component vocabulary accretes on it.
-- [ ] Typed child routing before `AnyElement` erasure: root children (`Trigger`/`Portal`), portal→positioner→popup chain, popup children (`Item`, `LinkItem`, `CheckboxItem`, `RadioGroup`, `Group`, `GroupLabel`, `Separator`, `SubmenuRoot`, `Arrow`, `Viewport`), group children, and radio-group children each get constrained enums in `child.rs`; arbitrary visual children remain allowed *inside* items/triggers/labels where Base UI examples rely on it.
-- [ ] `child_wiring.rs` is the only module that walks children, assigns item indices (skipping groups/labels/separators), collects labels for typeahead, attaches context, and registers submenu links; no index bookkeeping leaks into layers or public helper methods.
-- [ ] The nested-popup tree is modeled as linked per-menu runtimes (one per `MenuRoot`/`MenuSubmenuRoot`), not one god-runtime for the whole tree and not DOM-style broadcast events; cross-menu effects flow through explicit parent/child commands.
-- [ ] Positioning, portal, arrow, backdrop, hover timers, and typeahead are implemented Menu-locally using the reference files listed in Scope; **no new shared/generic primitives are extracted** unless a concept is already proven deep and repeated (and then only as flat `utils/` files).
-- [ ] `MenuParentKind::{Menubar, ContextMenu}` seams exist (storage, injection point, branch sites) with documented "implemented by the Menubar/Context Menu issues" markers; parent-supplied data the variants require (cursor anchor point, keyboard-relay target, `group` instant kind) is threaded through the runtime, not special-cased in the variant modules.
+- [x] Follow `docs/base-gpui-component-architecture.md`: one deep `MenuRuntime<P>`, thin `MenuContext<P>`, thin layers under `layers/`.
+- [x] `MenuRuntime<P>` owns: open/mounted/presence state, `MenuParentKind`, active trigger id/metadata/payload, registered item metadata (kind, label, disabled, `close_on_click`, focus handle, bounds), highlighted index, checkbox/radio state, typeahead buffer + typing flag, hover facts (`hover_enabled`, `allow_mouse_enter`, `stick_if_open`, pending timers' state), `instant` classification, measured trigger/positioner/popup/arrow bounds, and submenu tree links (children handles/entities, pending sibling-close state).
+- [x] Runtime interface is commands + part-shaped queries in Menu domain language (`sync_children`, `reconcile`, `request_open`/`request_close` with details, `activate_item`, `move_highlight`, `apply_typeahead`, `open_submenu`, `close_descendants`, `notify_parent_item_highlight`, `set_bounds`, ...) — no getter/setter pairs, no "what is the highlighted index" queries (parts ask "am I highlighted?").
+- [ ] Runtime is unit-testable without a GPUI window, including tree-coordination logic (parent-close cascades, sibling-open, pending delayed closes driven by injected clocks/explicit ticks). — *deferred/partial: runtime tree decisions (pending closes, reconcile_child_hover, sibling queries) are window-free; the cascade/sibling *execution* lives in MenuContext and needs a window*
+- [x] `MenuContext<P>` is `read`/`update` plus the open/close/toggle and item-activation commands; the controlled/uncontrolled rule for open state (and only that rule) lives in the context; no component vocabulary accretes on it.
+- [x] Typed child routing before `AnyElement` erasure: root children (`Trigger`/`Portal`), portal→positioner→popup chain, popup children (`Item`, `LinkItem`, `CheckboxItem`, `RadioGroup`, `Group`, `GroupLabel`, `Separator`, `SubmenuRoot`, `Arrow`, `Viewport`), group children, and radio-group children each get constrained enums in `child.rs`; arbitrary visual children remain allowed *inside* items/triggers/labels where Base UI examples rely on it.
+- [x] `child_wiring.rs` is the only module that walks children, assigns item indices (skipping groups/labels/separators), collects labels for typeahead, attaches context, and registers submenu links; no index bookkeeping leaks into layers or public helper methods.
+- [x] The nested-popup tree is modeled as linked per-menu runtimes (one per `MenuRoot`/`MenuSubmenuRoot`), not one god-runtime for the whole tree and not DOM-style broadcast events; cross-menu effects flow through explicit parent/child commands.
+- [x] Positioning, portal, arrow, backdrop, hover timers, and typeahead are implemented Menu-locally using the reference files listed in Scope; **no new shared/generic primitives are extracted** unless a concept is already proven deep and repeated (and then only as flat `utils/` files).
+- [x] `MenuParentKind::{Menubar, ContextMenu}` seams exist (storage, injection point, branch sites) with documented "implemented by the Menubar/Context Menu issues" markers; parent-supplied data the variants require (cursor anchor point, keyboard-relay target, `group` instant kind) is threaded through the runtime, not special-cased in the variant modules. — *Menubar issue landed: `MenuMenubarLink` threads the keyboard-relay target and the `Group` instant kind is recorded for menubar-parent menus; ContextMenu anchor point remains reserved*
 
 ### Controlled / uncontrolled open state
 
-- [ ] Uncontrolled root initializes from `.default_open(false)`.
-- [ ] Controlled root reflects `.open(...)` as source of truth; interactions fire `on_open_change` without mutating internal open state.
-- [ ] Controlled `.open(...)` takes precedence over `.default_open(...)`.
-- [ ] `on_open_change` fires before uncontrolled mutation; canceling prevents the change (open and close).
-- [ ] Details carry reason/source/trigger/payload; every close path reports the correct reason: `TriggerPress` (toggle), `ItemPress`, `EscapeKey`, `OutsidePress`, `FocusOut`, `SiblingOpen`, `CancelOpen` (drag-release outside), `ImperativeAction`; hover open reports `TriggerHover`.
-- [ ] `prevent_unmount_on_close()` keeps the popup mounted through one close cycle and does not leak into later closes.
-- [ ] `on_open_change_complete` fires after presence settles (immediately without transition infrastructure).
-- [ ] Root `.disabled(true)` ignores all open/close user interaction.
-- [ ] Redundant `set_open` calls (same open state, same trigger, same reason) are deduplicated — no duplicate callbacks.
-- [ ] `instant` transition classification is recorded: keyboard-click and dismiss (Escape/no-reason) closes mark the corresponding instant kind; trigger-change marks `trigger-change` (menubar `group` kind reserved for the Menubar issue).
+- [x] Uncontrolled root initializes from `.default_open(false)`.
+- [x] Controlled root reflects `.open(...)` as source of truth; interactions fire `on_open_change` without mutating internal open state.
+- [x] Controlled `.open(...)` takes precedence over `.default_open(...)`.
+- [x] `on_open_change` fires before uncontrolled mutation; canceling prevents the change (open and close).
+- [ ] Details carry reason/source/trigger/payload; every close path reports the correct reason: `TriggerPress` (toggle), `ItemPress`, `EscapeKey`, `OutsidePress`, `FocusOut`, `SiblingOpen`, `CancelOpen` (drag-release outside), `ImperativeAction`; hover open reports `TriggerHover`. — *deferred/partial: CancelOpen (drag-release) not implemented — drag-from-trigger activation deferred*
+- [x] `prevent_unmount_on_close()` keeps the popup mounted through one close cycle and does not leak into later closes.
+- [x] `on_open_change_complete` fires after presence settles (immediately without transition infrastructure).
+- [x] Root `.disabled(true)` ignores all open/close user interaction.
+- [x] Redundant `set_open` calls (same open state, same trigger, same reason) are deduplicated — no duplicate callbacks.
+- [ ] `instant` transition classification is recorded: keyboard-click and dismiss (Escape/no-reason) closes mark the corresponding instant kind; trigger-change marks `trigger-change` (menubar `group` kind reserved for the Menubar issue). — *deferred/partial: Click/Dismiss instant kinds recorded; trigger-change requires multi-trigger (MenuHandle stretch, deferred)*
 
 ### List navigation & typeahead
 
-- [ ] Menu uses GPUI key-dispatch actions and a Menu key context (`actions.rs`), not raw `on_key_down`, for Arrow keys, Home, End, Enter, Space, and Escape.
-- [ ] Highlight is separate per menu in the tree; each submenu tracks its own highlighted index.
-- [ ] ArrowDown/ArrowUp move highlight through activatable items (vertical orientation; the axis flips for horizontal orientation), wrapping per `.loop_focus(true)` and clamping when false.
-- [ ] Home/End move highlight to first/last activatable item.
-- [ ] Groups, group labels, and separators are never highlighted and do not consume item indices.
-- [ ] Navigation skips nothing else: disabled items follow Base UI's roving behavior (focusable-when-disabled highlight, activation no-op).
-- [ ] With a closed menu and focused trigger, ArrowDown opens and highlights the first item; ArrowUp opens and highlights the last item (reserved: suppressed for the future context-menu parent).
-- [ ] Pointer hover highlights items only when `highlight_item_on_hover == true` **and** the pointer has actually moved since open (`allow_mouse_enter` guard — the item under the cursor at open time is not highlighted by accident).
-- [ ] Enter activates the highlighted item.
-- [ ] Space activates the highlighted item unless a typeahead session is in progress (Space then contributes to the match and does not activate).
-- [ ] Typeahead matches registered item labels (explicit `.label(...)` override wins), skips disabled items, cycles on repeated characters, and resets after the standard timeout; matching moves highlight only (never activates).
-- [ ] Highlight movement scrolls the highlighted item into view when the popup scrolls.
+- [x] Menu uses GPUI key-dispatch actions and a Menu key context (`actions.rs`), not raw `on_key_down`, for Arrow keys, Home, End, Enter, Space, and Escape.
+- [x] Highlight is separate per menu in the tree; each submenu tracks its own highlighted index.
+- [ ] ArrowDown/ArrowUp move highlight through activatable items (vertical orientation; the axis flips for horizontal orientation), wrapping per `.loop_focus(true)` and clamping when false. — *deferred/partial: vertical orientation only; horizontal axis flip deferred*
+- [x] Home/End move highlight to first/last activatable item.
+- [x] Groups, group labels, and separators are never highlighted and do not consume item indices.
+- [x] Navigation skips nothing else: disabled items follow Base UI's roving behavior (focusable-when-disabled highlight, activation no-op).
+- [x] With a closed menu and focused trigger, ArrowDown opens and highlights the first item; ArrowUp opens and highlights the last item (reserved: suppressed for the future context-menu parent).
+- [x] Pointer hover highlights items only when `highlight_item_on_hover == true` **and** the pointer has actually moved since open (`allow_mouse_enter` guard — the item under the cursor at open time is not highlighted by accident).
+- [x] Enter activates the highlighted item.
+- [x] Space activates the highlighted item unless a typeahead session is in progress (Space then contributes to the match and does not activate).
+- [x] Typeahead matches registered item labels (explicit `.label(...)` override wins), skips disabled items, cycles on repeated characters, and resets after the standard timeout; matching moves highlight only (never activates).
+- [x] Highlight movement scrolls the highlighted item into view when the popup scrolls.
 
 ### Item activation behavior
 
-- [ ] Clicking an enabled `MenuItem` fires its activation callback; the menu closes when `close_on_click == true` (reason `ItemPress`) and stays open when false.
-- [ ] Disabled items (and items under a disabled root) never activate by pointer, keyboard, or drag-release.
-- [ ] Drag-from-trigger: pressing the trigger, dragging onto an item, and releasing activates that item and always closes the menu (overriding `close_on_click`), gated by the 200ms `allow_mouse_up_trigger` window equivalent; releasing outside the trigger/popup tree bounds closes with reason `CancelOpen`; drag-release never activates submenu triggers.
-- [ ] `MenuLinkItem` fires `on_activate` and follows its `close_on_click` default of false.
+- [x] Clicking an enabled `MenuItem` fires its activation callback; the menu closes when `close_on_click == true` (reason `ItemPress`) and stays open when false.
+- [x] Disabled items (and items under a disabled root) never activate by pointer, keyboard, or drag-release.
+- [ ] Drag-from-trigger: pressing the trigger, dragging onto an item, and releasing activates that item and always closes the menu (overriding `close_on_click`), gated by the 200ms `allow_mouse_up_trigger` window equivalent; releasing outside the trigger/popup tree bounds closes with reason `CancelOpen`; drag-release never activates submenu triggers. — *deferred/partial: drag-from-trigger release activation deferred (needs window-level mouseup tracking)*
+- [x] `MenuLinkItem` fires `on_activate` and follows its `close_on_click` default of false.
 
 ### Checkbox / radio item behavior
 
-- [ ] Uncontrolled checkbox item initializes from `.default_checked(false)`; controlled `.checked(...)` is source of truth and never self-mutates.
-- [ ] Activating a checkbox item fires `on_checked_change(!checked, details)` before uncontrolled mutation; canceling prevents the toggle.
-- [ ] Checkbox activation keeps the menu open by default (`close_on_click` false) and closes when explicitly set true.
-- [ ] Uncontrolled radio group initializes from `.default_value(...)`; controlled `.value(...)` is source of truth.
-- [ ] Activating an enabled radio item calls `on_value_change(item_value, details)`; canceling prevents uncontrolled mutation; selecting the already-selected value is deterministic.
-- [ ] Radio group `.disabled(true)` disables all its items; item-level disabled combines with group and root disabled.
-- [ ] Radio items outside a `MenuRadioGroup` fail clearly at construction/wiring time (typed child enums should make this unrepresentable).
-- [ ] Indicators render only while checked unless `.keep_mounted(true)`; keep-mounted indicators expose unchecked state through style state; presence/transition facts use `utils::presence`.
+- [x] Uncontrolled checkbox item initializes from `.default_checked(false)`; controlled `.checked(...)` is source of truth and never self-mutates.
+- [x] Activating a checkbox item fires `on_checked_change(!checked, details)` before uncontrolled mutation; canceling prevents the toggle.
+- [x] Checkbox activation keeps the menu open by default (`close_on_click` false) and closes when explicitly set true.
+- [x] Uncontrolled radio group initializes from `.default_value(...)`; controlled `.value(...)` is source of truth.
+- [x] Activating an enabled radio item calls `on_value_change(item_value, details)`; canceling prevents uncontrolled mutation; selecting the already-selected value is deterministic.
+- [x] Radio group `.disabled(true)` disables all its items; item-level disabled combines with group and root disabled.
+- [x] Radio items outside a `MenuRadioGroup` fail clearly at construction/wiring time (typed child enums should make this unrepresentable).
+- [ ] Indicators render only while checked unless `.keep_mounted(true)`; keep-mounted indicators expose unchecked state through style state; presence/transition facts use `utils::presence`. — *deferred/partial: indicators use a simple present flag; utils::presence transition facts deferred with transition infrastructure*
 
 ### Submenu behavior (nested-popup tree)
 
-- [ ] `MenuSubmenuTrigger` is simultaneously an item of the parent menu (participates in parent highlight, typeahead via its label, roving tab-stop) and the trigger of the child menu.
-- [ ] Hovering a submenu trigger opens the child after `.delay(...)` when `open_on_hover == true`, gated on the parent's `allow_mouse_enter` (no hover-open before real pointer movement); hover intent uses the safe-polygon primitive from `issues/add-gpui-safe-polygon-hover-primitive.md` when available, with tooltip-style close-delay timers as the documented interim fallback.
-- [ ] Clicking a submenu trigger opens the child; when `open_on_hover == true` mouse clicks do not toggle-close (parity with `toggle: !openOnHover`, `ignoreMouse: openOnHover`).
-- [ ] Keyboard: ArrowRight on a highlighted submenu trigger opens the child and highlights its first item (ArrowLeft in RTL via `utils::direction`); ArrowLeft inside an open submenu closes it and returns focus/highlight to the submenu trigger (ArrowRight in RTL).
-- [ ] Enter/Space on a highlighted submenu trigger opens the child and highlights its first item.
-- [ ] Closing a parent menu (any reason) closes all descendant submenus.
-- [ ] Opening a submenu closes the open submenu of any sibling branch (reason `SiblingOpen`).
-- [ ] Highlighting/hovering a different item in the parent closes the open child branch after the child's `close_delay` (immediately when zero); re-hovering the same submenu trigger cancels the pending close.
-- [ ] While a child is open, the parent popup's hover-driven behavior is adjusted (`hover_enabled` semantics) so moving within the parent does not flicker-close the child except through the item-hover rule above.
-- [ ] Escape inside a submenu closes only that submenu and returns focus to its trigger; with `.close_parent_on_esc(true)` Escape propagates to close the parent chain.
-- [ ] Outside-press dismissal tests against the union of all open popups in the tree plus the active trigger; presses inside any open menu of the tree never dismiss ancestors.
-- [ ] Submenu open/close fires the submenu root's own `on_open_change` with correct reasons.
-- [ ] Submenus never apply modal behavior regardless of configuration.
-- [ ] Rapid hover across multiple submenu triggers is deterministic: at most one child branch per menu is open once timers settle, and no panics.
+- [x] `MenuSubmenuTrigger` is simultaneously an item of the parent menu (participates in parent highlight, typeahead via its label, roving tab-stop) and the trigger of the child menu.
+- [x] Hovering a submenu trigger opens the child after `.delay(...)` when `open_on_hover == true`, gated on the parent's `allow_mouse_enter` (no hover-open before real pointer movement); hover intent uses the safe-polygon primitive from `issues/add-gpui-safe-polygon-hover-primitive.md` when available, with tooltip-style close-delay timers as the documented interim fallback.
+- [x] Clicking a submenu trigger opens the child; when `open_on_hover == true` mouse clicks do not toggle-close (parity with `toggle: !openOnHover`, `ignoreMouse: openOnHover`).
+- [x] Keyboard: ArrowRight on a highlighted submenu trigger opens the child and highlights its first item (ArrowLeft in RTL via `utils::direction`); ArrowLeft inside an open submenu closes it and returns focus/highlight to the submenu trigger (ArrowRight in RTL).
+- [x] Enter/Space on a highlighted submenu trigger opens the child and highlights its first item.
+- [x] Closing a parent menu (any reason) closes all descendant submenus.
+- [x] Opening a submenu closes the open submenu of any sibling branch (reason `SiblingOpen`).
+- [x] Highlighting/hovering a different item in the parent closes the open child branch after the child's `close_delay` (immediately when zero); re-hovering the same submenu trigger cancels the pending close.
+- [x] While a child is open, the parent popup's hover-driven behavior is adjusted (`hover_enabled` semantics) so moving within the parent does not flicker-close the child except through the item-hover rule above.
+- [x] Escape inside a submenu closes only that submenu and returns focus to its trigger; with `.close_parent_on_esc(true)` Escape propagates to close the parent chain.
+- [x] Outside-press dismissal tests against the union of all open popups in the tree plus the active trigger; presses inside any open menu of the tree never dismiss ancestors.
+- [x] Submenu open/close fires the submenu root's own `on_open_change` with correct reasons.
+- [x] Submenus never apply modal behavior regardless of configuration.
+- [x] Rapid hover across multiple submenu triggers is deterministic: at most one child branch per menu is open once timers settle, and no panics.
 
 ### Positioning / portal / dismiss
 
-- [ ] `MenuPortal` renders popup content through GPUI deferred/anchored overlay rendering only while mounted or `.keep_mounted(true)` (closed keep-mounted content reports closed style state).
-- [ ] `MenuPositioner` measures trigger/anchor and popup bounds via GPUI prepaint hooks and stores them in the runtime.
-- [ ] Default placement: side bottom / align center for a standalone menu; side inline-end / align start for submenus (direction-aware via `utils::direction`); parent-kind seams reserve the menubar and context-menu defaults.
-- [ ] `side_offset` / `align_offset` and collision padding map to GPUI anchored placement; collision avoidance implements the practical flip/shift subset established by Select/Popover (submenus default to the popup-style avoidance variant, standalone menus to the dropdown variant, matching Base UI's differing defaults).
-- [ ] Positioner style state exposes open, side, align, anchor-hidden, `nested`, `instant`, and measured anchor/available sizes.
-- [ ] `MenuArrow` follows resolved side/align, exposes `uncentered`, and updates when the side flips.
-- [ ] `MenuBackdrop` is user-renderable, sits below the popup, and closes on press with reason `OutsidePress`; a hover-opened menu's backdrop does not capture pointer events (Base UI sets `pointer-events: none` for `trigger-hover` opens).
-- [ ] Modal (`.modal(true)`, the default, root menus only): outside interaction is blocked via `utils::overlay::modal_backdrop`-style occlusion **with a cutout for the active trigger element** so the trigger stays clickable; modal behavior is skipped entirely when the menu was opened by hover; scroll locking follows whatever Popover/Dialog established or is documented as deferred.
-- [ ] `.modal(false)` allows normal outside interaction except dismissal handling.
-- [ ] Closing by focus leaving the tree reports `FocusOut`; window-resize/layout-invalidation closing follows the Select/Popover precedent or documents the same deferral.
+- [x] `MenuPortal` renders popup content through GPUI deferred/anchored overlay rendering only while mounted or `.keep_mounted(true)` (closed keep-mounted content reports closed style state).
+- [x] `MenuPositioner` measures trigger/anchor and popup bounds via GPUI prepaint hooks and stores them in the runtime.
+- [x] Default placement: side bottom / align center for a standalone menu; side inline-end / align start for submenus (direction-aware via `utils::direction`); parent-kind seams reserve the menubar and context-menu defaults.
+- [ ] `side_offset` / `align_offset` and collision padding map to GPUI anchored placement; collision avoidance implements the practical flip/shift subset established by Select/Popover (submenus default to the popup-style avoidance variant, standalone menus to the dropdown variant, matching Base UI's differing defaults). — *deferred/partial: single flip subset shared by both parent kinds; per-parent avoidance variants deferred*
+- [x] Positioner style state exposes open, side, align, anchor-hidden, `nested`, `instant`, and measured anchor/available sizes.
+- [x] `MenuArrow` follows resolved side/align, exposes `uncentered`, and updates when the side flips.
+- [x] `MenuBackdrop` is user-renderable, sits below the popup, and closes on press with reason `OutsidePress`; a hover-opened menu's backdrop does not capture pointer events (Base UI sets `pointer-events: none` for `trigger-hover` opens).
+- [x] Modal (`.modal(true)`, the default, root menus only): outside interaction is blocked via `utils::overlay::modal_backdrop`-style occlusion **with a cutout for the active trigger element** so the trigger stays clickable; modal behavior is skipped entirely when the menu was opened by hover; scroll locking follows whatever Popover/Dialog established or is documented as deferred.
+- [x] `.modal(false)` allows normal outside interaction except dismissal handling.
+- [x] Closing by focus leaving the tree reports `FocusOut`; window-resize/layout-invalidation closing follows the Select/Popover precedent or documents the same deferral.
 
 ### Keyboard / focus
 
-- [ ] Trigger is focusable when enabled, skipped when disabled; keyboard activation (Enter/Space) toggles the menu via GPUI actions.
-- [ ] Opening by pointer or keyboard moves focus into the popup per GPUI-native rules (submenus do not steal initial focus from the parent — `initialFocus` only applies to non-submenu parents); opening by hover does not steal focus.
-- [ ] Item tab-stop follows roving semantics: only the highlighted item of the open menu is the tab-stop.
-- [ ] Closing returns focus to the active trigger by default (`final_focus` override honored if implemented); when the active trigger is gone, focus falls back deterministically or is left unchanged as documented.
-- [ ] Hover-opened root menus honor patient-click: clicks on the trigger within the 500ms threshold do not close (`stick_if_open`); after the threshold, trigger clicks toggle-close normally — or this is explicitly deferred with the Popover patient-click precedent cited.
-- [ ] Escape/focus-out/close all restore focus without panics when triggered from deep submenu levels.
-- [ ] Accessibility audit item: confirm the pinned GPUI revision still lacks AccessKit role/expanded/label APIs; keep menu/menuitem/checkbox/radio/group semantics and group-label metadata in the runtime for the AccessKit follow-up; no DOM ARIA literals.
+- [x] Trigger is focusable when enabled, skipped when disabled; keyboard activation (Enter/Space) toggles the menu via GPUI actions.
+- [x] Opening by pointer or keyboard moves focus into the popup per GPUI-native rules (submenus do not steal initial focus from the parent — `initialFocus` only applies to non-submenu parents); opening by hover does not steal focus.
+- [x] Item tab-stop follows roving semantics: only the highlighted item of the open menu is the tab-stop.
+- [x] Closing returns focus to the active trigger by default (`final_focus` override honored if implemented); when the active trigger is gone, focus falls back deterministically or is left unchanged as documented.
+- [x] Hover-opened root menus honor patient-click: clicks on the trigger within the 500ms threshold do not close (`stick_if_open`); after the threshold, trigger clicks toggle-close normally — or this is explicitly deferred with the Popover patient-click precedent cited.
+- [x] Escape/focus-out/close all restore focus without panics when triggered from deep submenu levels.
+- [x] Accessibility audit item: confirm the pinned GPUI revision still lacks AccessKit role/expanded/label APIs; keep menu/menuitem/checkbox/radio/group semantics and group-label metadata in the runtime for the AccessKit follow-up; no DOM ARIA literals.
 
 ### Styling / state exposure
 
-- [ ] `MenuRootStyleState` exists (may be small: open, disabled, parent kind facts).
-- [ ] `MenuTriggerStyleState`: open, disabled, active-trigger, payload-present.
-- [ ] `MenuPositionerStyleState`: open, side, align, anchor-hidden, nested, instant, measured sizes.
-- [ ] `MenuPopupStyleState`: open, mounted, transition status, side, align, nested, instant.
-- [ ] `MenuBackdropStyleState`: open, mounted, transition status, hover-opened (pointer-inert) fact.
-- [ ] `MenuArrowStyleState`: open, side, align, uncentered.
-- [ ] `MenuItemStyleState`: highlighted, disabled.
-- [ ] `MenuLinkItemStyleState`: highlighted.
-- [ ] `MenuCheckboxItemStyleState`: checked, highlighted, disabled.
-- [ ] `MenuCheckboxItemIndicatorStyleState`: checked, highlighted, disabled, transition status.
-- [ ] `MenuRadioGroupStyleState`: disabled.
-- [ ] `MenuRadioItemStyleState`: checked, highlighted, disabled.
-- [ ] `MenuRadioItemIndicatorStyleState`: checked, highlighted, disabled, transition status.
-- [ ] `MenuSubmenuTriggerStyleState`: open, highlighted, disabled.
-- [ ] `MenuGroupStyleState` / `MenuGroupLabelStyleState` exist even if initially empty; `MenuViewportStyleState` (stretch): activation direction, transitioning, instant.
-- [ ] Every part that draws has `.style_with_state(...)` taking its component-specific struct; Base UI data attributes and CSS vars appear only as typed style-state fields.
+- [x] `MenuRootStyleState` exists (may be small: open, disabled, parent kind facts).
+- [x] `MenuTriggerStyleState`: open, disabled, active-trigger, payload-present.
+- [x] `MenuPositionerStyleState`: open, side, align, anchor-hidden, nested, instant, measured sizes.
+- [x] `MenuPopupStyleState`: open, mounted, transition status, side, align, nested, instant.
+- [x] `MenuBackdropStyleState`: open, mounted, transition status, hover-opened (pointer-inert) fact.
+- [x] `MenuArrowStyleState`: open, side, align, uncentered.
+- [x] `MenuItemStyleState`: highlighted, disabled.
+- [x] `MenuLinkItemStyleState`: highlighted.
+- [x] `MenuCheckboxItemStyleState`: checked, highlighted, disabled.
+- [x] `MenuCheckboxItemIndicatorStyleState`: checked, highlighted, disabled, transition status.
+- [x] `MenuRadioGroupStyleState`: disabled.
+- [x] `MenuRadioItemStyleState`: checked, highlighted, disabled.
+- [x] `MenuRadioItemIndicatorStyleState`: checked, highlighted, disabled, transition status.
+- [x] `MenuSubmenuTriggerStyleState`: open, highlighted, disabled.
+- [x] `MenuGroupStyleState` / `MenuGroupLabelStyleState` exist even if initially empty; `MenuViewportStyleState` (stretch): activation direction, transitioning, instant.
+- [x] Every part that draws has `.style_with_state(...)` taking its component-specific struct; Base UI data attributes and CSS vars appear only as typed style-state fields.
 
 ### Tests / verification
 
 Runtime tests (no window):
 
-- [ ] Uncontrolled default-closed and `default_open(true)` initial states.
-- [ ] Controlled open reconciliation; controlled callbacks without internal mutation; canceled open and canceled close.
-- [ ] Open-change reason/source correctness per close path, including `SiblingOpen` and `CancelOpen`.
-- [ ] Item registration order with groups/labels/separators interleaved (indices unaffected).
-- [ ] Highlight movement: wrap vs clamp, Home/End, disabled-item highlight with activation no-op.
-- [ ] Typeahead: label matching, explicit label override, disabled skipping, repeated-character cycling, reset timeout, Space suppression while typing.
-- [ ] Checkbox controlled/uncontrolled toggle and cancellation; radio group value selection, group disabled, cancellation.
-- [ ] Submenu tree: parent close cascades to descendants; sibling-open closes other branches; parent item-hover schedules/cancels delayed child close; Escape innermost-only vs `close_parent_on_esc`.
-- [ ] Outside-press hit-test against multi-level open-tree bounds.
-- [ ] `prevent_unmount_on_close` one-cycle behavior.
-- [ ] Handle open/close with unknown trigger id (if handle implemented).
+- [x] Uncontrolled default-closed and `default_open(true)` initial states.
+- [ ] Controlled open reconciliation; controlled callbacks without internal mutation; canceled open and canceled close. — *deferred/partial: controlled sync covered; cancellation paths live in MenuContext callbacks (need rendered tests)*
+- [ ] Open-change reason/source correctness per close path, including `SiblingOpen` and `CancelOpen`. — *deferred/partial: reasons recorded per path in context; per-reason assertions need rendered tests*
+- [x] Item registration order with groups/labels/separators interleaved (indices unaffected).
+- [x] Highlight movement: wrap vs clamp, Home/End, disabled-item highlight with activation no-op.
+- [x] Typeahead: label matching, explicit label override, disabled skipping, repeated-character cycling, reset timeout, Space suppression while typing.
+- [ ] Checkbox controlled/uncontrolled toggle and cancellation; radio group value selection, group disabled, cancellation. — *deferred/partial: toggle/selection covered; cancellation lives in wiring closures (needs rendered tests)*
+- [ ] Submenu tree: parent close cascades to descendants; sibling-open closes other branches; parent item-hover schedules/cancels delayed child close; Escape innermost-only vs `close_parent_on_esc`. — *deferred/partial: pure directives tested; cascade/Escape execution is context-level (needs rendered tests)*
+- [ ] Outside-press hit-test against multi-level open-tree bounds. — *deferred/partial: own-node union tested; multi-level link closures need a window*
+- [x] `prevent_unmount_on_close` one-cycle behavior.
+- [ ] Handle open/close with unknown trigger id (if handle implemented). — *deferred/partial: MenuHandle deferred (stretch)*
 
 Rendered tests under `crates/base_gpui/src/menu/tests/`:
 
@@ -491,14 +491,43 @@ Rendered tests under `crates/base_gpui/src/menu/tests/`:
 - [ ] Modal cutout keeps the trigger interactive; hover-opened menu skips modal/backdrop capture.
 - [ ] Keep-mounted portal behavior; positioner side/align/measurement style state; arrow side updates.
 - [ ] Separator/group/group-label render without corrupting navigation.
-- [ ] Demos render in `crates/base_gpui/src/main.rs` without panics.
+
+  *Rendered behavior tests under `menu/tests/` are not yet written (runtime tests + the gallery render smoke test cover the port so far); the unchecked rendered-test boxes above remain open.*
+- [x] Demos render in `crates/base_gpui/src/main.rs` without panics.
+
+## Port notes / documented deferrals (first pass, 2026-07-07)
+
+- **`MenuHandle<P>` / `create_menu_handle<P>()` (stretch)**: deferred. Menu currently
+  supports one wired trigger per root; the handle + detached triggers (and the
+  `trigger_id` activation semantics that depend on multiple triggers) follow the
+  Popover handle pattern in a follow-up. `.trigger_id(...)` / `.default_trigger_id(...)`
+  exist on `MenuRoot` for API parity but are inert until the handle lands.
+- **`MenuViewport<P>` (stretch)**: deferred together with detached triggers; the
+  `trigger-change` instant kind is likewise unreachable until then.
+- **Imperative `actionsRef` (`close`, `unmount`)**: deferred alongside the handle and
+  transition infrastructure.
+- **Drag-from-trigger release activation** (and the `CancelOpen` close reason it
+  produces): deferred; needs window-level mouseup tracking.
+- **Patient-click (`stick_if_open`)**: recorded in the runtime as a reserved seam,
+  behavior deferred with the Popover patient-click precedent.
+- **Safe polygon**: `MenuSubmenuTrigger` arms `primitives::safe_polygon` on unhover
+  (exit point, item bounds, child popup bounds, resolved side); the parent popup
+  evaluates it on mouse moves and maps verdicts onto the generation-counted child
+  close timers. Pointer travel outside any popup's element area is not observed yet
+  (window-scope mouse observation is a noted limitation); the unhover close is
+  therefore scheduled with `max(close_delay, 40ms)` as the armed grace.
+- **`final_focus`**: deferred, matching the Popover audit (documented on `MenuPopup`).
+- **Horizontal orientation**: `.orientation(...)` is stored/threaded; the arrow-key
+  axis flip is not implemented yet.
+- **Scroll locking / window-resize close**: follows the Popover approach (modal
+  backdrop swallows scroll; no explicit lock), same deferral.
 
 ## Follow-ups to track explicitly if not completed in the first port
 
 - [ ] Safe-polygon hover-intent primitive (`issues/add-gpui-safe-polygon-hover-primitive.md`) and swapping `MenuSubmenuTrigger` (and hover-enabled `MenuTrigger`) onto it.
 - [ ] `MenuHandle<P>` detached triggers + `MenuViewport<P>` trigger-change transitions (stretch scope above).
-- [ ] Context Menu issue: builds on `MenuParentKind::ContextMenu` (anchor-at-pointer, outside-press grace period, right-click gesture handling).
-- [ ] Menubar issue: builds on `MenuParentKind::Menubar` (composite root, keyboard relay seam, hover-across-triggers, `group` instant type).
+- [x] Context Menu issue: builds on `MenuParentKind::ContextMenu` (anchor-at-pointer, outside-press grace period, right-click gesture handling). — *Landed by `issues/port-baseui-context-menu.md`: cursor anchor + grace/initial-point facts live in `MenuRuntime`, positioner branches on the ContextMenu parent kind.*
+- [x] Menubar issue: builds on `MenuParentKind::Menubar` (composite root, keyboard relay seam, hover-across-triggers, `group` instant type).
 - [ ] Patient-click stickiness if deferred (shared decision with Popover).
 - [ ] Touch-specific open/close guards (`allowTouchToClose` equivalent) once GPUI exposes pointer-type metadata.
 - [ ] AccessKit menu/menuitem/menuitemcheckbox/menuitemradio/group roles and group-label relationships when the pinned GPUI revision supports them.

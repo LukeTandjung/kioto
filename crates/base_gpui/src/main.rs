@@ -2,33 +2,100 @@ use std::time::Duration;
 
 use base_gpui::{
     accordion::{AccordionHeader, AccordionItem, AccordionPanel, AccordionRoot, AccordionTrigger},
+    alert_dialog::{
+        AlertDialogBackdrop, AlertDialogClose, AlertDialogDescription, AlertDialogPopup,
+        AlertDialogPortal, AlertDialogRoot, AlertDialogTitle, AlertDialogTrigger,
+        AlertDialogViewport,
+    },
+    autocomplete::{
+        AutocompleteClear, AutocompleteEmpty, AutocompleteIcon, AutocompleteInput,
+        AutocompleteInputGroup, AutocompleteItem, AutocompleteList, AutocompleteMode,
+        AutocompletePopup, AutocompletePortal, AutocompletePositioner, AutocompleteRoot,
+        AutocompleteTrigger, AutocompleteValue,
+    },
+    avatar::{AvatarFallback, AvatarImage, AvatarRoot},
+    button::ButtonRoot,
     checkbox::{CheckboxIndicator, CheckboxRoot},
     checkbox_group::CheckboxGroup,
     collapsible::{CollapsiblePanel, CollapsibleRoot, CollapsibleTrigger},
+    combobox::{
+        ComboboxChips, ComboboxClear, ComboboxEmpty, ComboboxIcon, ComboboxInput,
+        ComboboxInputGroup, ComboboxItem, ComboboxItemIndicator, ComboboxLabel, ComboboxList,
+        ComboboxPopup, ComboboxPortal, ComboboxPositioner, ComboboxRoot, ComboboxTrigger,
+    },
+    context_menu::{
+        ContextMenuCheckboxItem, ContextMenuCheckboxItemIndicator, ContextMenuItem,
+        ContextMenuPortal, ContextMenuPositioner, ContextMenuRoot, ContextMenuSeparator,
+        ContextMenuSubmenuRoot, ContextMenuSubmenuTrigger, ContextMenuTrigger,
+    },
     dialog::{
         DialogBackdrop, DialogClose, DialogDescription, DialogPopup, DialogPortal, DialogRoot,
         DialogTitle, DialogTrigger, DialogViewport,
+    },
+    drawer::{
+        DrawerBackdrop, DrawerClose, DrawerContent, DrawerPopup, DrawerPortal, DrawerRoot,
+        DrawerSnapPoint, DrawerTitle, DrawerTrigger, DrawerViewport,
     },
     field::{FieldDescription, FieldError, FieldLabel, FieldRoot},
     fieldset::{FieldsetLegend, FieldsetRoot},
     form::Form,
     input::Input,
+    menu::{
+        MenuCheckboxItem, MenuCheckboxItemIndicator, MenuGroup, MenuGroupLabel, MenuItem,
+        MenuPopup, MenuPortal, MenuPositioner, MenuRadioGroup, MenuRadioItem,
+        MenuRadioItemIndicator, MenuRoot, MenuSeparator, MenuSubmenuRoot, MenuSubmenuTrigger,
+        MenuTrigger,
+    },
+    menubar::Menubar,
+    meter::{MeterIndicator, MeterLabel, MeterRoot, MeterTrack, MeterValue},
+    navigation_menu::{
+        NavigationMenuArrow, NavigationMenuContent, NavigationMenuIcon, NavigationMenuItem,
+        NavigationMenuLink, NavigationMenuList, NavigationMenuPopup, NavigationMenuPortal,
+        NavigationMenuPositioner, NavigationMenuRoot, NavigationMenuTrigger,
+        NavigationMenuViewport,
+    },
     number_field::{
         NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput,
         NumberFieldRoot,
     },
+    otp_field::{OTPFieldInput, OTPFieldRoot},
     popover::{
         PopoverArrow, PopoverClose, PopoverDescription, PopoverPopup, PopoverPortal,
         PopoverPositioner, PopoverRoot, PopoverTitle, PopoverTrigger,
     },
+    preview_card::{
+        create_preview_card_handle, PreviewCardPopup, PreviewCardPortal, PreviewCardPositioner,
+        PreviewCardRoot, PreviewCardTrigger, PreviewCardViewport,
+    },
+    primitives::{
+        scrollbar, scrollbar_vertical, ScrollbarAxis, ScrollbarStyle, ScrollbarVisibility,
+    },
+    progress::{ProgressIndicator, ProgressLabel, ProgressRoot, ProgressTrack, ProgressValue},
     radio_group::{RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot},
+    scroll_area::{
+        ScrollAreaContent, ScrollAreaCorner, ScrollAreaOrientation, ScrollAreaRoot,
+        ScrollAreaScrollbar, ScrollAreaScrollbarStyleState, ScrollAreaThumb, ScrollAreaViewport,
+    },
     select::{
         SelectIcon, SelectItem, SelectItemIndicator, SelectItemText, SelectList, SelectPopup,
         SelectPortal, SelectPositioner, SelectRoot, SelectSeparator, SelectTrigger, SelectValue,
     },
     separator::{Separator, SeparatorOrientation},
+    slider::{
+        SliderControl, SliderIndicator, SliderLabel, SliderRoot, SliderThumb, SliderTrack,
+        SliderValue, SliderValues,
+    },
     switch::{SwitchRoot, SwitchThumb},
     tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab},
+    toast::{
+        create_toast_manager, ToastClose, ToastDescription, ToastId, ToastManager, ToastOptions,
+        ToastPromiseOptions, ToastProvider, ToastRoot, ToastTitle, ToastViewport,
+    },
+    toggle::Toggle,
+    toggle_group::ToggleGroup,
+    toolbar::{
+        ToolbarButton, ToolbarGroup, ToolbarInput, ToolbarLink, ToolbarRoot, ToolbarSeparator,
+    },
     tooltip::{
         TooltipPopup, TooltipPortal, TooltipPositioner, TooltipProvider, TooltipRoot,
         TooltipTrigger, TooltipViewport,
@@ -36,12 +103,26 @@ use base_gpui::{
     utils::direction::{DirectionProvider, TextDirection},
 };
 use gpui::{
-    div, prelude::*, px, rgb, size, App, Bounds, Context, IntoElement, Render, Window,
-    WindowBounds, WindowOptions,
+    div, hsla, prelude::*, px, rgb, size, uniform_list, App, Bounds, Context, Div, IntoElement,
+    Render, ScrollHandle, UniformListScrollHandle, Window, WindowBounds, WindowOptions,
 };
 use gpui_platform::application;
 
-struct ComponentGallery;
+struct ComponentGallery {
+    scrollbar_vertical_handle: ScrollHandle,
+    scrollbar_both_handle: ScrollHandle,
+    scrollbar_list_handle: UniformListScrollHandle,
+}
+
+impl ComponentGallery {
+    fn new() -> Self {
+        Self {
+            scrollbar_vertical_handle: ScrollHandle::new(),
+            scrollbar_both_handle: ScrollHandle::new(),
+            scrollbar_list_handle: UniformListScrollHandle::new(),
+        }
+    }
+}
 
 impl Render for ComponentGallery {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
@@ -91,6 +172,26 @@ impl Render for ComponentGallery {
                                 switch_demo(),
                             ))
                             .child(component_card(
+                                "Button",
+                                "Plain pressable with disabled and focusable-when-disabled.",
+                                button_demo(),
+                            ))
+                            .child(component_card(
+                                "Toggle",
+                                "Two-state pressable button with pressed styling.",
+                                toggle_demo(),
+                            ))
+                            .child(component_card(
+                                "Toggle Group",
+                                "Grouped toggles with shared value and roving focus.",
+                                toggle_group_demo(),
+                            ))
+                            .child(component_card(
+                                "Toolbar",
+                                "Roving-focus toolbar with buttons, a group, a separator, a link, and an input.",
+                                toolbar_demo(),
+                            ))
+                            .child(component_card(
                                 "Collapsible",
                                 "Disclosure trigger with controlled panel presence.",
                                 collapsible_demo(),
@@ -126,6 +227,11 @@ impl Render for ComponentGallery {
                                 fieldset_demo(),
                             ))
                             .child(component_card(
+                                "Avatar",
+                                "Image loading status with initials fallback and show-delay.",
+                                avatar_demo(),
+                            ))
+                            .child(component_card(
                                 "Separator",
                                 "Shared horizontal and vertical visual dividers.",
                                 separator_demo(),
@@ -141,9 +247,64 @@ impl Render for ComponentGallery {
                                 popover_demo(),
                             ))
                             .child(component_card(
+                                "Menu",
+                                "Dropdown menu with items, separator, and a group.",
+                                menu_demo(),
+                            ))
+                            .child(component_card(
+                                "Menu (checkbox + radio)",
+                                "Checkbox items and a radio group with indicators.",
+                                menu_checkbox_radio_demo(),
+                            ))
+                            .child(component_card(
+                                "Menu (submenu)",
+                                "Nested submenu opened by hover or ArrowRight.",
+                                menu_submenu_demo(),
+                            ))
+                            .child(component_card(
+                                "Context Menu",
+                                "Right-click surface opening a menu at the cursor with items, a checkbox item, and a submenu.",
+                                context_menu_demo(),
+                            ))
+                            .child(component_card(
+                                "Menubar",
+                                "Horizontal menu row with roving focus, hover-switch, and a submenu.",
+                                menubar_demo(),
+                            ))
+                            .child(component_card(
                                 "Dialog",
                                 "Modal overlay with trigger, backdrop, popup, title, description, and close.",
                                 dialog_demo(),
+                            ))
+                            .child(component_card(
+                                "Drawer",
+                                "Swipeable bottom panel; drag the sheet downward to dismiss it.",
+                                drawer_demo(),
+                            ))
+                            .child(component_card(
+                                "Drawer Snap Points",
+                                "Bottom drawer that settles on 25%/50% viewport snap points on release.",
+                                drawer_snap_demo(),
+                            ))
+                            .child(component_card(
+                                "Alert Dialog",
+                                "Always-modal confirmation dialog; only Escape or an explicit action closes it.",
+                                alert_dialog_demo(),
+                            ))
+                            .child(component_card(
+                                "Toast",
+                                "Queued notifications: add/upsert/promise/close-all via the imperative manager; hover the stack to pause dismissal.",
+                                toast_demo(),
+                            ))
+                            .child(component_card(
+                                "Preview Card",
+                                "Hover-opened link preview with 600ms/300ms delays, payload triggers, and a detached handle.",
+                                preview_card_demo(),
+                            ))
+                            .child(component_card(
+                                "Navigation Menu",
+                                "Horizontal menu bar with a shared retargeting panel, hover intent, and a close-on-click link.",
+                                navigation_menu_demo(),
                             ))
                             .child(component_card(
                                 "Tooltip",
@@ -161,6 +322,31 @@ impl Render for ComponentGallery {
                                 multiple_select_demo(),
                             ))
                             .child(component_card(
+                                "Combobox",
+                                "Input-filtered listbox with clear, trigger, indicators, and empty state.",
+                                combobox_demo(),
+                            ))
+                            .child(component_card(
+                                "Multiple Combobox",
+                                "Multi-select combobox with removable chips and chip keyboard navigation.",
+                                multiple_combobox_demo(),
+                            ))
+                            .child(component_card(
+                                "Field + Combobox",
+                                "Required Field registration with a serialized Combobox value.",
+                                field_combobox_demo(),
+                            ))
+                            .child(component_card(
+                                "Autocomplete",
+                                "Text input with a filtered suggestion list (mode: List).",
+                                autocomplete_demo(),
+                            ))
+                            .child(component_card(
+                                "Autocomplete (inline)",
+                                "Keyboard highlight inline-autocompletes the input (mode: Both).",
+                                autocomplete_both_demo(),
+                            ))
+                            .child(component_card(
                                 "Number Field",
                                 "Text editing, stepping, min/max, and formatted numeric value.",
                                 number_field_demo(),
@@ -169,6 +355,11 @@ impl Render for ComponentGallery {
                                 "Field + Number Field",
                                 "Required Field validation with a numeric control.",
                                 field_number_field_demo(),
+                            ))
+                            .child(component_card(
+                                "Field + OTP Field",
+                                "Six-slot one-time code with separator and required validation.",
+                                field_otp_field_demo(),
                             ))
                             .child(component_card(
                                 "Radio Group LTR",
@@ -189,10 +380,304 @@ impl Render for ComponentGallery {
                                 "Checkbox Group",
                                 "Shared selected values, parent state, and disabled propagation.",
                                 checkbox_group_demo(),
+                            ))
+                            .child(component_card(
+                                "Slider",
+                                "Single-value pointer and keyboard driven slider.",
+                                slider_demo(),
+                            ))
+                            .child(component_card(
+                                "Range Slider",
+                                "Two-thumb range slider with push collision behavior.",
+                                range_slider_demo(),
+                            ))
+                            .child(component_card(
+                                "Field + Slider",
+                                "Field label, registered slider control, and error slot.",
+                                field_slider_demo(),
+                            ))
+                            .child(component_card(
+                                "Progress",
+                                "Determinate task-completion display with label and value.",
+                                progress_demo(),
+                            ))
+                            .child(component_card(
+                                "Indeterminate Progress",
+                                "Unknown-duration progress exposed as status-only state.",
+                                indeterminate_progress_demo(),
+                            ))
+                            .child(component_card(
+                                "Meter",
+                                "Graphical display of a value within a known range.",
+                                meter_demo(),
+                            ))
+                            .child(component_card(
+                                "Scrollbar (vertical)",
+                                "Overlay scrollbar primitive over a tracked ScrollHandle.",
+                                scrollbar_vertical_demo(&self.scrollbar_vertical_handle),
+                            ))
+                            .child(component_card(
+                                "Scrollbar (both axes)",
+                                "Both tracks plus the corner over an overflow_scroll container.",
+                                scrollbar_both_axes_demo(&self.scrollbar_both_handle),
+                            ))
+                            .child(component_card(
+                                "Scrollbar (uniform list)",
+                                "Scrollbar over a virtualized uniform_list scroll handle.",
+                                scrollbar_uniform_list_demo(&self.scrollbar_list_handle),
+                            ))
+                            .child(component_card(
+                                "Scroll Area",
+                                "Compound scroll container with hover/scroll-styled scrollbars.",
+                                scroll_area_demo(),
                             )),
                     ),
             )
     }
+}
+
+fn slider_body(thumb_count: usize) -> SliderControl {
+    let mut control = SliderControl::new().w_full().h(px(20.0)).child(
+        SliderTrack::new()
+            .absolute()
+            .top(px(8.0))
+            .left(px(0.0))
+            .right(px(0.0))
+            .h(px(4.0))
+            .rounded_full()
+            .bg(rgb(0xd1d5db))
+            .child(
+                SliderIndicator::new()
+                    .h(px(4.0))
+                    .rounded_full()
+                    .bg(rgb(0x2563eb)),
+            ),
+    );
+    for _ in 0..thumb_count {
+        control = control.child(
+            SliderThumb::new()
+                .top(px(4.0))
+                .w(px(12.0))
+                .h(px(12.0))
+                .rounded_full()
+                .bg(rgb(0xffffff))
+                .border_2()
+                .border_color(rgb(0x2563eb))
+                .style_with_state(|state, thumb| {
+                    if state.focused {
+                        thumb.border_color(rgb(0x1d4ed8)).shadow_md()
+                    } else {
+                        thumb
+                    }
+                }),
+        );
+    }
+    control
+}
+
+fn slider_demo() -> impl IntoElement {
+    SliderRoot::new()
+        .id("example-slider")
+        .default_value(SliderValues::Single(40.0))
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            SliderLabel::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("Volume"),
+        )
+        .child(
+            SliderValue::new()
+                .text_size(px(12.0))
+                .text_color(rgb(0x6b7280)),
+        )
+        .child(slider_body(1))
+}
+
+fn range_slider_demo() -> impl IntoElement {
+    SliderRoot::new()
+        .id("example-range-slider")
+        .default_value(SliderValues::Range(Vec::from([20.0, 80.0])))
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            SliderValue::new()
+                .text_size(px(12.0))
+                .text_color(rgb(0x6b7280)),
+        )
+        .child(slider_body(2))
+}
+
+fn progress_demo() -> impl IntoElement {
+    ProgressRoot::new()
+        .id("example-progress")
+        .value(Some(65.0))
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            ProgressLabel::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("Export data"),
+        )
+        .child(
+            ProgressValue::new()
+                .text_size(px(12.0))
+                .text_color(rgb(0x6b7280)),
+        )
+        .child(
+            ProgressTrack::new()
+                .w_full()
+                .h(px(4.0))
+                .rounded_full()
+                .bg(rgb(0xd1d5db))
+                .child(
+                    ProgressIndicator::new()
+                        .h(px(4.0))
+                        .rounded_full()
+                        .bg(rgb(0x2563eb)),
+                ),
+        )
+}
+
+fn meter_demo() -> impl IntoElement {
+    MeterRoot::new()
+        .id("example-meter")
+        .value(24.0)
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            MeterLabel::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("Battery level"),
+        )
+        .child(
+            MeterValue::new()
+                .text_size(px(12.0))
+                .text_color(rgb(0x6b7280)),
+        )
+        .child(
+            MeterTrack::new()
+                .w_full()
+                .h(px(4.0))
+                .rounded_full()
+                .bg(rgb(0xd1d5db))
+                .child(
+                    MeterIndicator::new()
+                        .h(px(4.0))
+                        .rounded_full()
+                        .bg(rgb(0x2563eb)),
+                ),
+        )
+}
+
+fn indeterminate_progress_demo() -> impl IntoElement {
+    ProgressRoot::new()
+        .id("example-indeterminate-progress")
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            ProgressLabel::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("Preparing download\u{2026}"),
+        )
+        .child(
+            ProgressTrack::new()
+                .w_full()
+                .h(px(4.0))
+                .rounded_full()
+                .bg(rgb(0xd1d5db))
+                .child(
+                    ProgressIndicator::new()
+                        .h(px(4.0))
+                        .rounded_full()
+                        .style_with_state(|_state, indicator| {
+                            // Status-only indeterminate treatment: style it here.
+                            indicator.w(gpui::relative(0.25)).bg(rgb(0x93c5fd))
+                        }),
+                ),
+        )
+}
+
+fn field_slider_demo() -> impl IntoElement {
+    FieldRoot::new()
+        .id("example-slider-field")
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            FieldLabel::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("Brightness"),
+        )
+        .child(
+            SliderRoot::new()
+                .id("example-field-slider")
+                .name("brightness")
+                .default_value(SliderValues::Single(60.0))
+                .child(slider_body(1)),
+        )
+        .child(
+            FieldError::new()
+                .text_color(rgb(0xdc2626))
+                .text_size(px(12.0)),
+        )
+}
+
+fn avatar_demo() -> impl IntoElement {
+    let avatar_shell = |id: &'static str| {
+        AvatarRoot::new()
+            .id(id)
+            .flex()
+            .items_center()
+            .justify_center()
+            .w(px(40.0))
+            .h(px(40.0))
+            .rounded_full()
+            .overflow_hidden()
+            .bg(rgb(0xe5e7eb))
+            .text_size(px(13.0))
+            .text_color(rgb(0x111827))
+    };
+
+    div()
+        .flex()
+        .gap_3()
+        .items_center()
+        .child(
+            avatar_shell("avatar-demo-image")
+                .child(
+                    AvatarImage::new(
+                        "https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?w=128&h=128",
+                    )
+                    .w(px(40.0))
+                    .h(px(40.0)),
+                )
+                .child(AvatarFallback::new().child("LT")),
+        )
+        .child(
+            avatar_shell("avatar-demo-broken")
+                .child(AvatarImage::new("").w(px(40.0)).h(px(40.0)))
+                .child(AvatarFallback::new().child("LT")),
+        )
+        .child(
+            avatar_shell("avatar-demo-delay")
+                .child(AvatarImage::new("").w(px(40.0)).h(px(40.0)))
+                .child(
+                    AvatarFallback::new()
+                        .delay(Duration::from_millis(600))
+                        .child("LT"),
+                ),
+        )
 }
 
 fn component_card(
@@ -269,6 +754,473 @@ fn separator_demo() -> impl IntoElement {
                 .child("Log in")
                 .child("Sign up"),
         )
+}
+
+fn menu_item_style(highlighted: bool, item: gpui::Div) -> gpui::Div {
+    let item = item
+        .px_3()
+        .py_1p5()
+        .rounded_sm()
+        .text_size(px(13.0))
+        .text_color(rgb(0x111827));
+    if highlighted {
+        item.bg(rgb(0xe5e7eb))
+    } else {
+        item
+    }
+}
+
+fn menu_trigger_button(label: &'static str) -> MenuTrigger<()> {
+    MenuTrigger::<()>::new()
+        .id(label)
+        .px_3()
+        .py_2()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0x9ca3af))
+        .bg(rgb(0xffffff))
+        .text_size(px(13.0))
+        .text_color(rgb(0x111827))
+        .child(label)
+}
+
+fn menu_popup_frame() -> MenuPopup<()> {
+    MenuPopup::<()>::new()
+        .w(px(200.0))
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .bg(rgb(0xffffff))
+        .shadow_lg()
+        .p_1()
+        .flex()
+        .flex_col()
+}
+
+fn menu_demo() -> impl IntoElement {
+    MenuRoot::<()>::new()
+        .id("gallery-menu")
+        .modal(false)
+        .child(menu_trigger_button("Open menu"))
+        .child(
+            MenuPortal::<()>::new().child(
+                MenuPositioner::<()>::new().side_offset(px(6.0)).child(
+                    menu_popup_frame()
+                        .child(
+                            MenuItem::<()>::new()
+                                .id("new-file")
+                                .label("New file")
+                                .style_with_state(|state, item| {
+                                    menu_item_style(state.highlighted, item)
+                                })
+                                .child("New file"),
+                        )
+                        .child(
+                            MenuItem::<()>::new()
+                                .id("open-file")
+                                .label("Open file")
+                                .style_with_state(|state, item| {
+                                    menu_item_style(state.highlighted, item)
+                                })
+                                .child("Open file"),
+                        )
+                        .child(MenuSeparator::new().h(px(1.0)).my_1().bg(rgb(0xe5e7eb)))
+                        .child(
+                            MenuGroup::<()>::new()
+                                .child(
+                                    MenuGroupLabel::<()>::new()
+                                        .label("Danger")
+                                        .px_3()
+                                        .py_1()
+                                        .text_size(px(11.0))
+                                        .text_color(rgb(0x6b7280))
+                                        .child("Danger"),
+                                )
+                                .child(
+                                    MenuItem::<()>::new()
+                                        .id("delete")
+                                        .label("Delete")
+                                        .style_with_state(|state, item| {
+                                            menu_item_style(state.highlighted, item)
+                                        })
+                                        .child("Delete"),
+                                ),
+                        ),
+                ),
+            ),
+        )
+}
+
+fn menu_checkbox_radio_demo() -> impl IntoElement {
+    MenuRoot::<()>::new()
+        .id("gallery-menu-check-radio")
+        .modal(false)
+        .child(menu_trigger_button("View options"))
+        .child(
+            MenuPortal::<()>::new().child(
+                MenuPositioner::<()>::new().side_offset(px(6.0)).child(
+                    menu_popup_frame()
+                        .child(
+                            MenuCheckboxItem::<()>::new()
+                                .id("show-toolbar")
+                                .label("Show toolbar")
+                                .default_checked(true)
+                                .style_with_state(|state, item| {
+                                    menu_item_style(state.highlighted, item)
+                                        .flex()
+                                        .flex_row()
+                                        .items_center()
+                                        .gap_2()
+                                })
+                                .child(
+                                    MenuCheckboxItemIndicator::<()>::new()
+                                        .w(px(8.0))
+                                        .h(px(8.0))
+                                        .rounded_full()
+                                        .bg(rgb(0x2563eb)),
+                                )
+                                .child_any("Show toolbar"),
+                        )
+                        .child(MenuSeparator::new().h(px(1.0)).my_1().bg(rgb(0xe5e7eb)))
+                        .child(
+                            MenuRadioGroup::<(), &'static str>::new()
+                                .default_value(Some("list"))
+                                .child(
+                                    MenuRadioItem::<(), &'static str>::new()
+                                        .id("view-list")
+                                        .value("list")
+                                        .label("List view")
+                                        .style_with_state(|state, item| {
+                                            menu_item_style(state.highlighted, item)
+                                                .flex()
+                                                .flex_row()
+                                                .items_center()
+                                                .gap_2()
+                                        })
+                                        .child(
+                                            MenuRadioItemIndicator::<(), &'static str>::new()
+                                                .w(px(8.0))
+                                                .h(px(8.0))
+                                                .rounded_full()
+                                                .bg(rgb(0x16a34a)),
+                                        )
+                                        .child_any("List view"),
+                                )
+                                .child(
+                                    MenuRadioItem::<(), &'static str>::new()
+                                        .id("view-grid")
+                                        .value("grid")
+                                        .label("Grid view")
+                                        .style_with_state(|state, item| {
+                                            menu_item_style(state.highlighted, item)
+                                                .flex()
+                                                .flex_row()
+                                                .items_center()
+                                                .gap_2()
+                                        })
+                                        .child(
+                                            MenuRadioItemIndicator::<(), &'static str>::new()
+                                                .w(px(8.0))
+                                                .h(px(8.0))
+                                                .rounded_full()
+                                                .bg(rgb(0x16a34a)),
+                                        )
+                                        .child_any("Grid view"),
+                                ),
+                        ),
+                ),
+            ),
+        )
+}
+
+fn menu_submenu_demo() -> impl IntoElement {
+    MenuRoot::<()>::new()
+        .id("gallery-menu-submenu")
+        .modal(false)
+        .child(menu_trigger_button("Share"))
+        .child(
+            MenuPortal::<()>::new().child(
+                MenuPositioner::<()>::new().side_offset(px(6.0)).child(
+                    menu_popup_frame()
+                        .child(
+                            MenuItem::<()>::new()
+                                .id("copy-link")
+                                .label("Copy link")
+                                .style_with_state(|state, item| {
+                                    menu_item_style(state.highlighted, item)
+                                })
+                                .child("Copy link"),
+                        )
+                        .child(
+                            MenuSubmenuRoot::<()>::new()
+                                .id("share-submenu")
+                                .child(
+                                    MenuSubmenuTrigger::<()>::new()
+                                        .id("share-with")
+                                        .label("Share with")
+                                        .style_with_state(|state, item| {
+                                            menu_item_style(state.highlighted || state.open, item)
+                                        })
+                                        .child("Share with \u{2192}"),
+                                )
+                                .child(
+                                    MenuPortal::<()>::new().child(
+                                        MenuPositioner::<()>::new().side_offset(px(2.0)).child(
+                                            menu_popup_frame()
+                                                .child(
+                                                    MenuItem::<()>::new()
+                                                        .id("share-email")
+                                                        .label("Email")
+                                                        .style_with_state(|state, item| {
+                                                            menu_item_style(state.highlighted, item)
+                                                        })
+                                                        .child("Email"),
+                                                )
+                                                .child(
+                                                    MenuItem::<()>::new()
+                                                        .id("share-message")
+                                                        .label("Message")
+                                                        .style_with_state(|state, item| {
+                                                            menu_item_style(state.highlighted, item)
+                                                        })
+                                                        .child("Message"),
+                                                ),
+                                        ),
+                                    ),
+                                ),
+                        ),
+                ),
+            ),
+        )
+}
+
+fn context_menu_demo() -> impl IntoElement {
+    ContextMenuRoot::<()>::new()
+        .id("gallery-context-menu")
+        .child(
+            ContextMenuTrigger::<()>::new()
+                .id("gallery-context-menu-trigger")
+                .px_8()
+                .py_6()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0x9ca3af))
+                .bg(rgb(0xf9fafb))
+                .text_size(px(13.0))
+                .text_color(rgb(0x6b7280))
+                .style_with_state(|state, area| match state.open {
+                    true => area.border_color(rgb(0x2563eb)),
+                    false => area,
+                })
+                .child_any("Right-click here"),
+        )
+        .child(
+            ContextMenuPortal::<()>::new().child(
+                ContextMenuPositioner::<()>::new().child(
+                    menu_popup_frame()
+                        .child(
+                            ContextMenuItem::<()>::new()
+                                .id("ctx-cut")
+                                .label("Cut")
+                                .style_with_state(|state, item| {
+                                    menu_item_style(state.highlighted, item)
+                                })
+                                .child("Cut"),
+                        )
+                        .child(
+                            ContextMenuItem::<()>::new()
+                                .id("ctx-copy")
+                                .label("Copy")
+                                .style_with_state(|state, item| {
+                                    menu_item_style(state.highlighted, item)
+                                })
+                                .child("Copy"),
+                        )
+                        .child(
+                            ContextMenuSeparator::new()
+                                .h(px(1.0))
+                                .my_1()
+                                .bg(rgb(0xe5e7eb)),
+                        )
+                        .child(
+                            ContextMenuCheckboxItem::<()>::new()
+                                .id("ctx-word-wrap")
+                                .label("Word wrap")
+                                .default_checked(true)
+                                .style_with_state(|state, item| {
+                                    menu_item_style(state.highlighted, item)
+                                        .flex()
+                                        .flex_row()
+                                        .items_center()
+                                        .gap_2()
+                                })
+                                .child(
+                                    ContextMenuCheckboxItemIndicator::<()>::new()
+                                        .w(px(8.0))
+                                        .h(px(8.0))
+                                        .rounded_full()
+                                        .bg(rgb(0x2563eb)),
+                                )
+                                .child_any("Word wrap"),
+                        )
+                        .child(
+                            ContextMenuSubmenuRoot::<()>::new()
+                                .id("ctx-share-submenu")
+                                .child(
+                                    ContextMenuSubmenuTrigger::<()>::new()
+                                        .id("ctx-share-with")
+                                        .label("Share with")
+                                        .style_with_state(|state, item| {
+                                            menu_item_style(state.highlighted || state.open, item)
+                                        })
+                                        .child("Share with \u{2192}"),
+                                )
+                                .child(
+                                    ContextMenuPortal::<()>::new().child(
+                                        ContextMenuPositioner::<()>::new()
+                                            .side_offset(px(2.0))
+                                            .child(
+                                                menu_popup_frame()
+                                                    .child(
+                                                        ContextMenuItem::<()>::new()
+                                                            .id("ctx-share-email")
+                                                            .label("Email")
+                                                            .style_with_state(|state, item| {
+                                                                menu_item_style(
+                                                                    state.highlighted,
+                                                                    item,
+                                                                )
+                                                            })
+                                                            .child("Email"),
+                                                    )
+                                                    .child(
+                                                        ContextMenuItem::<()>::new()
+                                                            .id("ctx-share-message")
+                                                            .label("Message")
+                                                            .style_with_state(|state, item| {
+                                                                menu_item_style(
+                                                                    state.highlighted,
+                                                                    item,
+                                                                )
+                                                            })
+                                                            .child("Message"),
+                                                    ),
+                                            ),
+                                    ),
+                                ),
+                        ),
+                ),
+            ),
+        )
+}
+
+fn menubar_menu(
+    id: &'static str,
+    label: &'static str,
+    items: Vec<(&'static str, &'static str)>,
+) -> MenuRoot<()> {
+    let mut popup = menu_popup_frame();
+    for (item_id, item_label) in items {
+        popup = popup.child(
+            MenuItem::<()>::new()
+                .id(item_id)
+                .label(item_label)
+                .style_with_state(|state, item| menu_item_style(state.highlighted, item))
+                .child(item_label),
+        );
+    }
+    MenuRoot::<()>::new()
+        .id(id)
+        .child(menu_trigger_button(label))
+        .child(
+            MenuPortal::<()>::new().child(
+                MenuPositioner::<()>::new()
+                    .side_offset(px(4.0))
+                    .child(popup),
+            ),
+        )
+}
+
+fn menubar_demo() -> impl IntoElement {
+    Menubar::new()
+        .id("gallery-menubar")
+        .modal(false)
+        .flex()
+        .flex_row()
+        .gap_1()
+        .p_1()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .bg(rgb(0xf9fafb))
+        .child(menubar_menu(
+            "menubar-file",
+            "File",
+            vec![("mb-new", "New"), ("mb-open", "Open"), ("mb-save", "Save")],
+        ))
+        .child(
+            MenuRoot::<()>::new()
+                .id("menubar-edit")
+                .child(menu_trigger_button("Edit"))
+                .child(
+                    MenuPortal::<()>::new().child(
+                        MenuPositioner::<()>::new().side_offset(px(4.0)).child(
+                            menu_popup_frame()
+                                .child(
+                                    MenuItem::<()>::new()
+                                        .id("mb-undo")
+                                        .label("Undo")
+                                        .style_with_state(|state, item| {
+                                            menu_item_style(state.highlighted, item)
+                                        })
+                                        .child("Undo"),
+                                )
+                                .child(
+                                    MenuSubmenuRoot::<()>::new()
+                                        .id("menubar-find")
+                                        .child(
+                                            MenuSubmenuTrigger::<()>::new()
+                                                .id("mb-find")
+                                                .label("Find")
+                                                .style_with_state(|state, item| {
+                                                    menu_item_style(
+                                                        state.highlighted || state.open,
+                                                        item,
+                                                    )
+                                                })
+                                                .child("Find \u{2192}"),
+                                        )
+                                        .child(
+                                            MenuPortal::<()>::new().child(
+                                                MenuPositioner::<()>::new()
+                                                    .side_offset(px(2.0))
+                                                    .child(
+                                                        menu_popup_frame().child(
+                                                            MenuItem::<()>::new()
+                                                                .id("mb-find-next")
+                                                                .label("Find next")
+                                                                .style_with_state(|state, item| {
+                                                                    menu_item_style(
+                                                                        state.highlighted,
+                                                                        item,
+                                                                    )
+                                                                })
+                                                                .child("Find next"),
+                                                        ),
+                                                    ),
+                                            ),
+                                        ),
+                                ),
+                        ),
+                    ),
+                ),
+        )
+        .child(menubar_menu(
+            "menubar-view",
+            "View",
+            vec![("mb-zoom-in", "Zoom in"), ("mb-zoom-out", "Zoom out")],
+        ))
+        .child(menubar_menu("menubar-help", "Help", vec![("mb-about", "About")]).disabled(true))
 }
 
 fn popover_demo() -> impl IntoElement {
@@ -436,6 +1388,460 @@ fn dialog_demo() -> impl IntoElement {
                                 ),
                         ),
                 ),
+        )
+}
+
+fn drawer_demo() -> impl IntoElement {
+    DrawerRoot::<()>::new()
+        .id("gallery-drawer")
+        .flex()
+        .items_center()
+        .gap_2()
+        .child(
+            DrawerTrigger::<()>::new()
+                .id("open")
+                .px_3()
+                .py_2()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0x9ca3af))
+                .bg(rgb(0xffffff))
+                .text_size(px(13.0))
+                .text_color(rgb(0x111827))
+                .child("Open drawer"),
+        )
+        .child(
+            DrawerPortal::<()>::new()
+                .child(DrawerBackdrop::<()>::new().style_with_state(|state, backdrop| {
+                    backdrop
+                        .absolute()
+                        .top_0()
+                        .left_0()
+                        .w_full()
+                        .h_full()
+                        .bg(rgb(0x111827))
+                        .opacity(0.35 * (1.0 - state.swipe_progress))
+                }))
+                .child(
+                    DrawerViewport::<()>::new()
+                        .id("gallery-drawer-viewport")
+                        .absolute()
+                        .top_0()
+                        .left_0()
+                        .w_full()
+                        .h_full()
+                        .flex()
+                        .flex_col()
+                        .justify_end()
+                        .child(
+                            DrawerPopup::<()>::new()
+                                .style_with_state(|state, popup| {
+                                    popup.mt(state.swipe_movement.y.max(px(0.0)))
+                                })
+                                .w_full()
+                                .rounded_t_lg()
+                                .border_1()
+                                .border_color(rgb(0xd1d5db))
+                                .bg(rgb(0xffffff))
+                                .shadow_lg()
+                                .p_4()
+                                .flex()
+                                .flex_col()
+                                .gap_2()
+                                .child(
+                                    DrawerTitle::<()>::new()
+                                        .text_size(px(15.0))
+                                        .text_color(rgb(0x111827))
+                                        .child("Drawer title"),
+                                )
+                                .child(
+                                    DrawerContent::<()>::new()
+                                        .text_size(px(12.0))
+                                        .text_color(rgb(0x6b7280))
+                                        .child("Drag anywhere outside this content to swipe the drawer down and dismiss it."),
+                                )
+                                .child(
+                                    DrawerClose::<()>::new()
+                                        .self_start()
+                                        .mt_2()
+                                        .px_2()
+                                        .py_1()
+                                        .rounded_sm()
+                                        .bg(rgb(0xe5e7eb))
+                                        .text_size(px(12.0))
+                                        .text_color(rgb(0x111827))
+                                        .child("Close"),
+                                ),
+                        ),
+                ),
+        )
+}
+
+fn drawer_snap_demo() -> impl IntoElement {
+    DrawerRoot::<()>::new()
+        .id("gallery-drawer-snap")
+        .snap_points(vec![
+            DrawerSnapPoint::Fraction(0.25),
+            DrawerSnapPoint::Fraction(0.5),
+        ])
+        .flex()
+        .items_center()
+        .gap_2()
+        .child(
+            DrawerTrigger::<()>::new()
+                .id("open")
+                .px_3()
+                .py_2()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0x9ca3af))
+                .bg(rgb(0xffffff))
+                .text_size(px(13.0))
+                .text_color(rgb(0x111827))
+                .child("Open snap drawer"),
+        )
+        .child(
+            DrawerPortal::<()>::new()
+                .child(DrawerBackdrop::<()>::new().style_with_state(|state, backdrop| {
+                    backdrop
+                        .absolute()
+                        .top_0()
+                        .left_0()
+                        .w_full()
+                        .h_full()
+                        .bg(rgb(0x111827))
+                        .opacity(0.35 * (1.0 - state.swipe_progress))
+                }))
+                .child(
+                    DrawerViewport::<()>::new()
+                        .id("gallery-drawer-snap-viewport")
+                        .absolute()
+                        .top_0()
+                        .left_0()
+                        .w_full()
+                        .h_full()
+                        .flex()
+                        .flex_col()
+                        .justify_end()
+                        .child(
+                            DrawerPopup::<()>::new()
+                                .style_with_state(|state, popup| {
+                                    let offset = state.snap_point_offset
+                                        + state.swipe_movement.y.max(px(0.0));
+                                    popup.mt(offset.max(px(0.0)))
+                                })
+                                .w_full()
+                                .h_full()
+                                .rounded_t_lg()
+                                .border_1()
+                                .border_color(rgb(0xd1d5db))
+                                .bg(rgb(0xffffff))
+                                .shadow_lg()
+                                .p_4()
+                                .flex()
+                                .flex_col()
+                                .gap_2()
+                                .child(
+                                    DrawerTitle::<()>::new()
+                                        .text_size(px(15.0))
+                                        .text_color(rgb(0x111827))
+                                        .child("Snap-point drawer"),
+                                )
+                                .child(
+                                    DrawerContent::<()>::new()
+                                        .text_size(px(12.0))
+                                        .text_color(rgb(0x6b7280))
+                                        .child("Release the drag near a snap point to settle there; drag far down to close."),
+                                ),
+                        ),
+                ),
+        )
+}
+
+fn alert_dialog_demo() -> impl IntoElement {
+    AlertDialogRoot::<()>::new()
+        .id("gallery-alert-dialog")
+        .flex()
+        .items_center()
+        .gap_2()
+        .child(
+            AlertDialogTrigger::<()>::new()
+                .id("open")
+                .px_3()
+                .py_2()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0x9ca3af))
+                .bg(rgb(0xffffff))
+                .text_size(px(13.0))
+                .text_color(rgb(0x111827))
+                .child("Discard draft…"),
+        )
+        .child(
+            AlertDialogPortal::<()>::new()
+                .child(
+                    AlertDialogBackdrop::<()>::new().style_with_state(|_, backdrop| {
+                        backdrop
+                            .absolute()
+                            .top_0()
+                            .left_0()
+                            .w_full()
+                            .h_full()
+                            .bg(rgb(0x111827))
+                            .opacity(0.35)
+                    }),
+                )
+                .child(
+                    AlertDialogViewport::<()>::new()
+                        .absolute()
+                        .top_0()
+                        .left_0()
+                        .w_full()
+                        .h_full()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .child(
+                            AlertDialogPopup::<()>::new()
+                                .w(px(280.0))
+                                .rounded_lg()
+                                .border_1()
+                                .border_color(rgb(0xd1d5db))
+                                .bg(rgb(0xffffff))
+                                .shadow_lg()
+                                .p_4()
+                                .flex()
+                                .flex_col()
+                                .gap_2()
+                                .child(
+                                    AlertDialogTitle::<()>::new()
+                                        .text_size(px(15.0))
+                                        .text_color(rgb(0x111827))
+                                        .child("Discard draft?"),
+                                )
+                                .child(
+                                    AlertDialogDescription::<()>::new()
+                                        .text_size(px(12.0))
+                                        .text_color(rgb(0x6b7280))
+                                        .child("This cannot be undone. Clicking outside will not dismiss this dialog."),
+                                )
+                                .child(
+                                    AlertDialogClose::<()>::new()
+                                        .self_start()
+                                        .mt_2()
+                                        .px_2()
+                                        .py_1()
+                                        .rounded_sm()
+                                        .bg(rgb(0xdc2626))
+                                        .text_size(px(12.0))
+                                        .text_color(rgb(0xffffff))
+                                        .child("Discard"),
+                                )
+                                .child(
+                                    AlertDialogClose::<()>::new()
+                                        .self_start()
+                                        .px_2()
+                                        .py_1()
+                                        .rounded_sm()
+                                        .bg(rgb(0xe5e7eb))
+                                        .text_size(px(12.0))
+                                        .text_color(rgb(0x111827))
+                                        .child("Cancel"),
+                                ),
+                        ),
+                ),
+        )
+}
+
+fn preview_card_demo() -> impl IntoElement {
+    let handle = create_preview_card_handle::<&'static str>();
+    let handle_for_trigger = handle.clone();
+
+    div()
+        .flex()
+        .flex_col()
+        .gap_3()
+        .child(
+            // Basic: single trigger, starts closed, opens on hover/focus.
+            PreviewCardRoot::<&'static str>::new()
+                .id("gallery-preview-card-basic")
+                .flex()
+                .gap_2()
+                .child(
+                    preview_card_gallery_trigger("gallery-preview-card-basic-trigger", "@base_ui")
+                        .payload(
+                            "Base UI: unstyled UI components for building accessible web apps.",
+                        ),
+                )
+                .child(preview_card_gallery_popup()),
+        )
+        .child(
+            // Payload/multi-trigger: two triggers share one card and swap payloads.
+            PreviewCardRoot::<&'static str>::new()
+                .id("gallery-preview-card-multi")
+                .flex()
+                .gap_2()
+                .child(
+                    preview_card_gallery_trigger("gallery-preview-card-multi-one", "Alice")
+                        .payload("Alice — maintains the design system."),
+                )
+                .child(
+                    preview_card_gallery_trigger("gallery-preview-card-multi-two", "Bob")
+                        .payload("Bob — works on the rendering engine."),
+                )
+                .child(preview_card_gallery_popup()),
+        )
+        .child(
+            // Detached handle: the trigger lives outside the root.
+            div()
+                .flex()
+                .gap_2()
+                .child(
+                    PreviewCardTrigger::<&'static str>::new()
+                        .id("gallery-preview-card-detached-trigger")
+                        .handle(handle_for_trigger)
+                        .payload("Detached trigger connected through a handle.")
+                        .px_3()
+                        .py_2()
+                        .rounded_md()
+                        .border_1()
+                        .border_color(rgb(0x9ca3af))
+                        .bg(rgb(0xffffff))
+                        .text_size(px(13.0))
+                        .text_color(rgb(0x111827))
+                        .child("Detached"),
+                )
+                .child(
+                    PreviewCardRoot::<&'static str>::new()
+                        .id("gallery-preview-card-detached")
+                        .handle(handle)
+                        .child(preview_card_gallery_popup()),
+                ),
+        )
+}
+
+fn preview_card_gallery_trigger(
+    id: &'static str,
+    label: &'static str,
+) -> PreviewCardTrigger<&'static str> {
+    PreviewCardTrigger::<&'static str>::new()
+        .id(id)
+        .px_3()
+        .py_2()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0x9ca3af))
+        .bg(rgb(0xffffff))
+        .text_size(px(13.0))
+        .text_color(rgb(0x1d4ed8))
+        .child(label)
+}
+
+fn preview_card_gallery_popup() -> PreviewCardPortal<&'static str> {
+    PreviewCardPortal::<&'static str>::new().child(
+        PreviewCardPositioner::<&'static str>::new().child(
+            PreviewCardPopup::<&'static str>::new()
+                .rounded_md()
+                .bg(rgb(0xffffff))
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .text_color(rgb(0x111827))
+                .text_size(px(12.0))
+                .py_2()
+                .px_3()
+                .w(px(240.0))
+                .shadow_lg()
+                .child(PreviewCardViewport::<&'static str>::new().payload_content(
+                    |payload, _window, _cx| {
+                        div()
+                            .child(payload.copied().unwrap_or("Hover a link to preview it."))
+                            .into_any_element()
+                    },
+                )),
+        ),
+    )
+}
+
+fn navigation_menu_demo() -> impl IntoElement {
+    NavigationMenuRoot::<&'static str>::new()
+        .id("gallery-navigation-menu")
+        .child(
+            NavigationMenuList::<&'static str>::new()
+                .flex()
+                .gap_2()
+                .child(navigation_menu_gallery_item(
+                    "overview",
+                    "Overview",
+                    "Product overview: a short panel.",
+                    160.0,
+                ))
+                .child(navigation_menu_gallery_item(
+                    "docs",
+                    "Docs",
+                    "Documentation: a wider panel with more room for links and summaries.",
+                    260.0,
+                ))
+                .child(
+                    NavigationMenuLink::<&'static str>::new()
+                        .active(true)
+                        .close_on_click(true)
+                        .px_3()
+                        .py_2()
+                        .rounded_md()
+                        .text_size(px(13.0))
+                        .text_color(rgb(0x1d4ed8))
+                        .child("Blog"),
+                ),
+        )
+        .child(
+            NavigationMenuPortal::<&'static str>::new().child(
+                NavigationMenuPositioner::<&'static str>::new().child(
+                    NavigationMenuPopup::<&'static str>::new()
+                        .rounded_md()
+                        .bg(rgb(0xffffff))
+                        .border_1()
+                        .border_color(rgb(0xd1d5db))
+                        .text_color(rgb(0x111827))
+                        .text_size(px(12.0))
+                        .py_2()
+                        .px_3()
+                        .shadow_lg()
+                        .child(NavigationMenuArrow::<&'static str>::new().bg(rgb(0xd1d5db)))
+                        .child(NavigationMenuViewport::<&'static str>::new()),
+                ),
+            ),
+        )
+}
+
+fn navigation_menu_gallery_item(
+    value: &'static str,
+    label: &'static str,
+    content: &'static str,
+    content_width: f32,
+) -> NavigationMenuItem<&'static str> {
+    NavigationMenuItem::<&'static str>::new()
+        .value(value)
+        .child(
+            NavigationMenuTrigger::<&'static str>::new()
+                .px_3()
+                .py_2()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0x9ca3af))
+                .bg(rgb(0xffffff))
+                .text_size(px(13.0))
+                .text_color(rgb(0x111827))
+                .child_any(label)
+                .child(
+                    NavigationMenuIcon::<&'static str>::new()
+                        .text_size(px(10.0))
+                        .child(div().child("v")),
+                ),
+        )
+        .child(
+            NavigationMenuContent::<&'static str>::new()
+                .w(px(content_width))
+                .child(div().child(content)),
         )
 }
 
@@ -681,6 +2087,310 @@ fn select_item(value: &'static str, label: &'static str) -> SelectItem<&'static 
         .child(SelectItemText::new().text(label).text_size(px(13.0)))
 }
 
+fn combobox_demo() -> impl IntoElement {
+    ComboboxRoot::<&'static str>::new()
+        .id("gallery-combobox")
+        .item_to_string_value(|value| (*value).into())
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            ComboboxLabel::new()
+                .text_size(px(13.0))
+                .child("Fruit search"),
+        )
+        .child(combobox_input_group())
+        .child(combobox_popup_stack("gallery-combobox"))
+}
+
+fn multiple_combobox_demo() -> impl IntoElement {
+    ComboboxRoot::<&'static str>::new()
+        .id("gallery-multiple-combobox")
+        .multiple(true)
+        .default_values(vec!["apple"])
+        .item_to_string_value(|value| (*value).into())
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            ComboboxInputGroup::new()
+                .w_full()
+                .min_h(px(34.0))
+                .px_2()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .bg(rgb(0xffffff))
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .gap_1()
+                .child(
+                    ComboboxChips::new()
+                        .flex()
+                        .gap_1()
+                        .style_with_state(|_state, chips| chips),
+                )
+                .child(
+                    ComboboxInput::new()
+                        .id("gallery-multiple-combobox-input")
+                        .placeholder("Add fruits…")
+                        .flex_1(),
+                )
+                .child(ComboboxClear::new().text_color(rgb(0x6b7280)))
+                .child(
+                    ComboboxTrigger::new()
+                        .id("gallery-multiple-combobox-trigger")
+                        .child(ComboboxIcon::<&'static str>::new().text_size(px(12.0))),
+                ),
+        )
+        .child(combobox_popup_stack("gallery-multiple-combobox"))
+}
+
+fn field_combobox_demo() -> impl IntoElement {
+    FieldRoot::new()
+        .id("gallery-field-combobox")
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(FieldLabel::new().text_size(px(13.0)).child("Fruit"))
+        .child_any(
+            ComboboxRoot::<&'static str>::new()
+                .id("gallery-field-combobox-control")
+                .name("fruit")
+                .required(true)
+                .item_to_string_value(|value| (*value).into())
+                .child(combobox_input_group())
+                .child(combobox_popup_stack("gallery-field-combobox")),
+        )
+        .child(
+            FieldDescription::new()
+                .text_size(px(12.0))
+                .child("Type to filter, pick one value."),
+        )
+        .child(
+            FieldError::new()
+                .text_size(px(12.0))
+                .text_color(rgb(0xb91c1c)),
+        )
+}
+
+fn combobox_input_group() -> ComboboxInputGroup<&'static str> {
+    ComboboxInputGroup::new()
+        .w_full()
+        .h(px(34.0))
+        .px_2()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .bg(rgb(0xffffff))
+        .flex()
+        .items_center()
+        .gap_1()
+        .child(
+            ComboboxInput::new()
+                .id("gallery-combobox-input")
+                .placeholder("Search fruits…")
+                .flex_1(),
+        )
+        .child(ComboboxClear::new().text_color(rgb(0x6b7280)))
+        .child(
+            ComboboxTrigger::new().id("gallery-combobox-trigger").child(
+                ComboboxIcon::<&'static str>::new()
+                    .text_size(px(12.0))
+                    .text_color(rgb(0x6b7280)),
+            ),
+        )
+}
+
+fn combobox_popup_stack(id_prefix: &'static str) -> ComboboxPortal<&'static str> {
+    ComboboxPortal::new().child(
+        ComboboxPositioner::new().side_offset(px(4.0)).child(
+            ComboboxPopup::new()
+                .w(px(220.0))
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .bg(rgb(0xffffff))
+                .shadow_lg()
+                .p_1()
+                .child(
+                    ComboboxList::new()
+                        .flex()
+                        .flex_col()
+                        .gap_1()
+                        .child(combobox_item(id_prefix, "apple", "Apple"))
+                        .child(combobox_item(id_prefix, "banana", "Banana"))
+                        .child(combobox_item(id_prefix, "cherry", "Cherry"))
+                        .child(combobox_item(id_prefix, "orange", "Orange"))
+                        .child(
+                            ComboboxEmpty::new()
+                                .px_2()
+                                .py_1()
+                                .text_size(px(12.0))
+                                .text_color(rgb(0x6b7280))
+                                .child("No fruits found."),
+                        ),
+                ),
+        ),
+    )
+}
+
+fn combobox_item(
+    id_prefix: &'static str,
+    value: &'static str,
+    label: &'static str,
+) -> ComboboxItem<&'static str> {
+    ComboboxItem::new()
+        .id(format!("{id_prefix}-item-{value}"))
+        .value(value)
+        .label(label)
+        .px_2()
+        .py_1()
+        .rounded_sm()
+        .flex()
+        .items_center()
+        .gap_2()
+        .style_with_state(|state, item| {
+            if state.highlighted {
+                item.bg(rgb(0xf3f4f6))
+            } else {
+                item
+            }
+        })
+        .child(
+            ComboboxItemIndicator::new()
+                .keep_mounted(true)
+                .w(px(14.0))
+                .text_size(px(12.0))
+                .style_with_state(|state, indicator| {
+                    if state.selected {
+                        indicator.text_color(rgb(0x2563eb))
+                    } else {
+                        indicator.text_color(rgb(0xffffff))
+                    }
+                }),
+        )
+        .child_any(div().text_size(px(13.0)).child(label))
+}
+
+fn autocomplete_demo() -> impl IntoElement {
+    AutocompleteRoot::<&'static str>::new()
+        .id("gallery-autocomplete")
+        .item_to_string_value(|value| (*value).into())
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(autocomplete_input_group("gallery-autocomplete"))
+        .child(autocomplete_popup_stack("gallery-autocomplete"))
+        .child(
+            AutocompleteValue::<&'static str>::new()
+                .text_size(px(12.0))
+                .text_color(rgb(0x6b7280))
+                .formatter(|value| match value.is_empty() {
+                    true => "Nothing typed yet.".into(),
+                    false => format!("Value: {value}").into(),
+                }),
+        )
+}
+
+fn autocomplete_both_demo() -> impl IntoElement {
+    AutocompleteRoot::<&'static str>::new()
+        .id("gallery-autocomplete-both")
+        .mode(AutocompleteMode::Both)
+        .item_to_string_value(|value| (*value).into())
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(autocomplete_input_group("gallery-autocomplete-both"))
+        .child(autocomplete_popup_stack("gallery-autocomplete-both"))
+}
+
+fn autocomplete_input_group(id_prefix: &'static str) -> AutocompleteInputGroup<&'static str> {
+    AutocompleteInputGroup::new()
+        .w_full()
+        .h(px(34.0))
+        .px_2()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .bg(rgb(0xffffff))
+        .flex()
+        .items_center()
+        .gap_1()
+        .child(
+            AutocompleteInput::new()
+                .id(format!("{id_prefix}-input"))
+                .placeholder("Search fruits…")
+                .flex_1(),
+        )
+        .child(AutocompleteClear::new().text_color(rgb(0x6b7280)))
+        .child(
+            AutocompleteTrigger::new()
+                .id(format!("{id_prefix}-trigger"))
+                .child(
+                    AutocompleteIcon::<&'static str>::new()
+                        .text_size(px(12.0))
+                        .text_color(rgb(0x6b7280)),
+                ),
+        )
+}
+
+fn autocomplete_popup_stack(id_prefix: &'static str) -> AutocompletePortal<&'static str> {
+    AutocompletePortal::new().child(
+        AutocompletePositioner::new().side_offset(px(4.0)).child(
+            AutocompletePopup::new()
+                .w(px(220.0))
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .bg(rgb(0xffffff))
+                .shadow_lg()
+                .p_1()
+                .child(
+                    AutocompleteList::new()
+                        .flex()
+                        .flex_col()
+                        .gap_1()
+                        .child(autocomplete_item(id_prefix, "apple", "Apple"))
+                        .child(autocomplete_item(id_prefix, "banana", "Banana"))
+                        .child(autocomplete_item(id_prefix, "cherry", "Cherry"))
+                        .child(autocomplete_item(id_prefix, "orange", "Orange"))
+                        .child(
+                            AutocompleteEmpty::new()
+                                .px_2()
+                                .py_1()
+                                .text_size(px(12.0))
+                                .text_color(rgb(0x6b7280))
+                                .child("No fruits found."),
+                        ),
+                ),
+        ),
+    )
+}
+
+fn autocomplete_item(
+    id_prefix: &'static str,
+    value: &'static str,
+    label: &'static str,
+) -> AutocompleteItem<&'static str> {
+    AutocompleteItem::new()
+        .id(format!("{id_prefix}-item-{value}"))
+        .value(value)
+        .label(label)
+        .px_2()
+        .py_1()
+        .rounded_sm()
+        .style_with_state(|state, item| {
+            if state.highlighted {
+                item.bg(rgb(0xf3f4f6))
+            } else {
+                item
+            }
+        })
+        .child_any(div().text_size(px(13.0)).child(label))
+}
+
 fn tabs_demo() -> impl IntoElement {
     TabsRoot::<&'static str>::new()
         .id("gallery-tabs")
@@ -767,6 +2477,220 @@ fn switch_demo() -> impl IntoElement {
         .gap_2()
         .child(gallery_switch("example-switch", true))
         .child("Notifications")
+}
+
+fn button_demo() -> impl IntoElement {
+    div()
+        .flex()
+        .items_center()
+        .gap_2()
+        .child(gallery_button("example-button", false, false, "Save"))
+        .child(gallery_button(
+            "example-button-disabled",
+            true,
+            false,
+            "Disabled",
+        ))
+        .child(gallery_button(
+            "example-button-focusable-disabled",
+            true,
+            true,
+            "Focusable disabled",
+        ))
+}
+
+fn gallery_button(
+    id: &'static str,
+    disabled: bool,
+    focusable_when_disabled: bool,
+    label: &'static str,
+) -> ButtonRoot {
+    ButtonRoot::new()
+        .id(id)
+        .disabled(disabled)
+        .focusable_when_disabled(focusable_when_disabled)
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .px_3()
+        .py_2()
+        .text_size(px(13.0))
+        .bg(rgb(0xffffff))
+        .text_color(rgb(0x111827))
+        .on_click(|_event, _window, _cx| {
+            println!("button clicked");
+        })
+        // Keyboard-only focus rings use gpui's native `.focus_visible(...)`
+        // builder; `style_with_state` covers disabled/focused styling.
+        .style_with_state(|state, button| {
+            let button = if state.disabled {
+                button.opacity(0.5)
+            } else {
+                button
+            };
+
+            if state.focused {
+                button.shadow_lg()
+            } else {
+                button
+            }
+        })
+        .child(label)
+}
+
+fn toggle_demo() -> impl IntoElement {
+    div().flex().items_center().gap_2().child(
+        Toggle::<gpui::SharedString>::new()
+            .id("example-toggle")
+            .rounded_md()
+            .border_1()
+            .border_color(rgb(0xd1d5db))
+            .px_3()
+            .py_2()
+            .text_size(px(13.0))
+            .style_with_state(|state, toggle| {
+                let toggle = if state.pressed {
+                    toggle.bg(rgb(0x111827)).text_color(rgb(0xffffff))
+                } else {
+                    toggle.bg(rgb(0xffffff)).text_color(rgb(0x111827))
+                };
+
+                let toggle = if state.disabled {
+                    toggle.opacity(0.5)
+                } else {
+                    toggle
+                };
+
+                if state.focused {
+                    toggle.shadow_lg()
+                } else {
+                    toggle
+                }
+            })
+            .child("Bold"),
+    )
+}
+
+fn toolbar_demo() -> impl IntoElement {
+    ToolbarRoot::new()
+        .id("example-toolbar")
+        .flex()
+        .items_center()
+        .gap_1()
+        .p_1()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .child(toolbar_demo_button("toolbar-copy", "Copy", false))
+        .child(toolbar_demo_button("toolbar-paste", "Paste", true))
+        .child(
+            ToolbarGroup::new()
+                .style_with_state(|_state, group| group.flex().gap_1())
+                .child(toolbar_demo_button("toolbar-cut", "Cut", false))
+                .child(
+                    ToolbarLink::new()
+                        .id("toolbar-help")
+                        .px_3()
+                        .py_2()
+                        .rounded_md()
+                        .text_size(px(13.0))
+                        .text_color(rgb(0x2563eb))
+                        .style_with_state(|state, link| {
+                            if state.focused {
+                                link.shadow_lg()
+                            } else {
+                                link
+                            }
+                        })
+                        .child("Help"),
+                ),
+        )
+        .child(
+            ToolbarSeparator::new()
+                .style_with_state(|_state, separator| separator.w(px(1.0)).h_6().bg(rgb(0xd1d5db))),
+        )
+        .child(
+            ToolbarInput::new()
+                .id("toolbar-search")
+                .placeholder("Search…")
+                .w(px(160.0))
+                .px_2()
+                .py_1()
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .style_with_state(|state, input| {
+                    if state.input.focused {
+                        input.border_color(rgb(0x2563eb))
+                    } else {
+                        input
+                    }
+                }),
+        )
+}
+
+fn toolbar_demo_button(id: &'static str, label: &'static str, disabled: bool) -> ToolbarButton {
+    ToolbarButton::new()
+        .id(id)
+        .disabled(disabled)
+        .px_3()
+        .py_2()
+        .rounded_md()
+        .text_size(px(13.0))
+        .style_with_state(|state, button| {
+            let button = if state.disabled {
+                button.bg(rgb(0xf3f4f6)).text_color(rgb(0x9ca3af))
+            } else {
+                button.bg(rgb(0xffffff)).text_color(rgb(0x111827))
+            };
+
+            if state.focused {
+                button.shadow_lg()
+            } else {
+                button
+            }
+        })
+        .child(label)
+}
+
+fn toggle_group_demo() -> impl IntoElement {
+    ToggleGroup::<gpui::SharedString>::new()
+        .id("example-toggle-group")
+        .multiple(true)
+        .default_value(vec!["bold".into()])
+        .flex()
+        .gap_1()
+        .p_1()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .child(gallery_group_toggle("bold", "Bold"))
+        .child(gallery_group_toggle("italic", "Italic"))
+        .child(gallery_group_toggle("underline", "Underline"))
+}
+
+fn gallery_group_toggle(value: &'static str, label: &'static str) -> Toggle<gpui::SharedString> {
+    Toggle::<gpui::SharedString>::new()
+        .id(value)
+        .value(gpui::SharedString::from(value))
+        .rounded_md()
+        .px_3()
+        .py_2()
+        .text_size(px(13.0))
+        .style_with_state(|state, toggle| {
+            let toggle = if state.pressed {
+                toggle.bg(rgb(0x111827)).text_color(rgb(0xffffff))
+            } else {
+                toggle.bg(rgb(0xffffff)).text_color(rgb(0x111827))
+            };
+
+            if state.focused {
+                toggle.shadow_lg()
+            } else {
+                toggle
+            }
+        })
+        .child(label)
 }
 
 fn collapsible_demo() -> impl IntoElement {
@@ -1199,6 +3123,66 @@ fn fieldset_text_field(
         )
 }
 
+fn field_otp_field_demo() -> impl IntoElement {
+    FieldRoot::new()
+        .id("example-otp-field-field")
+        .validation_mode(base_gpui::field::FieldValidationMode::OnBlur)
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            FieldLabel::new()
+                .text_size(px(13.0))
+                .text_color(rgb(0x374151))
+                .child("One-time code"),
+        )
+        .child(otp_field_body())
+        .child(
+            FieldError::new()
+                .text_color(rgb(0xdc2626))
+                .text_size(px(12.0))
+                .child("Code is required."),
+        )
+}
+
+fn otp_field_body() -> OTPFieldRoot {
+    let mut root = OTPFieldRoot::new()
+        .id("example-otp-field")
+        .name("one-time-code")
+        .length(6)
+        .required(true)
+        .flex()
+        .items_center()
+        .gap_1();
+
+    for index in 0..6 {
+        if index == 3 {
+            root = root.child(Separator::new().w(px(10.0)).h(px(2.0)).bg(rgb(0x9ca3af)));
+        }
+        root = root.child(
+            OTPFieldInput::new()
+                .w(px(30.0))
+                .h(px(36.0))
+                .rounded_md()
+                .border_1()
+                .border_color(rgb(0xd1d5db))
+                .style_with_state(|state, slot| {
+                    if state.root.disabled {
+                        slot.bg(rgb(0xf3f4f6)).opacity(0.6)
+                    } else if state.active && state.root.focused {
+                        slot.border_color(rgb(0x2563eb))
+                    } else if state.filled {
+                        slot.bg(rgb(0xf9fafb))
+                    } else {
+                        slot
+                    }
+                }),
+        );
+    }
+
+    root
+}
+
 fn number_field_demo() -> impl IntoElement {
     NumberFieldRoot::new()
         .id("example-number-field")
@@ -1452,6 +3436,314 @@ fn gallery_checkbox(id: &'static str, default_checked: bool, checked_color: u32)
         )
 }
 
+fn toast_demo() -> impl IntoElement {
+    // A process-wide manager: demonstrates manager-driven adds from outside
+    // the viewport subtree (the buttons live beside, not inside, the stack).
+    thread_local! {
+        static TOAST_DEMO_MANAGER: ToastManager = create_toast_manager::<()>();
+    }
+    let manager = TOAST_DEMO_MANAGER.with(ToastManager::clone);
+
+    let toast_button = |id: &'static str, label: &'static str| {
+        div()
+            .id(id)
+            .px_3()
+            .py_1p5()
+            .rounded_md()
+            .bg(rgb(0x1f2937))
+            .text_color(rgb(0xf9fafb))
+            .text_size(px(13.0))
+            .cursor_pointer()
+            .child(label)
+    };
+
+    let add_manager = manager.clone();
+    let upsert_manager = manager.clone();
+    let promise_manager = manager.clone();
+    let close_manager = manager.clone();
+
+    ToastProvider::new()
+        .id("gallery-toast-provider")
+        .manager(manager)
+        .child_any(
+            div()
+                .flex()
+                .flex_wrap()
+                .gap_2()
+                .child(
+                    toast_button("gallery-toast-add", "Add toast").on_click(move |_, _, cx| {
+                        add_manager.add(
+                            ToastOptions::new()
+                                .title("Saved")
+                                .description("Your changes were saved."),
+                            cx,
+                        );
+                    }),
+                )
+                .child(
+                    toast_button("gallery-toast-upsert", "Upsert toast").on_click(
+                        move |_, _, cx| {
+                            upsert_manager.add(
+                                ToastOptions::new()
+                                    .id(ToastId::new("gallery-toast-upserted"))
+                                    .title("Upserted")
+                                    .description("Same id: updated in place, timer reset."),
+                                cx,
+                            );
+                        },
+                    ),
+                )
+                .child(
+                    toast_button("gallery-toast-promise", "Promise toast").on_click(
+                        move |_, _, cx| {
+                            let timer = cx.background_executor().timer(Duration::from_millis(1500));
+                            promise_manager
+                                .promise(
+                                    async move {
+                                        timer.await;
+                                        Ok::<(), ()>(())
+                                    },
+                                    ToastPromiseOptions::from_text(
+                                        "Uploading…",
+                                        "Upload complete",
+                                        "Upload failed",
+                                    ),
+                                    cx,
+                                )
+                                .detach();
+                        },
+                    ),
+                )
+                .child(
+                    toast_button("gallery-toast-close-all", "Close all").on_click(
+                        move |_, _, cx| {
+                            close_manager.close(None, cx);
+                        },
+                    ),
+                ),
+        )
+        .child(
+            ToastViewport::new()
+                .id("gallery-toast-viewport")
+                .absolute()
+                .bottom_4()
+                .right_4()
+                .flex()
+                .flex_col()
+                .gap_2()
+                .content_builder(|_facts| {
+                    ToastRoot::new()
+                        .w(px(280.0))
+                        .p_3()
+                        .rounded_md()
+                        .bg(rgb(0x111827))
+                        .text_color(rgb(0xf9fafb))
+                        .style_with_state(|state, base| {
+                            if state.limited {
+                                base.opacity(0.0)
+                            } else {
+                                base
+                            }
+                        })
+                        .child(
+                            ToastTitle::new()
+                                .text_size(px(13.0))
+                                .font_weight(gpui::FontWeight::SEMIBOLD),
+                        )
+                        .child(
+                            ToastDescription::new()
+                                .text_size(px(12.0))
+                                .text_color(rgb(0x9ca3af)),
+                        )
+                        .child(
+                            ToastClose::new()
+                                .absolute()
+                                .top_1()
+                                .right_2()
+                                .cursor_pointer()
+                                .text_size(px(12.0))
+                                .child_any("✕"),
+                        )
+                }),
+        )
+}
+
+// Overlay composition pattern: a `relative()` container wraps the scrollable
+// content, and the scrollbar primitive is overlaid as an absolute sibling
+// layer that fills the container.
+fn scrollbar_vertical_demo(handle: &ScrollHandle) -> impl IntoElement {
+    div()
+        .relative()
+        .w_full()
+        .h(px(120.0))
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .child(
+            div()
+                .id("scrollbar-vertical-demo")
+                .size_full()
+                .overflow_y_scroll()
+                .track_scroll(handle)
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .p_2()
+                        .gap_1()
+                        .children((0..40).map(|index| {
+                            div()
+                                .text_size(px(12.0))
+                                .text_color(rgb(0x374151))
+                                .child(format!("Row {index}"))
+                        })),
+                ),
+        )
+        .child(
+            scrollbar_vertical(handle)
+                .id("scrollbar-vertical-demo-bar")
+                .visibility(ScrollbarVisibility::Scrolling),
+        )
+}
+
+fn scrollbar_both_axes_demo(handle: &ScrollHandle) -> impl IntoElement {
+    div()
+        .relative()
+        .w_full()
+        .h(px(120.0))
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .child(
+            div()
+                .id("scrollbar-both-demo")
+                .size_full()
+                .overflow_scroll()
+                .track_scroll(handle)
+                .child(
+                    div()
+                        .w(px(700.0))
+                        .flex()
+                        .flex_col()
+                        .p_2()
+                        .gap_1()
+                        .children((0..40).map(|index| {
+                            div()
+                                .text_size(px(12.0))
+                                .text_color(rgb(0x374151))
+                                .child(format!(
+                                    "Row {index} — wide content that overflows horizontally too"
+                                ))
+                        })),
+                ),
+        )
+        .child(
+            scrollbar(handle)
+                .id("scrollbar-both-demo-bar")
+                .axis(ScrollbarAxis::Both)
+                .visibility(ScrollbarVisibility::Always),
+        )
+}
+
+fn scrollbar_uniform_list_demo(handle: &UniformListScrollHandle) -> impl IntoElement {
+    div()
+        .relative()
+        .w_full()
+        .h(px(120.0))
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .child(
+            uniform_list("scrollbar-uniform-list-demo", 200, |range, _window, _cx| {
+                range
+                    .map(|index| {
+                        div()
+                            .px_2()
+                            .text_size(px(12.0))
+                            .text_color(rgb(0x374151))
+                            .child(format!("Virtualized item {index}"))
+                    })
+                    .collect()
+            })
+            .size_full()
+            .track_scroll(handle),
+        )
+        .child(
+            scrollbar_vertical(handle)
+                .id("scrollbar-uniform-list-demo-bar")
+                .visibility(ScrollbarVisibility::Hover),
+        )
+}
+
+// Base UI's canonical show-on-hover / show-while-scrolling recipe: the
+// scrollbar strips fade in from `hovering || scrolling` purely through
+// `style_with_state`, while the primitive underneath stays pinned visible.
+fn scroll_area_demo() -> impl IntoElement {
+    let scrollbar_style = |state: ScrollAreaScrollbarStyleState, strip: Div| {
+        if state.hovering || state.scrolling {
+            strip.bg(rgb(0xf3f4f6)).opacity(1.0)
+        } else {
+            strip.opacity(0.0)
+        }
+    };
+
+    ScrollAreaRoot::new()
+        .id("scroll-area-demo")
+        .w_full()
+        .h(px(140.0))
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0xd1d5db))
+        .child(
+            ScrollAreaViewport::new()
+                .id("scroll-area-demo-viewport")
+                .size_full()
+                .child(
+                    ScrollAreaContent::new().child(
+                        div()
+                            .w(px(700.0))
+                            .flex()
+                            .flex_col()
+                            .p_2()
+                            .gap_1()
+                            .children((0..40).map(|index| {
+                                div()
+                                    .text_size(px(12.0))
+                                    .text_color(rgb(0x374151))
+                                    .child(format!(
+                                    "Row {index} — wide scroll area content overflowing both axes"
+                                ))
+                            })),
+                    ),
+                ),
+        )
+        .child(
+            ScrollAreaScrollbar::new()
+                .id("scroll-area-demo-vertical")
+                .orientation(ScrollAreaOrientation::Vertical)
+                .style_with_state(scrollbar_style)
+                .child(
+                    ScrollAreaThumb::new().style_with_state(|_state, style| ScrollbarStyle {
+                        thumb_color: hsla(221.0 / 360.0, 0.83, 0.53, 0.6),
+                        ..style
+                    }),
+                ),
+        )
+        .child(
+            ScrollAreaScrollbar::new()
+                .id("scroll-area-demo-horizontal")
+                .orientation(ScrollAreaOrientation::Horizontal)
+                .style_with_state(scrollbar_style)
+                .child(
+                    ScrollAreaThumb::new().style_with_state(|_state, style| ScrollbarStyle {
+                        thumb_color: hsla(221.0 / 360.0, 0.83, 0.53, 0.6),
+                        ..style
+                    }),
+                ),
+        )
+        .child(ScrollAreaCorner::new().style_with_state(|_state, corner| corner.bg(rgb(0xf3f4f6))))
+}
+
 fn main() {
     application().run(|cx: &mut App| {
         base_gpui::init(cx);
@@ -1463,7 +3755,7 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |_, cx| cx.new(|_| ComponentGallery),
+            |_, cx| cx.new(|_| ComponentGallery::new()),
         )
         .expect("failed to open component gallery window");
 
@@ -1480,7 +3772,7 @@ mod tests {
     #[gpui::test]
     fn component_gallery_renders_without_panics(cx: &mut TestAppContext) {
         cx.update(base_gpui::init);
-        cx.open_window(size(px(1040.0), px(760.0)), |_, _| ComponentGallery);
+        cx.open_window(size(px(1040.0), px(760.0)), |_, _| ComponentGallery::new());
         cx.run_until_parked();
     }
 }

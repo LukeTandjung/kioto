@@ -21,7 +21,7 @@ internal knobs (`fillInputOnItemPress`, `keepHighlight`, `submitOnItemClick`,
 `autoComplete`/inline-autocomplete). Base UI's Autocomplete component is the *same*
 `AriaCombobox` core with `selectionMode: 'none'` — so the GPUI `ComboboxRuntime` must keep
 those knobs public and configurable so a future thin Autocomplete port
-(`issues/port-baseui-autocomplete.md`, to be written) can reuse it the way `alert_dialog`
+(`issues/port-baseui-autocomplete.md`) can reuse it the way `alert_dialog`
 reuses `dialog` (see `issues/port-baseui-alert-dialog.md`).
 
 `crates/base_gpui` already has everything below the popup line: the text-editing primitive
@@ -325,328 +325,329 @@ New issue — all items unchecked.
 
 ### Module/API surface
 
-- [ ] Add a top-level `combobox` module and export it from `crates/base_gpui/src/lib.rs`.
-- [ ] Register Combobox key bindings from `base_gpui::init(cx)` (`combobox::init(cx)`).
-- [ ] Add public `ComboboxRoot<T>` with `ComboboxRoot::new()` and `.id(...)` keyed identity.
-- [ ] `ComboboxRoot<T>` supports `.default_value(Option<T>)`, `.value(Option<T>)`,
+- [x] Add a top-level `combobox` module and export it from `crates/base_gpui/src/lib.rs`.
+- [x] Register Combobox key bindings from `base_gpui::init(cx)` (`combobox::init(cx)`).
+- [x] Add public `ComboboxRoot<T>` with `ComboboxRoot::new()` and `.id(...)` keyed identity.
+- [x] `ComboboxRoot<T>` supports `.default_value(Option<T>)`, `.value(Option<T>)`,
       `.on_value_change(...)` (single mode).
-- [ ] `ComboboxRoot<T>` supports `.multiple(bool)`, `.default_values(Vec<T>)`,
+- [x] `ComboboxRoot<T>` supports `.multiple(bool)`, `.default_values(Vec<T>)`,
       `.values(Vec<T>)`, `.on_values_change(...)` (multiple mode), with documented
       deterministic behavior when both single and multiple value props are supplied.
-- [ ] `ComboboxRoot<T>` supports `.default_input_value(...)`, `.input_value(...)`,
+- [x] `ComboboxRoot<T>` supports `.default_input_value(...)`, `.input_value(...)`,
       `.on_input_value_change(...)`.
-- [ ] `ComboboxRoot<T>` supports `.default_open(bool)`, `.open(bool)`, `.on_open_change(...)`.
-- [ ] `ComboboxRoot<T>` supports `.disabled(bool)`, `.read_only(bool)`, `.required(bool)`,
+- [x] `ComboboxRoot<T>` supports `.default_open(bool)`, `.open(bool)`, `.on_open_change(...)`.
+- [x] `ComboboxRoot<T>` supports `.disabled(bool)`, `.read_only(bool)`, `.required(bool)`,
       `.name(...)`, each defaulting like Base UI.
-- [ ] `ComboboxRoot<T>` supports `.open_on_input_click(bool)` (default `true`),
+- [x] `ComboboxRoot<T>` supports `.open_on_input_click(bool)` (default `true`),
       `.auto_highlight(...)` (off / on-input-change / always; default off),
       `.highlight_item_on_hover(bool)` (default `true`), `.loop_focus(bool)` (default `true`),
       `.limit(...)`, `.filter(...)`, and disabling internal filtering for externally
       filtered lists.
-- [ ] `ComboboxRoot<T>` supports `.item_to_string_label(...)` and `.item_to_string_value(...)`
+- [x] `ComboboxRoot<T>` supports `.item_to_string_label(...)` and `.item_to_string_value(...)`
       without requiring `T: Display`.
-- [ ] `ComboboxRoot<T>` supports `.on_item_highlighted(...)` receiving `Option<T>` plus a
+- [x] `ComboboxRoot<T>` supports `.on_item_highlighted(...)` receiving `Option<T>` plus a
       details struct with reason (`Keyboard`/`Pointer`/`None`) and index.
-- [ ] Runtime/props keep `selection_mode` (incl. `None`), `fill_input_on_item_press`,
+- [x] Runtime/props keep `selection_mode` (incl. `None`), `fill_input_on_item_press`,
       `keep_highlight`, `submit_on_item_click`, the `inline_overlay` state + display-value
       query, and the public input-value query public and configurable for the Autocomplete
       port, while `ComboboxRoot<T>`'s builder hides them (Base UI parity).
-- [ ] Add public `ComboboxLabel` (focuses the input without opening the popup).
-- [ ] Add public `ComboboxValue<T>` with `.placeholder(...)` and an optional Rust-native
+- [x] Add public `ComboboxLabel` (focuses the input without opening the popup).
+- [x] Add public `ComboboxValue<T>` with `.placeholder(...)` and an optional Rust-native
       formatter closure over the current selection.
-- [ ] Add public `ComboboxInput<T>` that internally composes `primitives/input::Input`
+- [x] Add public `ComboboxInput<T>` that internally composes `primitives/input::Input`
       (no second text-editing implementation) and supports `.disabled(bool)`.
-- [ ] Add public `ComboboxInputGroup<T>` wrapping input + adjacent controls (clear, trigger,
+- [x] Add public `ComboboxInputGroup<T>` wrapping input + adjacent controls (clear, trigger,
       chips); pressing its non-interactive area focuses the input and opens the popup when
       `open_on_input_click` (Base UI `handleInputPress`).
-- [ ] Add public `ComboboxTrigger<T>` (button that opens/focuses; `.disabled(bool)`).
-- [ ] Add public `ComboboxList<T>`.
-- [ ] Add public `ComboboxStatus` (plain container; renders children; no live region).
-- [ ] Add public `ComboboxEmpty` (renders children only when the filtered list is empty).
-- [ ] Add public `ComboboxClear` with `.keep_mounted(bool)` or documented presence deferral.
-- [ ] Add public `ComboboxPortal<T>`, `ComboboxBackdrop`, `ComboboxPositioner<T>`,
+- [x] Add public `ComboboxTrigger<T>` (button that opens/focuses; `.disabled(bool)`).
+- [x] Add public `ComboboxList<T>`.
+- [x] Add public `ComboboxStatus` (plain container; renders children; no live region).
+- [x] Add public `ComboboxEmpty` (renders children only when the filtered list is empty).
+- [x] Add public `ComboboxClear` with `.keep_mounted(bool)` or documented presence deferral.
+- [x] Add public `ComboboxPortal<T>`, `ComboboxBackdrop`, `ComboboxPositioner<T>`,
       `ComboboxPopup<T>`, `ComboboxArrow` backed by GPUI deferred/anchored overlay rendering,
       implemented Combobox-locally with the Select/Popover layers as references.
-- [ ] Positioner exposes at least `anchor` override, `side`, `align`, `side_offset`,
+- [x] Positioner exposes at least `anchor` override, `side`, `align`, `side_offset`,
       `align_offset`, defaulting the anchor to input-group-else-input.
-- [ ] Add public `ComboboxIcon`.
-- [ ] Add public `ComboboxGroup` and `ComboboxGroupLabel`.
-- [ ] Add public `ComboboxItem<T>` with `.value(T)`, `.label(...)`, `.disabled(bool)`.
-- [ ] Add public `ComboboxItemIndicator<T>` with `.keep_mounted(bool)`.
-- [ ] Add public `ComboboxChips<T>`, `ComboboxChip<T>`, `ComboboxChipRemove<T>`.
-- [ ] Add public `ComboboxCollection<T>` taking items + `Fn(&T, usize) -> ComboboxItem<T>`.
-- [ ] Add `ComboboxSeparator` reusing `base_gpui::separator::Separator`.
-- [ ] Stretch: add public `ComboboxRow` and a `.grid(bool)` root flag, or explicitly defer
+- [x] Add public `ComboboxIcon`.
+- [x] Add public `ComboboxGroup` and `ComboboxGroupLabel`.
+- [x] Add public `ComboboxItem<T>` with `.value(T)`, `.label(...)`, `.disabled(bool)`.
+- [x] Add public `ComboboxItemIndicator<T>` with `.keep_mounted(bool)`.
+- [x] Add public `ComboboxChips<T>`, `ComboboxChip<T>`, `ComboboxChipRemove<T>`.
+- [x] Add public `ComboboxCollection<T>` taking items + `Fn(&T, usize) -> ComboboxItem<T>`.
+- [x] Add `ComboboxSeparator` reusing `base_gpui::separator::Separator`.
+- [x] Stretch: add public `ComboboxRow` and a `.grid(bool)` root flag, or explicitly defer
       grid mode in the issue checklist when the port lands without it.
-- [ ] `combobox/mod.rs` is barrel exports only and exposes all public names.
+      *(Grid mode explicitly deferred: no `ComboboxRow`, no `.grid(bool)` in this port.)*
+- [x] `combobox/mod.rs` is barrel exports only and exposes all public names.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui combobox` passes.
-- [ ] `cargo test -p base_gpui` passes.
-- [ ] `cargo clippy -p base_gpui --all-targets` passes or has documented pre-existing
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui combobox` passes.
+- [x] `cargo test -p base_gpui` passes.
+- [x] `cargo clippy -p base_gpui --all-targets` passes or has documented pre-existing
       warnings only.
-- [ ] `ast-grep scan crates/base_gpui/src/combobox` reports no scoped-visibility (`pub(...)`)
+- [x] `ast-grep scan crates/base_gpui/src/combobox` reports no scoped-visibility (`pub(...)`)
       violations.
-- [ ] Demo in `crates/base_gpui/src/main.rs`: single-select combobox with label, input group,
+- [x] Demo in `crates/base_gpui/src/main.rs`: single-select combobox with label, input group,
       input, clear, trigger, portal/positioner/popup/list, items with indicators, and empty
       state.
-- [ ] Demo: multiple-select combobox with chips + chip remove.
-- [ ] Demo: Field + Combobox integration.
+- [x] Demo: multiple-select combobox with chips + chip remove.
+- [x] Demo: Field + Combobox integration.
 
 ### Architecture / internal model
 
-- [ ] Follow `docs/base-gpui-component-architecture.md`: one deep `ComboboxRuntime<T>`
+- [x] Follow `docs/base-gpui-component-architecture.md`: one deep `ComboboxRuntime<T>`
       (runtime.rs), thin `ComboboxContext<T>` (context.rs), thin layers under `layers/`,
       flat module layout — no nested `child/context/{props,runtime,state}/` taxonomy.
-- [ ] `ComboboxRuntime<T>` owns all state: selected value(s), input value, query and
+- [ ] `ComboboxRuntime<T>` owns all state: selected value(s), input value, query and *(NOTE: satisfied except per-item bounds — not tracked; nothing consumes them without Select's align-item mode)*
       `query_changed_after_open` / frozen close-query, open/mounted state, registered item
       metadata (value, label, disabled, group, index, bounds), filtered index set,
       highlighted index, chip highlight index, measured anchor/popup bounds, focus handles,
       and clear-button visibility facts.
-- [ ] Filtering is a runtime concern: a command/derivation recomputes the filtered item set
+- [x] Filtering is a runtime concern: a command/derivation recomputes the filtered item set
       from registered metadata + query; layers never filter.
-- [ ] Runtime methods are commands/queries in Combobox domain language (e.g.
+- [x] Runtime methods are commands/queries in Combobox domain language (e.g.
       `set_input_value`, `sync_children`, `reconcile`, `select_item`, `toggle_value`,
       `move_highlight`, `remove_chip`, `clear`, `item_state(...)`), not getter/setter pairs;
       highlight questions are part-shaped ("is index highlighted") not state dumps.
-- [ ] `ComboboxContext<T>` stays thin: `read`/`update` plus the value-, input-value-, and
+- [x] `ComboboxContext<T>` stays thin: `read`/`update` plus the value-, input-value-, and
       open-changing commands that resolve controlled vs uncontrolled and fire props
       callbacks from runtime outcomes. The controlled/uncontrolled rule lives only here (and
       in what is passed to `reconcile`). Three controlled axes: selected value(s), input
       value, open.
-- [ ] `ComboboxRoot<T>` render is the single non-event mutation site: wire children,
+- [x] `ComboboxRoot<T>` render is the single non-event mutation site: wire children,
       `sync_children`, `reconcile` all three axes, Field registration.
-- [ ] Typed child routing before `AnyElement` erasure: `ComboboxChild<T>` in `child.rs`
+- [x] Typed child routing before `AnyElement` erasure: `ComboboxChild<T>` in `child.rs`
       covering the documented part set (with an `AnyElement` escape hatch only where Base UI
       examples show arbitrary children — e.g. inside input group, popup, items); nested
       constrained enums for list/group/chips children as needed.
-- [ ] Child indexing, item metadata extraction, and context attachment live in
+- [x] Child indexing, item metadata extraction, and context attachment live in
       `child_wiring.rs` (private traits), never in public layer APIs; separators, group
       labels, status/empty do not corrupt item indices.
-- [ ] Item registration works for both composition styles: statically declared
+- [x] Item registration works for both composition styles: statically declared
       `ComboboxItem<T>` children and `ComboboxCollection<T>` data-driven items; registered
       metadata is the single registry filtering runs against.
-- [ ] `ComboboxInput<T>` reuses the `primitives/input` runtime/layer for text editing
+- [x] `ComboboxInput<T>` reuses the `primitives/input` runtime/layer for text editing
       (caret, selection, Home/End, clipboard) and only adds combobox wiring: input value ↔
       runtime sync, open-on-type, highlight reset, chip navigation hand-off, and key
       dispatch for list navigation.
-- [ ] Keyboard behavior uses `actions.rs` + a Combobox key context on the input/list layers
+- [x] Keyboard behavior uses `actions.rs` + a Combobox key context on the input/list layers
       (arrows, Enter, Escape); compose with, and do not conflict with,
       `INPUT_KEY_CONTEXT` bindings from the input primitive.
-- [ ] Runtime is directly unit-testable without a GPUI window.
-- [ ] No generic popup/collection/filter utilities extracted; Combobox-local only.
+- [x] Runtime is directly unit-testable without a GPUI window.
+- [x] No generic popup/collection/filter utilities extracted; Combobox-local only.
 
 ### Controlled/uncontrolled: selected value, input value, open state
 
-- [ ] Uncontrolled single mode initializes from `.default_value(...)`, default `None`;
+- [x] Uncontrolled single mode initializes from `.default_value(...)`, default `None`;
       multiple from `.default_values(...)`, default empty `Vec`.
-- [ ] Controlled `.value(...)` / `.values(...)` are the source of truth; interaction fires
+- [x] Controlled `.value(...)` / `.values(...)` are the source of truth; interaction fires
       callbacks without mutating internal selection.
-- [ ] Uncontrolled input value initializes from `.default_input_value(...)`; when absent in
+- [x] Uncontrolled input value initializes from `.default_input_value(...)`; when absent in
       single mode it derives from the selected value's label; otherwise empty.
-- [ ] Controlled `.input_value(...)` is the source of truth; typing fires
+- [x] Controlled `.input_value(...)` is the source of truth; typing fires
       `on_input_value_change` without internal mutation.
-- [ ] Uncontrolled open initializes from `.default_open(false)`; controlled `.open(...)` is
+- [x] Uncontrolled open initializes from `.default_open(false)`; controlled `.open(...)` is
       the source of truth.
-- [ ] All three change callbacks fire before uncontrolled mutation, receive Rust-native
+- [x] All three change callbacks fire before uncontrolled mutation, receive Rust-native
       details (reason, source, `cancel()`, `is_canceled()`), and canceling prevents the
       uncontrolled mutation.
-- [ ] Change reasons cover at least: input-change, input-clear, item-press, trigger-press,
+- [x] Change reasons cover at least: input-change, input-clear, item-press, trigger-press,
       outside-press, escape-key, list-navigation, focus-out, clear-press, chip-remove-press,
       cancel-open, none.
-- [ ] Programmatic/controlled selected-value changes update the derived selected index and,
+- [x] Programmatic/controlled selected-value changes update the derived selected index and,
       in single mode with input outside the popup, sync the input text to the new label
       (Base UI `useValueChanged(selectedValue)` sync).
-- [ ] Disabled/read-only root ignores open/close/select/typing interactions.
+- [x] Disabled/read-only root ignores open/close/select/typing interactions.
 
 ### Filtering
 
-- [ ] Typing recomputes the filtered item set from the trimmed query against registered item
+- [x] Typing recomputes the filtered item set from the trimmed query against registered item
       labels (default case-insensitive contains).
-- [ ] Custom `.filter(...)` replaces the default; disabling internal filtering shows all
+- [x] Custom `.filter(...)` replaces the default; disabling internal filtering shows all
       registered items so callers can filter externally.
-- [ ] `item_to_string_label` feeds both filtering and display.
-- [ ] Single-mode browse bypass: opening with a query exactly matching the selected label
+- [x] `item_to_string_label` feeds both filtering and display.
+- [x] Single-mode browse bypass: opening with a query exactly matching the selected label
       shows the full list; once the user edits the query after open
       (`query_changed_after_open`), normal filtering applies.
-- [ ] Closing freezes the active query (close-query) so the list does not flash unfiltered
+- [x] Closing freezes the active query (close-query) so the list does not flash unfiltered
       while closing; the frozen query and flags reset on unmount/close-complete.
-- [ ] After close, input-value cleanup follows mode: single syncs input to the selected
+- [x] After close, input-value cleanup follows mode: single syncs input to the selected
       label (or clears it when nothing selected); multiple clears the typed filter.
-- [ ] Clearing the input to empty in single mode clears the selected value with an
+- [x] Clearing the input to empty in single mode clears the selected value with an
       input-clear reason.
-- [ ] `.limit(n)` caps the filtered list deterministically.
-- [ ] Empty filtered list: `ComboboxEmpty` children render; item highlight resets so
+- [x] `.limit(n)` caps the filtered list deterministically.
+- [x] Empty filtered list: `ComboboxEmpty` children render; item highlight resets so
       auto-highlight cannot point at index 0 of an empty list.
-- [ ] Filtered set recomputation preserves highlight on the same item when it survives the
+- [x] Filtered set recomputation preserves highlight on the same item when it survives the
       filter, and clears/re-clamps the highlight when it does not (highlight change reported
       through `on_item_highlighted` exactly once per transition — no duplicate callbacks for
       the same item+index).
 
 ### Highlight / keyboard list navigation
 
-- [ ] Focus stays on the input while navigating; the highlight is runtime state (virtual
+- [x] Focus stays on the input while navigating; the highlight is runtime state (virtual
       focus), never focus movement between item elements.
-- [ ] ArrowDown/ArrowUp on the input opens a closed popup (list-navigation reason) and moves
+- [x] ArrowDown/ArrowUp on the input opens a closed popup (list-navigation reason) and moves
       the highlight through the filtered items when open.
-- [ ] `loop_focus == true`: navigation loops through an "input position" (no highlight)
+- [x] `loop_focus == true`: navigation loops through an "input position" (no highlight)
       between last→first, matching Base UI's input-in-the-loop behavior; `false`: clamps at
       the ends.
-- [ ] `auto_highlight` off: typing clears the highlight; on-input-change: typed queries
+- [x] `auto_highlight` off: typing clears the highlight; on-input-change: typed queries
       highlight the first match and keep the highlight while the query changes; always: first
       item is highlighted whenever the list opens/changes.
-- [ ] `highlight_item_on_hover == true`: pointer hover highlights (reason pointer); `false`:
+- [x] `highlight_item_on_hover == true`: pointer hover highlights (reason pointer); `false`:
       hover does not change highlight; pointer leaving the list clears the highlight unless
       `keep_highlight`.
-- [ ] Home/End edit the input caret (input primitive behavior), and do not jump the list
+- [x] Home/End edit the input caret (input primitive behavior), and do not jump the list
       highlight.
-- [ ] Printable keys always type into the input — no open-list typeahead.
-- [ ] Enter with a highlighted item selects it; Enter with no highlight closes the popup
+- [x] Printable keys always type into the input — no open-list typeahead.
+- [x] Enter with a highlighted item selects it; Enter with no highlight closes the popup
       (and remains the future form-submit hook).
-- [ ] Escape while open closes the popup; Escape while closed (input focused, value or
+- [x] Escape while open closes the popup; Escape while closed (input focused, value or
       input non-empty) clears the input and the selection with an escape-key reason.
-- [ ] Keyboard highlight movement skips nothing it shouldn't: disabled items match Base UI's
+- [x] Keyboard highlight movement skips nothing it shouldn't: disabled items match Base UI's
       roving behavior (highlightable, activation no-op); group labels/separators/status/empty
       are never highlighted.
-- [ ] Highlight movement scrolls the highlighted item into view (Select
+- [x] Highlight movement scrolls the highlighted item into view (Select
       `scroll_highlighted_into_view` precedent).
-- [ ] `on_item_highlighted` fires with the highlighted value and reason on every highlight
+- [x] `on_item_highlighted` fires with the highlighted value and reason on every highlight
       transition, and with `None` when the highlight clears.
 
 ### Item selection: single vs multiple, chips
 
-- [ ] Pointer press on an enabled item in single mode selects it, closes the popup
+- [x] Pointer press on an enabled item in single mode selects it, closes the popup
       (item-press reason), and fills the input with the item label when the input is outside
       the popup.
-- [ ] Selecting in multiple mode toggles membership in the ordered `Vec<T>` (append on
+- [x] Selecting in multiple mode toggles membership in the ordered `Vec<T>` (append on
       select, remove on deselect), does not close the popup, and never duplicates values.
-- [ ] In multiple mode, selecting while a typed filter is active clears the filter query so
+- [x] In multiple mode, selecting while a typed filter is active clears the filter query so
       the full list is visible again (Base UI wasFiltering behavior for the first-port
       topology).
-- [ ] Disabled items and read-only/disabled roots make activation a no-op (pointer and
+- [x] Disabled items and read-only/disabled roots make activation a no-op (pointer and
       Enter).
-- [ ] The press-selection path is one runtime command shared by pointer and Enter so
+- [x] The press-selection path is one runtime command shared by pointer and Enter so
       callbacks/reasons stay consistent.
-- [ ] `ComboboxItemIndicator<T>` renders only when its item is selected unless
+- [x] `ComboboxItemIndicator<T>` renders only when its item is selected unless
       `keep_mounted`.
-- [ ] `ComboboxChips<T>` renders one `ComboboxChip<T>` per selected value in selection
+- [x] `ComboboxChips<T>` renders one `ComboboxChip<T>` per selected value in selection
       order; chips compose as plain layers over runtime `Vec<T>` state.
-- [ ] Chip keyboard model: from the input with caret at start, ArrowLeft (RTL-aware:
+- [ ] Chip keyboard model: from the input with caret at start, ArrowLeft (RTL-aware: *(NOTE: implemented via input caret-edge hooks and key-down observation; RTL-aware inline-start mapping not implemented — physical Left/Right only)*
       inline-start) highlights the last chip; ArrowLeft/ArrowRight move between chips and
       return to the input past the ends; Backspace/Delete on a highlighted chip removes that
       value and moves the highlight to the adjacent chip (or back to the input); Enter/Space/
       printable characters return focus to the input; ArrowDown/ArrowUp from a chip opens
       the popup.
-- [ ] Backspace in an empty input with no chip highlighted removes the last selected value.
-- [ ] `ComboboxChipRemove<T>` removes its chip's value (chip-remove-press reason), refocuses
+- [x] Backspace in an empty input with no chip highlighted removes the last selected value.
+- [x] `ComboboxChipRemove<T>` removes its chip's value (chip-remove-press reason), refocuses
       the input, and clears the list highlight if the removed item was highlighted.
-- [ ] `ComboboxClear` is visible only when there is something to clear (single: value
+- [x] `ComboboxClear` is visible only when there is something to clear (single: value
       present; multiple: non-empty; None mode: input non-empty); pressing it clears input +
       selection + highlight (clear-press reason) and refocuses the input without opening the
       popup.
-- [ ] `ComboboxValue<T>` shows placeholder when nothing is selected, the selected label in
+- [x] `ComboboxValue<T>` shows placeholder when nothing is selected, the selected label in
       single mode, and joined labels (or a caller formatter) in multiple mode.
-- [ ] Dynamic item removal/re-add reconciles selection deterministically (Select fallback
+- [x] Dynamic item removal/re-add reconciles selection deterministically (Select fallback
       rules as precedent); duplicate item values behave deterministically and are
       documented.
 
 ### Positioning / portal / dismissal
 
-- [ ] `ComboboxPortal` renders overlay content only while open/mounted (or force-mounted for
+- [x] `ComboboxPortal` renders overlay content only while open/mounted (or force-mounted for
       measurement) through GPUI deferred/anchored rendering.
-- [ ] Clicking/pressing the input (when `open_on_input_click`) opens the popup without
+- [x] Clicking/pressing the input (when `open_on_input_click`) opens the popup without
       toggling it closed; typing a non-empty query opens it; the trigger button toggles
       open/close and focuses the input on non-touch press.
-- [ ] The positioner anchors to the input group when present, else the input, with an
+- [x] The positioner anchors to the input group when present, else the input, with an
       explicit `.anchor(...)` override; anchor bounds are measured through GPUI
       layout/prepaint hooks, and anchor width is exposed so the popup can match the input
       width (Base UI CSS-var equivalent as typed style state).
-- [ ] Side/align + offsets map to GPUI anchored semantics; viewport clamping via
+- [x] Side/align + offsets map to GPUI anchored semantics; viewport clamping via
       `snap_to_window_with_margin(...)`; collision subset documented as in Select.
-- [ ] Outside press dismisses (outside-press reason) but presses on the trigger, clear
+- [ ] Outside press dismisses (outside-press reason) but presses on the trigger, clear *(NOTE: input-group/trigger/clear/chips presses re-open or act after the positioner's mouse-down-out close; strict exclusion not verified in a rendered test)*
       button, chips container, or input group do not count as outside.
-- [ ] Focus leaving input+popup closes with focus-out reason and marks the Field touched.
-- [ ] Escape closes and keeps focus on the input.
-- [ ] While open the input keeps keyboard focus; opening never steals focus into the popup.
-- [ ] `ComboboxBackdrop` and `ComboboxArrow` render with open/side/align style state
+- [x] Focus leaving input+popup closes with focus-out reason and marks the Field touched.
+- [x] Escape closes and keeps focus on the input.
+- [x] While open the input keeps keyboard focus; opening never steals focus into the popup.
+- [x] `ComboboxBackdrop` and `ComboboxArrow` render with open/side/align style state
       (popover layer precedents); no scroll-lock/modal inertness in the first port.
-- [ ] List scrolling uses a runtime-owned scroll handle; long lists remain usable; the
+- [x] List scrolling uses a runtime-owned scroll handle; long lists remain usable; the
       virtualized stretch item uses gpui `uniform_list` with indices mapped to the filtered
       set, or is explicitly deferred.
 
 ### Field / Form integration
 
-- [ ] Combobox inside `FieldRoot` registers one representative control (the input) with
+- [x] Combobox inside `FieldRoot` registers one representative control (the input) with
       stable key, name, value, disabled, focused, required, value-missing facts, and focus
       handle.
-- [ ] Field/Fieldset disabled state combines with Combobox disabled state; name precedence
+- [x] Field/Fieldset disabled state combines with Combobox disabled state; name precedence
       follows Field rules.
-- [ ] Filled: single = value selected; multiple = non-empty list (None mode, for
+- [x] Filled: single = value selected; multiple = non-empty list (None mode, for
       Autocomplete later: input non-empty).
-- [ ] Dirty compares current selection (and input value in None mode) against initial;
+- [x] Dirty compares current selection (and input value in None mode) against initial;
       touched sets on blur/focus-out, not when focus moves within the combobox; focused is
       true while input or popup interaction is inside the combobox.
-- [ ] Required: single missing when `None`; multiple missing when empty.
-- [ ] Accepted value changes clear matching external Form errors and run `OnChange`
+- [x] Required: single missing when `None`; multiple missing when empty.
+- [ ] Accepted value changes clear matching external Form errors and run `OnChange` *(NOTE: relies on Field's registration-driven validation like Select; not covered by a Combobox rendered test yet)*
       validation; `OnBlur` validates on focus-out; `OnSubmit` validates on Form submit.
-- [ ] Serialization: single registers `FieldValue::Text(serialized)` via
+- [x] Serialization: single registers `FieldValue::Text(serialized)` via
       `item_to_string_value` (or documented `Present`/`Empty`); multiple registers
       `FieldValue::List(...)`; None mode (for the Autocomplete port) registers
       `FieldValue::Text(input_value)`; named fields contribute deterministic `FormValue`
       entries; disabled fields are skipped.
-- [ ] Invalid Form submit focuses the Combobox input through the registered focus handle.
+- [x] Invalid Form submit focuses the Combobox input through the registered focus handle.
 
 ### Styling / state exposure
 
-- [ ] `ComboboxRootStyleState`: open, disabled, read-only, required, selection mode,
+- [x] `ComboboxRootStyleState`: open, disabled, read-only, required, selection mode,
       value-present, input-non-empty, list-empty, plus Field facts (focused, filled, dirty,
       touched, valid).
-- [ ] `ComboboxInputStyleState`: open, disabled, read-only, popup side, list-empty, plus
+- [x] `ComboboxInputStyleState`: open, disabled, read-only, popup side, list-empty, plus
       Field facts (Base UI input state = FieldRootState + open/popupSide/listEmpty/readOnly);
       composes with, not replaces, the inner `InputStyleState` styling hook.
-- [ ] `ComboboxInputGroupStyleState` and `ComboboxTriggerStyleState`: open, disabled,
+- [x] `ComboboxInputGroupStyleState` and `ComboboxTriggerStyleState`: open, disabled,
       read-only, popup side, list-empty, placeholder (no selected value), plus Field facts.
-- [ ] `ComboboxListStyleState`: empty.
-- [ ] `ComboboxPositionerStyleState`: open, side, align, anchor width/measured sizes,
+- [x] `ComboboxListStyleState`: empty.
+- [x] `ComboboxPositionerStyleState`: open, side, align, anchor width/measured sizes,
       anchor-hidden if supported, empty.
-- [ ] `ComboboxPopupStyleState`: open, side, align, empty (transition status deferred with
+- [x] `ComboboxPopupStyleState`: open, side, align, empty (transition status deferred with
       the shared follow-up).
-- [ ] `ComboboxBackdropStyleState`: open/mounted.
-- [ ] `ComboboxArrowStyleState`: open, side, align, uncentered.
-- [ ] `ComboboxItemStyleState`: selected, highlighted, disabled, index.
-- [ ] `ComboboxItemIndicatorStyleState`: selected.
-- [ ] `ComboboxChipStyleState`: highlighted, disabled, read-only, index;
+- [x] `ComboboxBackdropStyleState`: open/mounted.
+- [x] `ComboboxArrowStyleState`: open, side, align, uncentered.
+- [x] `ComboboxItemStyleState`: selected, highlighted, disabled, index.
+- [x] `ComboboxItemIndicatorStyleState`: selected.
+- [x] `ComboboxChipStyleState`: highlighted, disabled, read-only, index;
       `ComboboxChipRemoveStyleState`: disabled.
-- [ ] `ComboboxClearStyleState`: visible, disabled, open.
-- [ ] `ComboboxIconStyleState`: open.
-- [ ] Empty-or-useful style states for label, value, status, empty, group, group label,
+- [x] `ComboboxClearStyleState`: visible, disabled, open.
+- [x] `ComboboxIconStyleState`: open.
+- [x] Empty-or-useful style states for label, value, status, empty, group, group label,
       separator; every part Base UI exposes state for has `style_with_state(...)`.
-- [ ] Style-state structs live in `style_state.rs`; no DOM data attributes, CSS classes, or
+- [x] Style-state structs live in `style_state.rs`; no DOM data attributes, CSS classes, or
       CSS variables anywhere in the public surface.
 
 ### Tests / verification
 
 Runtime tests (no window) under `crates/base_gpui/src/combobox/tests/`:
 
-- [ ] Uncontrolled/controlled reconciliation for all three axes (selected value(s), input
+- [x] Uncontrolled/controlled reconciliation for all three axes (selected value(s), input
       value, open) including cancellation.
-- [ ] Default input value derivation from the selected label in single mode.
-- [ ] Filtering: default contains match, custom filter, filter disabled, limit,
+- [x] Default input value derivation from the selected label in single mode.
+- [x] Filtering: default contains match, custom filter, filter disabled, limit,
       single-mode browse bypass and `query_changed_after_open` transition, close-query
       freeze/reset.
-- [ ] Highlight: move next/previous with and without loop, auto-highlight modes, highlight
+- [x] Highlight: move next/previous with and without loop, auto-highlight modes, highlight
       preservation/clamping across filter changes, disabled-item behavior, hover vs
       keep-highlight.
-- [ ] Selection: single select outcome (close + fill input), multiple toggle
+- [x] Selection: single select outcome (close + fill input), multiple toggle
       (order, no duplicates, stays open, filter clear), Backspace-removes-last,
       chip-remove highlight cleanup, clear command, Escape-while-closed clear.
-- [ ] Item registration order with groups/separators interleaved; collection-driven
+- [ ] Item registration order with groups/separators interleaved; collection-driven *(NOTE: order + group registration unit-tested; collection-driven registration requires a rendered test — not written)*
       registration; dynamic removal/re-add reconciliation.
-- [ ] `on_item_highlighted` fires exactly once per transition with correct reason/index.
+- [x] `on_item_highlighted` fires exactly once per transition with correct reason/index.
 
-Rendered tests:
+Rendered tests: *(none written in this pass — runtime behavior is unit-tested; rendered/window tests deferred)*
 
 - [ ] Typing filters the visible items and opens the popup.
 - [ ] ArrowDown opens and highlights; Enter selects; single mode closes and fills the input.
@@ -664,7 +665,7 @@ Rendered tests:
 - [ ] Field integration: filled, dirty, touched, focused, required, validation modes.
 - [ ] Form integration: submitted values (single text, multiple list), external error
       clearing, disabled skip, invalid-submit focus.
-- [ ] Demos render in `crates/base_gpui/src/main.rs` without panics.
+- [ ] Demos render in `crates/base_gpui/src/main.rs` without panics. *(NOTE: demos added; not executed headlessly in this pass)*
 
 ## Stretch scope (explicitly optional in the first port)
 
@@ -679,6 +680,10 @@ Rendered tests:
 ## Follow-ups to track explicitly if not completed in the first port
 
 - [ ] Autocomplete port as a thin layer over `ComboboxRuntime<T>` with
+      *(Seams ready: `ComboboxSelectionMode::None`, `ComboboxProps.fill_input_on_item_press` /
+      `keep_highlight` / `submit_on_item_click`, `ComboboxRuntime::set_inline_overlay` +
+      `display_value()` (whole-value overlay via input `sync_props`), and the read-only
+      `input_value()` query.)*
       `selection_mode = None` (`issues/port-baseui-autocomplete.md`, already written —
       keep the cross-link to the runtime-knob criterion above in sync).
 - [ ] Inline autocompletion (`autoComplete: 'both' | 'inline'`): highlighted item label

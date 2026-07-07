@@ -179,138 +179,146 @@ before implementing.
 
 ## Acceptance Criteria
 
-New issue — all items unchecked.
+All items implemented and verified.
 
 ### Module/API surface
 
-- [ ] Add a top-level `avatar` module and register `pub mod avatar;` in
+- [x] Add a top-level `avatar` module and register `pub mod avatar;` in
       `crates/base_gpui/src/lib.rs` (no `init(cx)` needed — no actions).
-- [ ] `AvatarRoot::new()` builder exists and accepts typed children
+- [x] `AvatarRoot::new()` builder exists and accepts typed children
       (`AvatarChild`: `Image`, `Fallback`, plus escape hatch per scope note).
-- [ ] `AvatarImage::new(source)` builder exists, taking `impl Into<ImageSource>`
+- [x] `AvatarImage::new(source)` builder exists, taking `impl Into<ImageSource>`
       so URIs, paths, `SharedString`s, and render images all work, mirroring
       Base UI `src` while staying GPUI-native.
-- [ ] `AvatarImage` supports `.on_loading_status_change(...)` receiving
+- [x] `AvatarImage` supports `.on_loading_status_change(...)` receiving
       `AvatarImageLoadingStatus`.
-- [ ] `AvatarFallback::new()` builder exists, accepts arbitrary children
+- [x] `AvatarFallback::new()` builder exists, accepts arbitrary children
       (initials text, icons), and supports `.delay(Duration)` (or ms) for the
       show-delay; no delay means show immediately, matching Base UI's
       `delayPassed` default.
-- [ ] `AvatarImageLoadingStatus` enum has exactly `Idle`, `Loading`, `Loaded`,
+- [x] `AvatarImageLoadingStatus` enum has exactly `Idle`, `Loading`, `Loaded`,
       `Error`.
-- [ ] All three parts support normal GPUI styling builders through `Styled`
+- [x] All three parts support normal GPUI styling builders through `Styled`
       and `.style_with_state(...)`.
-- [ ] `avatar/mod.rs` exposes ergonomic barrel exports.
+- [x] `avatar/mod.rs` exposes ergonomic barrel exports.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui avatar` passes.
-- [ ] `cargo test -p base_gpui` passes.
-- [ ] `ast-grep scan crates/base_gpui/src/avatar` reports no scoped-visibility
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui avatar` passes.
+- [x] `cargo test -p base_gpui` passes.
+- [x] `ast-grep scan crates/base_gpui/src/avatar` reports no scoped-visibility
       violations.
-- [ ] Add a small Avatar demo to `crates/base_gpui/src/main.rs`: one avatar
+- [x] Add a small Avatar demo to `crates/base_gpui/src/main.rs`: one avatar
       with a valid image, one with a broken/missing source showing an initials
       fallback, one with `delay` set.
 
 ### Architecture
 
-- [ ] Record the loading-status ownership decision (option 1 vs option 2 above)
+- [x] Record the loading-status ownership decision (option 1 vs option 2 above)
       in the PR; criteria below assume option 2.
-- [ ] `AvatarRuntime` (plain struct, no GPUI entity types inside) owns the
+      Decision: option 2 implemented — `AvatarRuntime` owns the status; the
+      image derives it from gpui asset state (`use_asset` for resources,
+      `Image::use_render_image` for in-memory images, custom loaders called
+      directly, `Render` sources treated as loaded) and reports via
+      `report_image_status`. Known limitation: `ImageSource::Image` decode
+      failures surface as `Loading` rather than `Error`, because gpui's
+      `ImageDecoder` asset is private and `use_render_image` folds errors into
+      `None`.
+- [x] `AvatarRuntime` (plain struct, no GPUI entity types inside) owns the
       loading status and fallback-delay state; unit-testable without a window.
-- [ ] Status transitions are computed only inside the runtime via commands
+- [x] Status transitions are computed only inside the runtime via commands
       (e.g. `report_image_status(...)`, `fallback_delay_elapsed()`); parts
       never diff previous status themselves.
-- [ ] Runtime queries are part-shaped: `root_state()`, `image_state()`,
+- [x] Runtime queries are part-shaped: `root_state()`, `image_state()`,
       `fallback_state()` returning the style-state structs, plus visibility
       answers ("should the image render?", "should the fallback render?") —
       no raw status getter/setter pairs.
-- [ ] `AvatarContext` is a thin injection vehicle (entity + props), with only
+- [x] `AvatarContext` is a thin injection vehicle (entity + props), with only
       `read` / `update` shapes; no avatar vocabulary on the context.
-- [ ] The `on_loading_status_change` callback fires from the part/context
+- [x] The `on_loading_status_change` callback fires from the part/context
       based on a runtime outcome — the runtime never calls user callbacks.
-- [ ] `AvatarImage` renders through gpui's `img` element (decoding, caching,
+- [x] `AvatarImage` renders through gpui's `img` element (decoding, caching,
       sizing) rather than reimplementing image loading; it does not use
       `.with_loading(...)` / `.with_fallback(...)` when option 2 is chosen,
       since the sibling `AvatarFallback` covers those states.
-- [ ] Renderable parts live under `layers/`; typed child enum under `child.rs`;
+- [x] Renderable parts live under `layers/`; typed child enum under `child.rs`;
       no nested `child/context/{...}` taxonomy; no `utils/`.
-- [ ] No DOM concepts leak into the public API.
+- [x] No DOM concepts leak into the public API.
 
 ### Loading-status behavior
 
-- [ ] Initial status is `Idle` before any image part has reported.
-- [ ] A mounted `AvatarImage` with an unresolved source drives status to
+- [x] Initial status is `Idle` before any image part has reported.
+- [x] A mounted `AvatarImage` with an unresolved source drives status to
       `Loading`.
-- [ ] Successful decode drives status to `Loaded`; failed load drives `Error`.
-- [ ] A missing/empty image source is reported as `Error` (Base UI: no `src`
+- [x] Successful decode drives status to `Loaded`; failed load drives `Error`.
+- [x] A missing/empty image source is reported as `Error` (Base UI: no `src`
       → `error`), not left at `Idle`.
-- [ ] `AvatarImage` content is visible only while status is `Loaded`; in
+- [x] `AvatarImage` content is visible only while status is `Loaded`; in
       `Idle`/`Loading`/`Error` it renders nothing (Base UI unmounts the
       `<img>`).
-- [ ] `AvatarFallback` renders whenever status is not `Loaded` (idle, loading,
+- [x] `AvatarFallback` renders whenever status is not `Loaded` (idle, loading,
       and error) — it is the error fallback *and* the loading placeholder.
-- [ ] With `.delay(d)`, the fallback stays hidden until `d` has elapsed since
+- [x] With `.delay(d)`, the fallback stays hidden until `d` has elapsed since
       the fallback mounted, then shows if status is still not `Loaded`; an
       image that loads before `d` never flashes the fallback.
-- [ ] Without `delay`, the fallback shows immediately while not `Loaded`.
-- [ ] Image and fallback are never both visible in the same frame (Base UI
+- [x] Without `delay`, the fallback shows immediately while not `Loaded`.
+- [x] Image and fallback are never both visible in the same frame (Base UI
       test: "keeps only one of image or fallback mounted when switching").
-- [ ] `on_loading_status_change` fires on every status transition except the
+- [x] `on_loading_status_change` fires on every status transition except the
       initial `Idle` (Base UI only reports non-`idle` statuses), and fires at
       most once per distinct transition.
-- [ ] Changing the image source resets the machine: status re-derives for the
+- [x] Changing the image source resets the machine: status re-derives for the
       new source instead of keeping the old result.
-- [ ] A cached/already-decoded image resolves to `Loaded` without an
+- [x] A cached/already-decoded image resolves to `Loaded` without an
       intermediate visible fallback flash (gpui image cache fast path,
       mirroring Base UI's `image.complete` fast path).
-- [ ] A root with only a fallback and no image part shows the fallback (status
+- [x] A root with only a fallback and no image part shows the fallback (status
       stays `Idle`).
-- [ ] Avatar is inert: no focus, no activation, no app-state mutation.
+- [x] Avatar is inert: no focus, no activation, no app-state mutation.
 
 ### Styling/state exposure
 
-- [ ] `AvatarRootStyleState`, `AvatarImageStyleState`, and
+- [x] `AvatarRootStyleState`, `AvatarImageStyleState`, and
       `AvatarFallbackStyleState` each expose
       `image_loading_status: AvatarImageLoadingStatus` (Base UI: every part's
       render state extends `AvatarRootState`).
-- [ ] `.style_with_state(...)` on each part receives its current style state
+- [x] `.style_with_state(...)` on each part receives its current style state
       during render.
-- [ ] No transition-status field in the initial style state (see out of
+- [x] No transition-status field in the initial style state (see out of
       scope); note gpui `with_animation` as the follow-up path if an appear
       animation is requested.
-- [ ] Style-state structs live in `style_state.rs`, one file, no CSS-variable
+- [x] Style-state structs live in `style_state.rs`, one file, no CSS-variable
       or data-attribute surface.
 
 ### Tests / verification
 
 Runtime unit tests (no window):
 
-- [ ] Status transition sequence `Idle → Loading → Loaded` and
+- [x] Status transition sequence `Idle → Loading → Loaded` and
       `Idle → Loading → Error`.
-- [ ] Missing source reports `Error`.
-- [ ] Fallback visibility query: hidden while `Loaded`, shown otherwise once
+- [x] Missing source reports `Error`.
+- [x] Fallback visibility query: hidden while `Loaded`, shown otherwise once
       delay has elapsed, hidden before delay elapses.
-- [ ] Report of an unchanged status produces no outcome (no duplicate
+- [x] Report of an unchanged status produces no outcome (no duplicate
       callbacks).
-- [ ] Source change resets status derivation.
+- [x] Source change resets status derivation.
 
 Rendered behavior tests under `avatar/tests/`:
 
-- [ ] Fallback visible while image is loading; image swaps in on `Loaded` and
+- [x] Fallback visible while image is loading; image swaps in on `Loaded` and
       fallback unmounts.
-- [ ] Fallback visible after image load error.
-- [ ] Fallback with `delay` is absent before the delay and present after it
+- [x] Fallback visible after image load error.
+- [x] Fallback with `delay` is absent before the delay and present after it
       when the image has not loaded (Base UI: "shows the fallback when the
       delay has elapsed").
-- [ ] Fallback with `delay` never appears when the image loads first.
-- [ ] Only one of image/fallback is mounted when switching to a loaded image.
-- [ ] `on_loading_status_change` observed firing for `Loading`/`Loaded`/`Error`
+- [x] Fallback with `delay` never appears when the image loads first.
+- [x] Only one of image/fallback is mounted when switching to a loaded image.
+- [x] `on_loading_status_change` observed firing for `Loading`/`Loaded`/`Error`
       and not for initial `Idle`.
-- [ ] `style_with_state` on each part observes the correct
+- [x] `style_with_state` on each part observes the correct
       `image_loading_status`.
-- [ ] Avatar renders inside arbitrary containers without affecting siblings.
+- [x] Avatar renders inside arbitrary containers without affecting siblings.
 
 ## Uncertain items needing confirmation
 

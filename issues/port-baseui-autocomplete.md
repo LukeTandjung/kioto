@@ -264,22 +264,22 @@ reimplement.
 
 ### Module / API surface
 
-- [ ] `crates/base_gpui/src/autocomplete/` module exists and is registered in
+- [x] `crates/base_gpui/src/autocomplete/` module exists and is registered in
       `crates/base_gpui/src/lib.rs` (`pub mod autocomplete;`); key bindings come
       from the existing `combobox::init(cx)` (add `autocomplete::init(cx)` only if
       a new action is introduced, and register it from `base_gpui::init(cx)`).
-- [ ] `AutocompleteRoot<T>` builder exists with `.id(...)` keyed identity and
+- [x] `AutocompleteRoot<T>` builder exists with `.id(...)` keyed identity and
       `T: Clone + Eq + 'static`.
-- [ ] `AutocompleteRoot<T>` supports `.default_value(...)`, `.value(...)`,
+- [x] `AutocompleteRoot<T>` supports `.default_value(...)`, `.value(...)`,
       `.on_value_change(...)` — the **input text** axis (`SharedString`), mapped to
       the Combobox input-value axis.
-- [ ] `AutocompleteRoot<T>` supports
+- [x] `AutocompleteRoot<T>` supports
       `.mode(AutocompleteMode::{List, Both, Inline, None})`, default `List`.
-- [ ] `AutocompleteRoot<T>` supports `.default_open(bool)`, `.open(bool)`,
+- [x] `AutocompleteRoot<T>` supports `.default_open(bool)`, `.open(bool)`,
       `.on_open_change(...)`.
-- [ ] `AutocompleteRoot<T>` supports `.disabled(bool)`, `.read_only(bool)`,
+- [x] `AutocompleteRoot<T>` supports `.disabled(bool)`, `.read_only(bool)`,
       `.required(bool)`, `.name(...)`.
-- [ ] `AutocompleteRoot<T>` passes through `.auto_highlight(...)` (off /
+- [x] `AutocompleteRoot<T>` passes through `.auto_highlight(...)` (off /
       on-input-change / always; default off), `.keep_highlight(bool)` (default
       false), `.highlight_item_on_hover(bool)` (default true),
       `.open_on_input_click(bool)` (**default false** — Combobox defaults true),
@@ -287,18 +287,18 @@ reimplement.
       `.limit(...)`, `.filter(...)`, `.loop_focus(bool)`, and
       `.on_item_highlighted(...)` (receives `Option<T>` + reason
       Keyboard/Pointer/None).
-- [ ] `AutocompleteRoot<T>` supports `.item_to_string_value(...)` feeding display,
+- [x] `AutocompleteRoot<T>` supports `.item_to_string_value(...)` feeding display,
       filtering, fill-on-press, and Field serialization; never requires
       `T: Display`.
-- [ ] `AutocompleteRoot<T>` does **not** expose selection props (`value`/`values`
+- [x] `AutocompleteRoot<T>` does **not** expose selection props (`value`/`values`
       over `T`, `default_value(Option<T>)`, `on_value_change` over `T`,
       `.multiple`), `selection_mode`, `fill_input_on_item_press`, or a custom
       item-equality comparator.
-- [ ] `AutocompleteValue` exists: renders the current input value, with an optional
+- [x] `AutocompleteValue` exists: renders the current input value, with an optional
       formatter closure over the value (`Fn(&str) -> ...` shape) and optional
       static children taking precedence over the raw value, mirroring Base UI's
       children fallback order.
-- [ ] `autocomplete/mod.rs` re-exports the reused Combobox parts under Autocomplete
+- [x] `autocomplete/mod.rs` re-exports the reused Combobox parts under Autocomplete
       names: `AutocompleteInput`, `AutocompleteInputGroup`, `AutocompleteTrigger`,
       `AutocompleteIcon`, `AutocompleteClear`, `AutocompleteList`,
       `AutocompleteStatus`, `AutocompletePortal`, `AutocompleteBackdrop`,
@@ -306,122 +306,122 @@ reimplement.
       `AutocompleteGroup`, `AutocompleteGroupLabel`, `AutocompleteItem`,
       `AutocompleteCollection`, `AutocompleteEmpty`, `AutocompleteSeparator`
       (and `AutocompleteRow` iff the Combobox grid stretch landed).
-- [ ] `ComboboxLabel`, `ComboboxValue`, `ComboboxItemIndicator`, and the chips
+- [x] `ComboboxLabel`, `ComboboxValue`, `ComboboxItemIndicator`, and the chips
       parts are **not** re-exported under Autocomplete names.
-- [ ] `autocomplete/mod.rs` is barrel exports only.
+- [x] `autocomplete/mod.rs` is barrel exports only.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui autocomplete` passes.
-- [ ] `cargo test -p base_gpui` passes.
-- [ ] `cargo clippy -p base_gpui --all-targets` passes or has documented
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui autocomplete` passes.
+- [x] `cargo test -p base_gpui` passes.
+- [x] `cargo clippy -p base_gpui --all-targets` passes or has documented
       pre-existing warnings only.
-- [ ] `ast-grep scan crates/base_gpui/src/autocomplete` reports no
+- [x] `ast-grep scan crates/base_gpui/src/autocomplete` reports no
       scoped-visibility (`pub(...)`) violations.
-- [ ] Demo in `crates/base_gpui/src/main.rs`: an Autocomplete with input group,
+- [x] Demo in `crates/base_gpui/src/main.rs`: an Autocomplete with input group,
       input, clear, trigger, portal/positioner/popup/list, items, and empty state —
       one `mode = List` (filtering) and one `mode = Both` (inline autocompletion)
       variant.
 
 ### Configures the Combobox runtime (thin-variant invariants)
 
-- [ ] `AutocompleteRoot<T>` composes the existing `ComboboxRuntime<T>` /
+- [x] `AutocompleteRoot<T>` composes the existing `ComboboxRuntime<T>` /
       `ComboboxContext<T>` / `ComboboxChild<T>` wiring — no forked runtime, no
       duplicated filtering/highlight/positioning/dismissal logic anywhere under
       `crates/base_gpui/src/autocomplete/`.
-- [ ] Regardless of caller input, `selection_mode` is `None` — no selection state
+- [x] Regardless of caller input, `selection_mode` is `None` — no selection state
       is ever produced; item activation only fills the input.
-- [ ] Regardless of caller input, `fill_input_on_item_press` is `true`.
-- [ ] `open_on_input_click` defaults to `false`; typing a non-empty query still
+- [x] Regardless of caller input, `fill_input_on_item_press` is `true`.
+- [x] `open_on_input_click` defaults to `false`; typing a non-empty query still
       opens the popup. **(inherited open-on-type)**
-- [ ] `mode` resolves to the runtime knobs: `List`/`Both` enable filtering (caller
+- [x] `mode` resolves to the runtime knobs: `List`/`Both` enable filtering (caller
       `.filter(...)` or default contains); `Inline`/`None` disable internal
       filtering (static items); `Both`/`Inline` enable inline autocompletion.
-- [ ] In `Both` mode, filtering always uses the **typed** query, never the
+- [x] In `Both` mode, filtering always uses the **typed** query, never the
       inline-overlay display value (Base UI's filter-wrapping behavior): arrowing
       through items must not re-filter the list down to the highlighted item.
-- [ ] `.item_to_string_value(...)` is wired as the runtime's label resolver (the
+- [x] `.item_to_string_value(...)` is wired as the runtime's label resolver (the
       Combobox `item_to_string_label` slot) and the Field serialization resolver.
-- [ ] The pass-through knobs (`auto_highlight`, `keep_highlight`,
+- [x] The pass-through knobs (`auto_highlight`, `keep_highlight`,
       `highlight_item_on_hover`, `submit_on_item_click`, `limit`, `loop_focus`)
       reach the runtime unchanged and behave per the Combobox issue's criteria.
       **(inherited)**
-- [ ] Controlled/uncontrolled resolution for the input-value and open axes reuses
+- [x] Controlled/uncontrolled resolution for the input-value and open axes reuses
       the Combobox context rule (callbacks with reason details, cancelation,
       controlled source-of-truth). **(inherited)**
-- [ ] Disabled/read-only roots ignore open/typing/fill interactions. **(inherited)**
+- [x] Disabled/read-only roots ignore open/typing/fill interactions. **(inherited)**
 
 ### Inline autocompletion behavior (modes `Both`/`Inline` — the new logic)
 
-- [ ] Keyboard-highlighting an item (reason Keyboard) temporarily overwrites the
+- [x] Keyboard-highlighting an item (reason Keyboard) temporarily overwrites the
       **displayed** input text with the highlighted item's label (via
       `item_to_string_value`/registered label).
-- [ ] Programmatic highlight (reason None, e.g. `auto_highlight`) also writes the
+- [x] Programmatic highlight (reason None, e.g. `auto_highlight`) also writes the
       overlay — only reason **Pointer** is excluded: hovering items never changes
       the displayed input text (Base UI preserves the temporary value on hover).
-- [ ] Unhighlighting (highlight cleared, including popup close and Escape)
+- [x] Unhighlighting (highlight cleared, including popup close and Escape)
       removes the overlay and restores the typed input text exactly.
-- [ ] The overlay is display-only: while it is active, `on_value_change` does not
+- [x] The overlay is display-only: while it is active, `on_value_change` does not
       fire, the committed/typed value and query are unchanged, no open-on-type or
       highlight reset is triggered, and Field dirty/filled facts key off the
       committed value.
-- [ ] Typing clears any active overlay, commits the new typed value, and (in
+- [x] Typing clears any active overlay, commits the new typed value, and (in
       `Both` mode) re-filters against it.
-- [ ] A committed value change from any source (typing, item press, clear,
+- [x] A committed value change from any source (typing, item press, clear,
       controlled `.value(...)` change) clears the overlay.
-- [ ] Item press (pointer or Enter on the highlighted item) commits the item's
+- [x] Item press (pointer or Enter on the highlighted item) commits the item's
       label as a real input-value change (item-press reason), clears the overlay,
       and closes the popup — this is fill-on-press, not the overlay.
       **(inherited fill-on-press, verified in None selection mode)**
-- [ ] In modes `List`/`None`, highlight changes never alter the displayed input
+- [x] In modes `List`/`None`, highlight changes never alter the displayed input
       text.
-- [ ] The overlay reaches the screen through the existing `primitives/input`
+- [x] The overlay reaches the screen through the existing `primitives/input`
       controlled-value path (`sync_props` in
       `crates/base_gpui/src/primitives/input/runtime.rs`); no new input-primitive
       API and no selection-range/suffix-selection behavior (Base UI has none).
-- [ ] The caret/selection state of the input remains valid when the overlay swaps
+- [x] The caret/selection state of the input remains valid when the overlay swaps
       text in and out (the input runtime already clamps selection on controlled
       value change — verify through the overlay path).
 
 ### Input-value exposure via `AutocompleteValue`
 
-- [ ] `AutocompleteValue` renders the current **displayed** input value — including
+- [x] `AutocompleteValue` renders the current **displayed** input value — including
       an active inline overlay — matching Base UI, where the Value part reads the
       resolved input value context.
-- [ ] With a formatter closure, the closure receives the current value and its
+- [x] With a formatter closure, the closure receives the current value and its
       result is rendered; with static children, children win; otherwise the raw
       value renders.
-- [ ] `AutocompleteValue` re-renders live as the value changes (typing, overlay
+- [x] `AutocompleteValue` re-renders live as the value changes (typing, overlay
       set/clear, fill-on-press, clear button).
 
 ### Reuse of Combobox behavior (inherited — verify through Autocomplete, do not reimplement)
 
-- [ ] Default filtering (case-insensitive contains on labels), custom
+- [x] Default filtering (case-insensitive contains on labels), custom
       `.filter(...)`, `.limit(...)`, and static-items mode behave per the Combobox
       issue.
-- [ ] `AutocompleteEmpty` renders children only when the filtered list is empty;
+- [x] `AutocompleteEmpty` renders children only when the filtered list is empty;
       highlight resets on empty list.
-- [ ] Highlight/keyboard navigation: ArrowDown/ArrowUp open + move highlight,
+- [x] Highlight/keyboard navigation: ArrowDown/ArrowUp open + move highlight,
       focus stays on the input (virtual highlight), `loop_focus` input-position
       semantics, disabled items highlightable but inert, highlighted item scrolled
       into view.
-- [ ] `auto_highlight` modes and `keep_highlight`/`highlight_item_on_hover`
+- [x] `auto_highlight` modes and `keep_highlight`/`highlight_item_on_hover`
       pointer semantics work as specified in the Combobox issue.
-- [ ] Enter with no highlight closes the popup; Escape while open closes; Escape
+- [x] Enter with no highlight closes the popup; Escape while open closes; Escape
       while closed with a non-empty input clears it (escape-key reason; None-mode
       variant: input only, no selection to clear).
-- [ ] Positioner anchors to input-group-else-input; outside press dismisses;
+- [x] Positioner anchors to input-group-else-input; outside press dismisses;
       trigger/clear/input-group presses do not count as outside; focus-out closes
       and marks the Field touched.
-- [ ] `AutocompleteClear` is visible when the input is non-empty (the Combobox
+- [x] `AutocompleteClear` is visible when the input is non-empty (the Combobox
       issue's None-mode visibility rule); pressing it clears the input (clear-press
       reason) and refocuses the input.
-- [ ] Field/Form: filled = input non-empty; dirty compares the committed input
+- [x] Field/Form: filled = input non-empty; dirty compares the committed input
       value against initial; validation modes; the submitted value is the **input
       text** (via `item_to_string_value` only for item-derived text), never a
       selection; invalid submit focuses the input.
-- [ ] Style states are the Combobox style-state structs, reported through the
+- [x] Style states are the Combobox style-state structs, reported through the
       re-exported parts with `selection_mode = None` facts (root reports selection
       mode; input/trigger/input-group report open/popup-side/list-empty/Field
       facts); `style_with_state(...)` works on every re-exported part.
@@ -431,22 +431,24 @@ reimplement.
 Runtime tests (no window) under `crates/base_gpui/src/autocomplete/tests/` (or as
 Combobox runtime tests where the knowledge lives there — do not duplicate suites):
 
-- [ ] Mode matrix: `List` filters + no overlay; `Both` filters + overlay; `Inline`
+- [x] Mode matrix: `List` filters + no overlay; `Both` filters + overlay; `Inline`
       static + overlay; `None` static + no overlay.
-- [ ] `Both` filters on the typed query while an overlay is active (list does not
+- [x] `Both` filters on the typed query while an overlay is active (list does not
       collapse to the highlighted item).
-- [ ] Overlay lifecycle: keyboard highlight sets it, pointer highlight does not,
+- [x] Overlay lifecycle: keyboard highlight sets it, pointer highlight does not,
       unhighlight/close restores the typed text, typing clears and commits,
       committed change from clear/controlled update clears it, no
       `on_value_change` fires for overlay-only changes.
-- [ ] Item press in `selection_mode = None`: fills the input with the label
+- [x] Item press in `selection_mode = None`: fills the input with the label
       (item-press reason), closes the popup, produces no selection.
-- [ ] Controlled vs uncontrolled input value through the Autocomplete axis names,
+- [x] Controlled vs uncontrolled input value through the Autocomplete axis names,
       including cancelation and Escape-clear.
-- [ ] `open_on_input_click = false` default: input click does not open; typing
+- [x] `open_on_input_click = false` default: input click does not open; typing
       opens.
 
-Rendered tests:
+Rendered tests (not implemented in this pass — no windowed rendered-test
+harness exists yet for Combobox either; runtime coverage above plus the
+main.rs demos stand in):
 
 - [ ] Typing filters visible items (`List`/`Both`) vs static items
       (`Inline`/`None`).
@@ -466,11 +468,11 @@ Rendered tests:
 The Combobox issue anticipated this port well; these three small deltas are needed
 (add them there — do not compensate by duplicating runtime logic here):
 
-- [ ] **Input-value query for the Value part.** Autocomplete's `Value` reads the
+- [x] **Input-value query for the Value part.** Autocomplete's `Value` reads the
       current (displayed) input value; the `ComboboxRuntime<T>` needs a part-shaped
       query exposing it (Base UI's `useComboboxInputValueContext` analog). The
       runtime owns the value already — this is only a query addition.
-- [ ] **Upgrade the inline-autocomplete "hook point" into overlay state.** The
+- [x] **Upgrade the inline-autocomplete "hook point" into overlay state.** The
       Combobox issue reserves a highlight-outcome hook; this port needs it to be
       concrete: `inline_overlay: Option<SharedString>` set/cleared on highlight
       transitions when enabled, a display-value query ("overlay if present, else
@@ -479,17 +481,17 @@ The Combobox issue anticipated this port well; these three small deltas are need
       `on_input_value_change`, no query recompute, no open-on-type/highlight
       reset). Equivalently: reconciling a controlled input value that differs only
       by overlay must not count as a user edit.
-- [ ] **Correct the follow-up wording about the input primitive.** The Combobox
+- [x] **Correct the follow-up wording about the input primitive.** The Combobox
       issue's follow-up says inline autocompletion "requires ... input-primitive
       selection-range support" — it does not. Base UI's `AutocompleteRoot`
       overwrites the whole visible value and never selects a completed suffix; the
       existing controlled-value path (`sync_props` in
       `crates/base_gpui/src/primitives/input/runtime.rs`) suffices.
-- [ ] **None-mode Field serialization.** State explicitly that in
+- [x] **None-mode Field serialization.** State explicitly that in
       `selection_mode = None` the registered Field value is
       `FieldValue::Text(input value)` (the Combobox issue covers filled/dirty for
       None mode but not serialization).
-- [ ] Cross-link: the Combobox issue's Autocomplete follow-up item should point at
+- [x] Cross-link: the Combobox issue's Autocomplete follow-up item should point at
       this file as written (it currently says "to be written").
 
 ## Uncertain items needing confirmation

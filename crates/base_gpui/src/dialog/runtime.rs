@@ -14,6 +14,7 @@ pub enum DialogOpenChangeReason {
     ClosePress,
     FocusOut,
     ImperativeAction,
+    Swipe,
     #[default]
     None,
 }

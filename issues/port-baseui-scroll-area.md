@@ -204,119 +204,122 @@ user CSS decides opacity/transition. Preserve Base UI's contract:
 
 ### Module / API surface
 
-- [ ] `crates/base_gpui/src/scroll_area/` exists with the flat layout above and is
+- [x] `crates/base_gpui/src/scroll_area/` exists with the flat layout above and is
       registered in `crates/base_gpui/src/lib.rs`.
-- [ ] `ScrollAreaRoot` builder exists with `id(...)`,
+- [x] `ScrollAreaRoot` builder exists with `id(...)`,
       `overflow_edge_threshold(...)` (uniform value or per-edge
       `xStart`/`xEnd`/`yStart`/`yEnd` struct, negatives clamped to zero, default
       0), `child`/`children`, and `style_with_state(...)`.
-- [ ] `ScrollAreaViewport` builder exists with `child`/`children` and
+- [x] `ScrollAreaViewport` builder exists with `child`/`children` and
       `style_with_state(...)`.
-- [ ] `ScrollAreaContent` builder exists with `child`/`children` and
+- [x] `ScrollAreaContent` builder exists with `child`/`children` and
       `style_with_state(...)`.
-- [ ] `ScrollAreaScrollbar` builder exists with
+- [x] `ScrollAreaScrollbar` builder exists with
       `orientation(ScrollAreaOrientation::Vertical | Horizontal)` (default
       vertical), `keep_mounted(bool)` (default false), typed thumb child, and
       `style_with_state(...)`.
-- [ ] `ScrollAreaThumb` builder exists with `style_with_state(...)`.
-- [ ] `ScrollAreaCorner` builder exists with `style_with_state(...)`.
-- [ ] Typed child enums: `ScrollAreaChild` routes
+- [x] `ScrollAreaThumb` builder exists with `style_with_state(...)`.
+- [x] `ScrollAreaCorner` builder exists with `style_with_state(...)`.
+- [x] Typed child enums: `ScrollAreaChild` routes
       `Viewport`/`Scrollbar`/`Corner` (plus an `AnyElement` escape hatch only if
       Base UI examples show arbitrary root children); `ScrollAreaScrollbarChild`
       routes `Thumb`. `Content` is a typed child of `Viewport`.
-- [ ] No `pub(crate)`/`pub(super)` visibility modifiers; module boundaries are
+- [x] No `pub(crate)`/`pub(super)` visibility modifiers; module boundaries are
       public API or private.
-- [ ] `mod.rs` files are barrel exports only.
-- [ ] `sg scan` (repo `sgconfig.yml` rules) reports no violations in the new
+- [x] `mod.rs` files are barrel exports only.
+- [x] `sg scan` (repo `sgconfig.yml` rules) reports no violations in the new
       module.
 
 ### Correctness / compile readiness
 
-- [ ] `cargo check -p base_gpui` passes.
-- [ ] `cargo test -p base_gpui` passes.
-- [ ] A demo in `crates/base_gpui/src/main.rs` (or an example) mounts Root >
+- [x] `cargo check -p base_gpui` passes.
+- [x] `cargo test -p base_gpui` passes.
+- [x] A demo in `crates/base_gpui/src/main.rs` (or an example) mounts Root >
       Viewport > Content with overflowing content, both scrollbars with thumbs,
       and a corner, with hover/scroll-driven scrollbar styling.
-- [ ] No thumb-geometry or drag-mapping code exists under `scroll_area/`; grep for
+- [x] No thumb-geometry or drag-mapping code exists under `scroll_area/`; grep for
       thumb-size math finds it only in `primitives/scroll/`.
 
 ### Architecture / composition
 
-- [ ] `ScrollAreaRuntime` is the single deep module: it owns the `ScrollHandle`,
+- [x] `ScrollAreaRuntime` is the single deep module: it owns the `ScrollHandle`,
       hover fact, per-axis scrolling facts and their deadlines, last-observed
       offset, overflow-edge flags, per-axis hidden state, and corner size. Plain
       `&mut self`/`&self` methods, no GPUI entity types, unit-testable without a
       window.
-- [ ] Runtime interface is commands + queries only (e.g.
+- [x] Runtime interface is commands + queries only (e.g.
       `observe_scroll(offset, max_offset, now)`, `set_hovering(bool)`,
       `refresh_overflow(offset, max_offset, viewport_bounds)`,
       `expire_scrolling(now)`; `root_state()`, `viewport_state()`,
       `scrollbar_state(orientation)`, `thumb_state(orientation)`,
       `corner_state()`). No getter/setter pairs; parts ask part-shaped questions.
-- [ ] `ScrollAreaContext` is the thin injection vehicle
+- [x] `ScrollAreaContext` is the thin injection vehicle
       (`Entity<ScrollAreaRuntime>` + `Rc<ScrollAreaProps>`), exposing only
       `read`/`update`. Scroll Area has no value-changing `select`-analogue; the
       context grows no component vocabulary.
-- [ ] `ScrollAreaViewport` renders
+      *(One addition: `refresh`, an `update` variant that notifies only when
+      the command reports a change, used by render-top reconciliation and
+      layout observation so repaints settle. No component vocabulary.)*
+- [x] `ScrollAreaViewport` renders
       `div().id(...).overflow_scroll().track_scroll(&handle)` with the runtime's
       `ScrollHandle`; per-axis overflow derives from
       `max_offset()`/`bounds()`, not from any hand-measured content size.
-- [ ] `ScrollAreaScrollbar`/`ScrollAreaThumb` compose the `scrollbar()` primitive
+- [x] `ScrollAreaScrollbar`/`ScrollAreaThumb` compose the `scrollbar()` primitive
       from `issues/add-gpui-scrollbar-primitive.md` over that same `ScrollHandle`
       via `ScrollTarget`, per the Composition section; the primitive's visibility
       policy is pinned to `Always` and Scroll Area state drives styling.
-- [ ] Child wiring (which children exist, context attachment) happens once in the
+- [x] Child wiring (which children exist, context attachment) happens once in the
       root render before erasure to `AnyElement`; no index bookkeeping leaks into
       parts.
-- [ ] State mutates only at the top of root render (reconcile/refresh) and in
+- [x] State mutates only at the top of root render (reconcile/refresh) and in
       event/timer handlers via context commands.
 
 ### Scroll activity / overflow-edge state
 
-- [ ] A module-level documented `SCROLL_TIMEOUT` constant of 500ms exists.
-- [ ] When the observed vertical offset changes, `scrolling_y` becomes true; when
+- [x] A module-level documented `SCROLL_TIMEOUT` constant of 500ms exists.
+- [x] When the observed vertical offset changes, `scrolling_y` becomes true; when
       the horizontal offset changes, `scrolling_x` becomes true. A change on one
       axis does not mark the other axis as scrolling.
-- [ ] Each axis's scrolling flag clears 500ms after that axis's *last* observed
+- [x] Each axis's scrolling flag clears 500ms after that axis's *last* observed
       scroll activity (deadline extends on continued scrolling), driven by at most
       one scheduled timer per axis (or one shared timer) — no per-frame polling
       while idle. The deadline decision (`expire_scrolling(now)`) lives in the
       runtime so it is unit-testable with injected times.
-- [ ] Scrolling caused by the primitive (thumb drag, track click, wheel over
+- [x] Scrolling caused by the primitive (thumb drag, track click, wheel over
       track) marks the axis as scrolling through the same observed-offset path —
       no special-case plumbing.
-- [ ] Overflow-edge flags per axis: `overflow_y_start` is true when the scrolled
+- [x] Overflow-edge flags per axis: `overflow_y_start` is true when the scrolled
       distance from the start exceeds the `y_start` threshold;
       `overflow_y_end` when the remaining distance to the end exceeds the
       `y_end` threshold; likewise for x. With the default threshold 0 this reduces
       to "not at that edge", matching Select's
       `refresh_scroll_arrow_visibility` sign conventions
       (offset zero-or-negative; at end when `-offset >= max_offset`).
-- [ ] Edge flags are false for an axis with no overflow.
-- [ ] Edge flags refresh on scroll and on layout changes that alter
+- [x] Edge flags are false for an axis with no overflow.
+- [x] Edge flags refresh on scroll and on layout changes that alter
       `max_offset` (content or viewport resize), and refresh commands return
       whether anything changed so parts only notify when needed.
 
 ### Scrollbar visibility / mount / corner
 
-- [ ] `hovering` becomes true while the pointer is inside the Root's bounds and
+- [x] `hovering` becomes true while the pointer is inside the Root's bounds and
       false when it leaves (Root-level hover, not viewport-only, matching Base
       UI's root `onPointerEnter`/`onPointerLeave` + child containment).
-- [ ] An axis is hidden when its content does not overflow the viewport
+- [x] An axis is hidden when its content does not overflow the viewport
       (`max_offset` on that axis is zero, the GPUI analogue of
       `clientSize >= scrollSize`).
-- [ ] `ScrollAreaScrollbar` renders nothing when its axis is hidden, unless
+- [x] `ScrollAreaScrollbar` renders nothing when its axis is hidden, unless
       `keep_mounted(true)`, in which case it stays in the tree with
       `has_overflow_*` false in its style state.
-- [ ] A `keep_mounted` scrollbar whose axis starts hidden appears (gains overflow
+- [x] A `keep_mounted` scrollbar whose axis starts hidden appears (gains overflow
       state) without user scrolling once content grows to overflow, and a
       non-`keep_mounted` scrollbar mounts under the same condition.
-- [ ] The corner is hidden unless both axes have overflow
+- [x] The corner is hidden unless both axes have overflow
       (`corner_hidden = hidden_x || hidden_y`).
-- [ ] Corner size derives from the rendered scrollbar thicknesses (vertical
+- [x] Corner size derives from the rendered scrollbar thicknesses (vertical
       scrollbar width × horizontal scrollbar height), measured via GPUI
       layout/prepaint, and resets to zero when either axis loses overflow.
-- [ ] The vertical scrollbar reserves the corner height at its end and the
+- [x] The vertical scrollbar reserves the corner height at its end and the
       horizontal scrollbar reserves the corner width, so tracks never overlap the
       corner (Base UI's `bottom: var(--corner-height)` / `inset-inline-end:
       var(--corner-width)` translated to layout insets; coordinate with the
@@ -324,48 +327,48 @@ user CSS decides opacity/transition. Preserve Base UI's contract:
 
 ### Viewport / focus behavior
 
-- [ ] The Viewport is the single scroll container; wheel/trackpad scrolling over
+- [x] The Viewport is the single scroll container; wheel/trackpad scrolling over
       the viewport scrolls it natively via `overflow_scroll` (no re-implemented
       wheel handling at the viewport level).
-- [ ] The Viewport participates in focus (tab stop with a `FocusHandle`) only when
+- [x] The Viewport participates in focus (tab stop with a `FocusHandle`) only when
       at least one axis is scrollable, and drops out of the tab order when nothing
       scrolls — the GPUI translation of Base UI's conditional `tabIndex: 0 / -1`.
-- [ ] Wheel-over-scrollbar-track scrolling is delegated to the primitive and stays
+- [x] Wheel-over-scrollbar-track scrolling is delegated to the primitive and stays
       functional through the composition (see primitive issue; verify, do not
       reimplement).
 
 ### Content measurement
 
-- [ ] `ScrollAreaContent` wraps children so intrinsic content width is measurable
+- [x] `ScrollAreaContent` wraps children so intrinsic content width is measurable
       for horizontal overflow (the GPUI analogue of `min-width: fit-content`):
       the content must be allowed to exceed the viewport width instead of being
       clamped by it, so `max_offset().x` reflects true overflow.
-- [ ] Content growth/shrink updates overflow, edge flags, and scrollbar mount
+- [x] Content growth/shrink updates overflow, edge flags, and scrollbar mount
       state on the next frame without user scrolling (Base UI uses a
       `ResizeObserver`; use GPUI layout/prepaint observation, e.g.
       `on_children_prepainted` or `max_offset` refresh during viewport prepaint).
-- [ ] No first-frame flash of a wrong-sized thumb: whatever first-measurement
+- [x] No first-frame flash of a wrong-sized thumb: whatever first-measurement
       guard is needed lives in the runtime as a fact (measured yet or not), not as
       a visibility hack in parts.
-- [ ] Scroll Area works without a Content part for vertical-only use (Content is
+- [x] Scroll Area works without a Content part for vertical-only use (Content is
       optional, as in Base UI).
 
 ### Styling / state exposure
 
-- [ ] `ScrollAreaRootStyleState` (shared by Root, Viewport, and Content queries)
+- [x] `ScrollAreaRootStyleState` (shared by Root, Viewport, and Content queries)
       exposes: `scrolling` (either axis), `has_overflow_x`, `has_overflow_y`,
       `overflow_x_start`, `overflow_x_end`, `overflow_y_start`, `overflow_y_end`,
       `corner_hidden`.
-- [ ] `ScrollAreaScrollbarStyleState` extends that with `hovering`, per-axis
+- [x] `ScrollAreaScrollbarStyleState` extends that with `hovering`, per-axis
       `scrolling` (the scrollbar's own orientation), and `orientation`.
-- [ ] `ScrollAreaThumbStyleState` exposes `scrolling` (own orientation) and
+- [x] `ScrollAreaThumbStyleState` exposes `scrolling` (own orientation) and
       `orientation`.
-- [ ] `ScrollAreaCornerStyleState` exposes the corner size facts needed to style
+- [x] `ScrollAreaCornerStyleState` exposes the corner size facts needed to style
       it (or the corner is styled purely by layout; decide and document).
-- [ ] Style-state structs live in `style_state.rs`, are returned by runtime
+- [x] Style-state structs live in `style_state.rs`, are returned by runtime
       queries, and feed `style_with_state(...)`; no DOM data attributes, CSS
       variables, or `className` in the public surface.
-- [ ] The demo styles scrollbar opacity from `hovering || scrolling`, reproducing
+- [x] The demo styles scrollbar opacity from `hovering || scrolling`, reproducing
       Base UI's canonical show-on-hover/show-while-scrolling recipe purely through
       `style_with_state`.
 
@@ -374,32 +377,38 @@ user CSS decides opacity/transition. Preserve Base UI's contract:
 Runtime tests need no window (inject offsets/bounds/times); rendered tests under
 `crates/base_gpui/src/scroll_area/tests/` where practical.
 
-- [ ] Observing a vertical offset change sets `scrolling_y` and not `scrolling_x`,
+- [x] Observing a vertical offset change sets `scrolling_y` and not `scrolling_x`,
       and vice versa.
-- [ ] Scrolling flag clears exactly at `SCROLL_TIMEOUT` past the last activity and
+- [x] Scrolling flag clears exactly at `SCROLL_TIMEOUT` past the last activity and
       the deadline extends on continued activity.
-- [ ] Overflow-edge flags: at start only `*_end` is set, at end only `*_start`,
+- [x] Overflow-edge flags: at start only `*_end` is set, at end only `*_start`,
       mid-scroll both, no-overflow neither (default threshold).
-- [ ] Non-zero thresholds: an edge flag stays false until the scrolled/remaining
+- [x] Non-zero thresholds: an edge flag stays false until the scrolled/remaining
       distance exceeds its threshold; negative threshold inputs clamp to zero;
       uniform-number input applies to all four edges.
-- [ ] Hidden state: `max_offset == 0` on an axis hides that axis;
+- [x] Hidden state: `max_offset == 0` on an axis hides that axis;
       `corner_hidden` is true unless both axes overflow.
-- [ ] `keep_mounted(false)` scrollbar is absent without overflow and present with
+- [x] `keep_mounted(false)` scrollbar is absent without overflow and present with
       it; `keep_mounted(true)` is always present with correct `has_overflow_*`.
-- [ ] Corner size equals the scrollbar thicknesses when both axes overflow and
+- [x] Corner size equals the scrollbar thicknesses when both axes overflow and
       zero otherwise.
-- [ ] Content resize (max_offset change) updates overflow/edges/mount state
+- [x] Content resize (max_offset change) updates overflow/edges/mount state
       without a scroll event.
-- [ ] Hover enter/leave over the root toggles `hovering` in scrollbar style
+- [x] Hover enter/leave over the root toggles `hovering` in scrollbar style
       state.
-- [ ] Viewport is a tab stop only while scrollable.
+- [x] Viewport is a tab stop only while scrollable.
 - [ ] Rendered test (where practical): wheel-scrolling the viewport moves the
       composed primitive's thumb and flips edge state; dragging the primitive
       thumb (covered by the primitive's own tests) marks the Scroll Area as
       scrolling via observed offsets.
-- [ ] Style-state structs report the full field sets above from runtime facts.
-- [ ] `cargo test -p base_gpui scroll_area` passes.
+      *(Not practical: no scroll-wheel simulation is used in this repo's GPUI
+      test harness. Covered instead by rendered tests for overflow/edge
+      derivation and mount policy (`tests/rendered_scroll_area.rs`,
+      `tests/scrollbar_mounting.rs`) plus runtime tests over injected
+      offsets; primitive-driven scrolling flows through the same
+      `observe_scroll` path unit-tested in `tests/scrolling_axis_flags.rs`.)*
+- [x] Style-state structs report the full field sets above from runtime facts.
+- [x] `cargo test -p base_gpui scroll_area` passes.
 
 ## AccessKit accessibility follow-up
 

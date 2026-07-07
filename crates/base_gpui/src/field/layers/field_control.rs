@@ -11,7 +11,7 @@ use crate::{
         FieldControlRegistration, FieldValue,
     },
     fieldset::current_fieldset_disabled,
-    primitives::input::{input, Input, InputStyleState},
+    primitives::input::{input, Input, InputRuntime, InputStyleState},
 };
 
 #[derive(IntoElement)]
@@ -22,6 +22,7 @@ pub struct FieldControl {
     name: Option<SharedString>,
     disabled: bool,
     required: bool,
+    focus_handle: Option<FocusHandle>,
     style_with_state: Option<Rc<dyn Fn(InputStyleState, Div) -> Div + 'static>>,
 }
 
@@ -36,6 +37,7 @@ impl Default for FieldControl {
             name: None,
             disabled: false,
             required: false,
+            focus_handle: None,
             style_with_state: None,
         }
     }
@@ -59,12 +61,17 @@ impl RenderOnce for FieldControl {
         let fieldset_disabled = current_fieldset_disabled();
         let disabled = self.disabled || field_disabled || item_disabled || fieldset_disabled;
 
-        let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
-            ElementId::NamedChild(Arc::new(self.id.clone()), SharedString::from("focus")),
-            cx,
-            |_, cx| cx.focus_handle(),
-        );
-        let focus_handle = focus_handle_entity.read(cx).clone();
+        let focus_handle = match self.focus_handle.clone() {
+            Some(focus_handle) => focus_handle,
+            None => {
+                let focus_handle_entity: Entity<FocusHandle> = window.use_keyed_state(
+                    ElementId::NamedChild(Arc::new(self.id.clone()), SharedString::from("focus")),
+                    cx,
+                    |_, cx| cx.focus_handle(),
+                );
+                focus_handle_entity.read(cx).clone()
+            }
+        };
 
         let registration_context = field_context.clone();
         let registration_id = self.id.to_string();
@@ -166,6 +173,43 @@ impl FieldControl {
 
     pub fn tab_index(mut self, tab_index: isize) -> Self {
         self.input = self.input.tab_index(tab_index);
+        self
+    }
+
+    /// Overrides window Tab-order participation; composite containers such
+    /// as the Toolbar use this to keep a single roving tab stop.
+    pub fn tab_stop(mut self, tab_stop: bool) -> Self {
+        self.input = self.input.tab_stop(tab_stop);
+        self
+    }
+
+    /// Overrides the keyed focus handle so composite containers can own the
+    /// control's roving focus handle.
+    pub fn focus_handle(mut self, focus_handle: FocusHandle) -> Self {
+        self.focus_handle = Some(focus_handle);
+        self
+    }
+
+    pub fn on_edge_left(
+        mut self,
+        on_edge_left: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool
+            + 'static,
+    ) -> Self {
+        self.input = self.input.on_edge_left(on_edge_left);
+        self
+    }
+
+    pub fn on_edge_right(
+        mut self,
+        on_edge_right: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool
+            + 'static,
+    ) -> Self {
+        self.input = self.input.on_edge_right(on_edge_right);
+        self
+    }
+
+    pub fn select_all_on_focus(mut self, select_all_on_focus: bool) -> Self {
+        self.input = self.input.select_all_on_focus(select_all_on_focus);
         self
     }
 
