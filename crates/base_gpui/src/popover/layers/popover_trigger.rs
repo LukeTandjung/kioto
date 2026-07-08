@@ -1,4 +1,8 @@
-use std::{rc::Rc, sync::Arc, time::Duration};
+use std::{
+    rc::Rc,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use gpui::{
     div, AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
@@ -12,6 +16,7 @@ use crate::popover::{
     PopoverOpenChangeReason, PopoverOpenChangeSource, PopoverToggleAction, PopoverTriggerMetadata,
     PopoverTriggerStyleState, POPOVER_KEY_CONTEXT,
 };
+use crate::primitives::safe_polygon::SafePolygonVerdict;
 
 type PopoverTriggerStyle<P> = Rc<dyn Fn(PopoverTriggerStyleState<P>, Div) -> Div + 'static>;
 
@@ -126,6 +131,7 @@ impl<P: Clone + 'static> RenderOnce for PopoverTrigger<P> {
         let toggle_context = context.clone();
         let close_context = context.clone();
         let hover_context = context.clone();
+        let move_context = context.clone();
         let measure_context = context.clone();
         let click_id = scoped_id.clone();
         let toggle_id = scoped_id.clone();
@@ -206,6 +212,11 @@ impl<P: Clone + 'static> RenderOnce for PopoverTrigger<P> {
                             );
                         }
                     })
+                    .on_mouse_move(move |event, window, cx| {
+                        if let Some(context) = move_context.as_ref() {
+                            evaluate_safe_polygon_move(context, event.position, window, cx);
+                        }
+                    })
                     .on_hover(move |hovered, window, cx| {
                         if disabled || !open_on_hover {
                             return;
@@ -213,7 +224,10 @@ impl<P: Clone + 'static> RenderOnce for PopoverTrigger<P> {
                         if let Some(context) = hover_context.as_ref() {
                             if *hovered {
                                 if hover_open_delay.is_zero() {
-                                    context.update(cx, |runtime| runtime.cancel_hover());
+                                    context.update(cx, |runtime| {
+                                        runtime.cancel_hover();
+                                        runtime.disarm_safe_polygon();
+                                    });
                                     context.set_open(
                                         true,
                                         Some(hover_id.clone()),
@@ -224,6 +238,7 @@ impl<P: Clone + 'static> RenderOnce for PopoverTrigger<P> {
                                     );
                                 } else {
                                     let generation = context.update(cx, |runtime| {
+                                        runtime.disarm_safe_polygon();
                                         runtime.schedule_hover(
                                             PopoverHoverTarget::Open,
                                             Some(hover_id.clone()),
@@ -231,7 +246,7 @@ impl<P: Clone + 'static> RenderOnce for PopoverTrigger<P> {
                                     });
                                     spawn_delayed_hover(
                                         context.clone(),
-                                        hover_id.clone(),
+                                        Some(hover_id.clone()),
                                         generation,
                                         PopoverHoverTarget::Open,
                                         hover_open_delay,
@@ -239,16 +254,26 @@ impl<P: Clone + 'static> RenderOnce for PopoverTrigger<P> {
                                         cx,
                                     );
                                 }
-                            } else if hover_close_delay.is_zero() {
-                                context.update(cx, |runtime| runtime.cancel_hover());
-                                context.close(
-                                    PopoverOpenChangeReason::TriggerHover,
-                                    PopoverOpenChangeSource::Pointer,
-                                    window,
-                                    cx,
-                                );
                             } else {
+                                let (keep_open, open) = context.update(cx, |runtime| {
+                                    (
+                                        runtime.should_keep_open_for_popup_hover(),
+                                        runtime.open_value(),
+                                    )
+                                });
+                                if keep_open {
+                                    return;
+                                }
+                                if !open {
+                                    context.update(cx, |runtime| runtime.cancel_hover());
+                                    return;
+                                }
+                                // Arm the safe polygon so the pointer can
+                                // travel from the trigger to the popup
+                                // without the popover closing underneath it.
+                                let pointer = window.mouse_position();
                                 let generation = context.update(cx, |runtime| {
+                                    runtime.arm_safe_polygon(pointer);
                                     runtime.schedule_hover(
                                         PopoverHoverTarget::Close,
                                         Some(hover_id.clone()),
@@ -256,10 +281,10 @@ impl<P: Clone + 'static> RenderOnce for PopoverTrigger<P> {
                                 });
                                 spawn_delayed_hover(
                                     context.clone(),
-                                    hover_id.clone(),
+                                    Some(hover_id.clone()),
                                     generation,
                                     PopoverHoverTarget::Close,
-                                    hover_close_delay,
+                                    hover_close_delay.max(Duration::from_millis(50)),
                                     window,
                                     cx,
                                 );
@@ -353,9 +378,9 @@ impl<P: Clone + 'static> PopoverTrigger<P> {
     }
 }
 
-fn spawn_delayed_hover<P: Clone + 'static>(
+pub fn spawn_delayed_hover<P: Clone + 'static>(
     context: PopoverContext<P>,
-    trigger_id: ElementId,
+    trigger_id: Option<ElementId>,
     generation: u64,
     target: PopoverHoverTarget,
     delay: Duration,
@@ -367,7 +392,7 @@ fn spawn_delayed_hover<P: Clone + 'static>(
             cx.background_executor().timer(delay).await;
             cx.update(|window, cx| {
                 let current = context.update(cx, |runtime| {
-                    runtime.take_scheduled_hover(generation, target, Some(&trigger_id))
+                    runtime.take_scheduled_hover(generation, target, trigger_id.as_ref())
                 });
                 if !current {
                     return;
@@ -377,7 +402,7 @@ fn spawn_delayed_hover<P: Clone + 'static>(
                     PopoverHoverTarget::Open => {
                         context.set_open(
                             true,
-                            Some(trigger_id),
+                            trigger_id,
                             PopoverOpenChangeReason::TriggerHover,
                             PopoverOpenChangeSource::Pointer,
                             window,
@@ -385,6 +410,12 @@ fn spawn_delayed_hover<P: Clone + 'static>(
                         );
                     }
                     PopoverHoverTarget::Close => {
+                        let keep_open = context
+                            .read(cx, |runtime, _| runtime.should_keep_open_for_popup_hover());
+                        if keep_open {
+                            return;
+                        }
+                        context.update(cx, |runtime| runtime.disarm_safe_polygon());
                         context.close(
                             PopoverOpenChangeReason::TriggerHover,
                             PopoverOpenChangeSource::Pointer,
@@ -397,6 +428,57 @@ fn spawn_delayed_hover<P: Clone + 'static>(
             .ok();
         })
         .detach();
+}
+
+/// Feeds a pointer position to the runtime's armed safe polygon and acts on
+/// the verdict per the primitive's integration contract. Observed from the
+/// root, trigger, and popup mouse-move scopes.
+pub fn evaluate_safe_polygon_move<P: Clone + 'static>(
+    context: &PopoverContext<P>,
+    pointer: gpui::Point<gpui::Pixels>,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let verdict = context.update(cx, |runtime| {
+        runtime.evaluate_safe_polygon(pointer, polygon_now())
+    });
+    let Some(verdict) = verdict else {
+        return;
+    };
+    match verdict {
+        SafePolygonVerdict::Inside => {
+            let generation = context.update(cx, |runtime| {
+                runtime.schedule_hover(PopoverHoverTarget::Close, None)
+            });
+            spawn_delayed_hover(
+                context.clone(),
+                None,
+                generation,
+                PopoverHoverTarget::Close,
+                Duration::from_millis(40),
+                window,
+                cx,
+            );
+        }
+        SafePolygonVerdict::Outside => {
+            context.update(cx, |runtime| runtime.disarm_safe_polygon());
+        }
+        SafePolygonVerdict::LandedPopup => {
+            context.update(cx, |runtime| {
+                runtime.set_popup_hovered(true);
+                runtime.cancel_hover();
+            });
+        }
+        SafePolygonVerdict::LandedTrigger => {
+            context.update(cx, |runtime| runtime.cancel_hover());
+        }
+    }
+}
+
+fn polygon_now() -> Duration {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or(Duration::ZERO)
 }
 
 fn trigger_focus_handle(id: &ElementId, window: &mut Window, cx: &mut App) -> FocusHandle {

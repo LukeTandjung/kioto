@@ -64,13 +64,14 @@ impl RenderOnce for ButtonRoot {
         let pointer_handler = self.on_click;
 
         base.id(self.id)
-            .track_focus(
-                &focus_handle
-                    .tab_stop(tab_stop)
-                    .tab_index(if tab_stop { 0 } else { -1 }),
-            )
             .key_context(BUTTON_ROOT_KEY_CONTEXT)
-            .when(tab_stop, |base| base.focusable())
+            // A non-focusable disabled button must not track focus at all:
+            // GPUI focuses any tracked element on click, which would paint
+            // the focus ring even though the button is inert.
+            .when(tab_stop, |base| {
+                base.track_focus(&focus_handle.tab_stop(true).tab_index(0))
+                    .focusable()
+            })
             .on_action(move |_: &ButtonActivate, window, cx| {
                 activate(
                     disabled,

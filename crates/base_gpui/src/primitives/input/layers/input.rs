@@ -35,6 +35,8 @@ pub struct Input {
     on_end: Option<InputBoundaryHandler>,
     on_edge_left: Option<InputBoundaryHandler>,
     on_edge_right: Option<InputBoundaryHandler>,
+    on_backspace: Option<InputBoundaryHandler>,
+    on_delete: Option<InputBoundaryHandler>,
     select_all_on_focus: bool,
     on_style_state: Option<InputStyleStateHandler>,
     focus_handle: Option<FocusHandle>,
@@ -62,6 +64,8 @@ impl Default for Input {
             on_end: None,
             on_edge_left: None,
             on_edge_right: None,
+            on_backspace: None,
+            on_delete: None,
             select_all_on_focus: false,
             on_style_state: None,
             focus_handle: None,
@@ -107,6 +111,8 @@ impl RenderOnce for Input {
                 self.on_home.clone(),
                 self.on_end.clone(),
                 None,
+                self.on_backspace.clone(),
+                self.on_delete.clone(),
                 cx,
             );
             runtime.sync_composite(
@@ -261,7 +267,37 @@ impl Input {
     }
 
     pub fn on_enter(mut self, on_enter: impl Fn(SharedString) + 'static) -> Self {
+        self.on_enter = Some(Rc::new(move |value, _window, _cx| on_enter(value)));
+        self
+    }
+
+    pub fn on_enter_with_context(
+        mut self,
+        on_enter: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) + 'static,
+    ) -> Self {
         self.on_enter = Some(Rc::new(on_enter));
+        self
+    }
+
+    /// Consulted before any text edit on Backspace; returning `true`
+    /// consumes the press (e.g. Combobox chip removal).
+    pub fn on_backspace(
+        mut self,
+        on_backspace: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool
+            + 'static,
+    ) -> Self {
+        self.on_backspace = Some(Rc::new(on_backspace));
+        self
+    }
+
+    /// Consulted before any text edit on Delete; returning `true` consumes
+    /// the press.
+    pub fn on_delete(
+        mut self,
+        on_delete: impl Fn(SharedString, &mut Window, &mut gpui::Context<InputRuntime>) -> bool
+            + 'static,
+    ) -> Self {
+        self.on_delete = Some(Rc::new(on_delete));
         self
     }
 

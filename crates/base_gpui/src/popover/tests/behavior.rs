@@ -291,6 +291,55 @@ fn rehover_cancels_delayed_hover_close(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
+fn hovering_popup_keeps_hover_opened_popover_open(cx: &mut TestAppContext) {
+    let window = open_popover(
+        cx,
+        PopoverTestConfig {
+            open_on_hover: true,
+            close_delay: Duration::from_millis(75),
+            ..PopoverTestConfig::default()
+        },
+    );
+
+    move_over_selector(cx, window, "popover-trigger");
+    assert!(read_observations(cx, window).root_state().unwrap().open);
+
+    // Move straight onto the popup: leaving the trigger schedules a delayed
+    // close, but landing on the popup must keep the popover open well past
+    // the close delay.
+    move_over_selector(cx, window, "popover-popup");
+    advance_clock(cx, Duration::from_millis(500));
+    assert!(
+        read_observations(cx, window).root_state().unwrap().open,
+        "hovering the popup should keep a hover-opened popover open"
+    );
+
+    // Leaving the popup closes it after the close delay.
+    move_over_selector(cx, window, "popover-outside-target");
+    advance_clock(cx, Duration::from_millis(500));
+    assert!(
+        !read_observations(cx, window).root_state().unwrap().open,
+        "leaving the popup should close a hover-opened popover"
+    );
+}
+
+#[gpui::test]
+fn leaving_popup_does_not_close_click_opened_popover(cx: &mut TestAppContext) {
+    let window = open_popover(cx, PopoverTestConfig::default());
+
+    click_trigger(cx, window);
+    assert!(read_observations(cx, window).root_state().unwrap().open);
+
+    move_over_selector(cx, window, "popover-popup");
+    move_over_selector(cx, window, "popover-outside-target");
+    advance_clock(cx, Duration::from_millis(500));
+    assert!(
+        read_observations(cx, window).root_state().unwrap().open,
+        "a click-opened popover must stay open when the pointer leaves the popup"
+    );
+}
+
+#[gpui::test]
 fn keep_mounted_portal_reports_closed_mounted_popup(cx: &mut TestAppContext) {
     let window = open_popover(
         cx,

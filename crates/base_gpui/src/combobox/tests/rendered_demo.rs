@@ -183,6 +183,26 @@ fn demo_typing_updates_input_value(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
+fn demo_enter_selects_highlighted_item(cx: &mut TestAppContext) {
+    let window = open_demo(cx);
+
+    let input_bounds = demo_bounds(cx, window, "demo-combobox-input-area")
+        .expect("input area should have debug bounds");
+    click_at(cx, window, input_bounds);
+    cx.simulate_keystrokes(window.into(), "a p p");
+    cx.run_until_parked();
+    cx.simulate_keystrokes(window.into(), "down enter");
+    cx.run_until_parked();
+
+    let state = last_input_state(cx, window);
+    assert_eq!(
+        state.value.as_ref(),
+        "Apple",
+        "Enter on a highlighted item should select it"
+    );
+}
+
+#[gpui::test]
 fn demo_selecting_item_displays_label_in_input(cx: &mut TestAppContext) {
     let window = open_demo(cx);
 

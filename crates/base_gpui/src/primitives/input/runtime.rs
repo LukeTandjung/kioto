@@ -35,6 +35,8 @@ pub struct InputRuntime {
     on_paste: Option<InputPasteHandler>,
     on_edge_left: Option<InputBoundaryHandler>,
     on_edge_right: Option<InputBoundaryHandler>,
+    on_backspace: Option<InputBoundaryHandler>,
+    on_delete: Option<InputBoundaryHandler>,
     select_all_on_focus: bool,
     was_focused: bool,
     _subscriptions: Vec<Subscription>,
@@ -80,6 +82,8 @@ impl InputRuntime {
             on_paste: None,
             on_edge_left: None,
             on_edge_right: None,
+            on_backspace: None,
+            on_delete: None,
             select_all_on_focus: false,
             was_focused: false,
             _subscriptions: subscriptions,
@@ -126,6 +130,8 @@ impl InputRuntime {
         on_home: Option<InputBoundaryHandler>,
         on_end: Option<InputBoundaryHandler>,
         on_paste: Option<InputPasteHandler>,
+        on_backspace: Option<InputBoundaryHandler>,
+        on_delete: Option<InputBoundaryHandler>,
         cx: &mut Context<Self>,
     ) {
         let mut changed = false;
@@ -149,6 +155,8 @@ impl InputRuntime {
         self.on_home = on_home;
         self.on_end = on_end;
         self.on_paste = on_paste;
+        self.on_backspace = on_backspace;
+        self.on_delete = on_delete;
 
         if changed {
             cx.notify();
@@ -240,6 +248,14 @@ impl InputRuntime {
         if !self.can_edit() {
             return;
         }
+        // Composite containers (Combobox chips) may consume the press before
+        // any text edit happens, e.g. to remove a highlighted chip or the
+        // last selected value when the input is empty.
+        if let Some(on_backspace) = self.on_backspace.clone() {
+            if on_backspace(self.value.clone(), window, cx) {
+                return;
+            }
+        }
 
         if self.selected_range.is_empty() {
             let previous = self.previous_boundary(self.cursor_offset());
@@ -255,6 +271,11 @@ impl InputRuntime {
     pub fn delete(&mut self, _: &InputDelete, window: &mut Window, cx: &mut Context<Self>) {
         if !self.can_edit() {
             return;
+        }
+        if let Some(on_delete) = self.on_delete.clone() {
+            if on_delete(self.value.clone(), window, cx) {
+                return;
+            }
         }
 
         if self.selected_range.is_empty() {
@@ -374,9 +395,9 @@ impl InputRuntime {
         }
     }
 
-    pub fn enter(&mut self, _: &InputEnter, _: &mut Window, _: &mut Context<Self>) {
-        if let Some(on_enter) = self.on_enter.as_ref() {
-            on_enter(self.value.clone());
+    pub fn enter(&mut self, _: &InputEnter, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(on_enter) = self.on_enter.clone() {
+            on_enter(self.value.clone(), window, cx);
         }
     }
 

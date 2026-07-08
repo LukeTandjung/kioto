@@ -2,6 +2,10 @@ use std::time::Duration;
 
 use gpui::{px, Bounds, ElementId, FocusHandle, Pixels, Point, SharedString, Size};
 
+use crate::primitives::safe_polygon::{
+    SafePolygon, SafePolygonConfig, SafePolygonSide, SafePolygonVerdict,
+};
+
 use crate::popover::{
     PopoverAlign, PopoverArrowStyleState, PopoverBackdropStyleState, PopoverCloseStyleState,
     PopoverDescriptionStyleState, PopoverPopupStyleState, PopoverPortalStyleState,
@@ -331,6 +335,8 @@ pub struct PopoverRuntime<P: Clone + 'static> {
     focus_out_close_requested: bool,
     hover_generation: u64,
     pending_hover: Option<PopoverPendingHover>,
+    popup_hovered: bool,
+    safe_polygon: SafePolygon,
 }
 
 impl<P: Clone + 'static> PopoverRuntime<P> {
@@ -358,6 +364,8 @@ impl<P: Clone + 'static> PopoverRuntime<P> {
             focus_out_close_requested: false,
             hover_generation: 0,
             pending_hover: None,
+            popup_hovered: false,
+            safe_polygon: SafePolygon::new(SafePolygonConfig::default()),
         }
     }
 
@@ -736,7 +744,76 @@ impl<P: Clone + 'static> PopoverRuntime<P> {
         } else {
             self.prevent_unmount_on_close = prevent_unmount_on_close;
             self.focus_popup_on_open = false;
+            self.popup_hovered = false;
+            self.disarm_safe_polygon();
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Hover intent: hoverable popup + safe polygon
+    // ------------------------------------------------------------------
+
+    pub fn set_popup_hovered(&mut self, hovered: bool) {
+        self.popup_hovered = hovered;
+    }
+
+    /// Hovering the popup keeps a hover-opened popover open.
+    pub fn should_keep_open_for_popup_hover(&self) -> bool {
+        self.popup_hovered
+    }
+
+    /// Whether the current open state was produced by trigger hover; only
+    /// then does leaving the trigger/popup close the popover.
+    pub fn opened_by_hover(&self) -> bool {
+        self.open && self.last_open_reason == PopoverOpenChangeReason::TriggerHover
+    }
+
+    /// Arms the safe-polygon tracker with the pointer's exit point, the
+    /// active trigger's bounds, the measured popup bounds, and the effective
+    /// side. Returns whether the tracker armed (both bounds were available).
+    pub fn arm_safe_polygon(&mut self, exit_point: Point<Pixels>) -> bool {
+        let Some(trigger_bounds) = self.active_trigger_bounds() else {
+            return false;
+        };
+        let Some(popup_bounds) = self.popup_bounds else {
+            return false;
+        };
+        let side = match self.effective_side {
+            Some(PopoverSide::Top) => SafePolygonSide::Top,
+            Some(PopoverSide::Left | PopoverSide::InlineStart) => SafePolygonSide::Left,
+            Some(PopoverSide::Right | PopoverSide::InlineEnd) => SafePolygonSide::Right,
+            _ => SafePolygonSide::Bottom,
+        };
+        self.safe_polygon
+            .arm(exit_point, trigger_bounds, popup_bounds, side);
+        true
+    }
+
+    /// Evaluates the pointer against the armed safe polygon; `None` when the
+    /// tracker is not armed.
+    pub fn evaluate_safe_polygon(
+        &mut self,
+        pointer: Point<Pixels>,
+        now: Duration,
+    ) -> Option<SafePolygonVerdict> {
+        if !self.safe_polygon.is_armed() {
+            return None;
+        }
+        Some(self.safe_polygon.evaluate(pointer, now))
+    }
+
+    pub fn disarm_safe_polygon(&mut self) {
+        self.safe_polygon.disarm();
+    }
+
+    pub fn safe_polygon_armed(&self) -> bool {
+        self.safe_polygon.is_armed()
+    }
+
+    pub fn active_close_delay(&self) -> Duration {
+        self.active_trigger()
+            .map(PopoverTriggerMetadata::close_delay)
+            .unwrap_or(Duration::ZERO)
     }
 
     /// Records the reason/source of an accepted transition without changing controlled open state.

@@ -1,12 +1,13 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, ElementId, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled,
-    Window,
+    div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::popover::{
-    child_wiring::wire_children, scoped_trigger_id, PopoverChild, PopoverContext, PopoverHandle,
+    child_wiring::wire_children, layers::popover_trigger::evaluate_safe_polygon_move,
+    scoped_trigger_id, PopoverChild, PopoverContext, PopoverHandle,
     PopoverOpenChangeCompleteHandler, PopoverOpenChangeDetails, PopoverOpenChangeHandler,
     PopoverOpenChangeReason, PopoverOpenChangeSource, PopoverProps, PopoverRootStyleState,
 };
@@ -126,7 +127,11 @@ impl<P: Clone + 'static> RenderOnce for PopoverRoot<P> {
             None => self.base,
         };
 
-        base.children(children)
+        let move_context = context.clone();
+        base.on_mouse_move(move |event, window, cx| {
+            evaluate_safe_polygon_move(&move_context, event.position, window, cx);
+        })
+        .children(children)
     }
 }
 

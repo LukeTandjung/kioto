@@ -161,6 +161,8 @@ impl RenderOnce for OTPFieldRoot {
                     paste_context.paste(text, window, cx);
                     true
                 })),
+                None,
+                None,
                 cx,
             );
         });

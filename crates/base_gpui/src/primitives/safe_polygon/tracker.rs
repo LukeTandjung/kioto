@@ -56,7 +56,7 @@ struct CursorSample {
 /// Hover-intent tracker with an arm/evaluate/disarm lifecycle. Pure state and
 /// geometry: no timers, no entities, no window. See the module docs for the
 /// integration contract.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SafePolygon {
     config: SafePolygonConfig,
     armed: Option<ArmedRegion>,

@@ -69,10 +69,14 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
         let focus_handle = self
             .focus_handle
             .unwrap_or_else(|| input_focus_handle(&self.id, window, cx));
-        let (state, display_value) = context.read(cx, |runtime, props| {
+        let (state, display_value, suppress_placeholder) = context.read(cx, |runtime, props| {
             (
                 runtime.input_state(props, ComboboxSide::Bottom),
                 runtime.display_value(),
+                // With chips present, a multi-select field is not empty even
+                // though the text input is, so the placeholder must not show.
+                props.selection_mode == crate::combobox::ComboboxSelectionMode::Multiple
+                    && !runtime.selected_values().is_empty(),
             )
         });
         let disabled = self.disabled || state.root.disabled;
@@ -81,7 +85,9 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
 
         let typed_context = context.clone();
         let click_context = context.clone();
-        let key_context_handle = context.clone();
+        let enter_context = context.clone();
+        let backspace_context = context.clone();
+        let delete_context = context.clone();
         let next_context = context.clone();
         let previous_context = context.clone();
         let escape_context = context.clone();
@@ -92,7 +98,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
         let mut input = Input::new()
             .id(self.id.clone())
             .value(display_value)
-            .placeholder(self.placeholder.clone())
+            .placeholder(if suppress_placeholder {
+                SharedString::default()
+            } else {
+                self.placeholder.clone()
+            })
             .disabled(disabled)
             .read_only(read_only)
             .focus_handle(focus_handle)
@@ -119,6 +129,25 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
                 let outcome = edge_right_context.move_chip_highlight(ComboboxMove::Next, cx);
                 let _ = window;
                 !matches!(outcome, ComboboxChipMoveOutcome::NoChips)
+            })
+            // Enter/Backspace/Delete are claimed by the input primitive's key
+            // bindings before any ancestor `on_key_down` runs, so Combobox
+            // behavior hooks into the primitive's handlers directly.
+            .on_enter_with_context(move |_value, window, cx| {
+                enter_context.activate_highlighted(ComboboxChangeSource::Keyboard, window, cx);
+            })
+            .on_backspace(move |value, window, cx| {
+                if backspace_context.remove_highlighted_chip(window, cx) {
+                    return true;
+                }
+                if value.is_empty() {
+                    backspace_context.remove_last_value(window, cx);
+                    return true;
+                }
+                false
+            })
+            .on_delete(move |_value, window, cx| {
+                delete_context.remove_highlighted_chip(window, cx)
             });
         if let Some(input_style_with_state) = self.input_style_with_state.clone() {
             input = input.style_with_state(move |state, base| input_style_with_state(state, base));
@@ -145,36 +174,6 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
             })
             .on_action(move |_: &ComboboxEscape, window, cx| {
                 escape_context.escape_pressed(window, cx);
-            })
-            .on_key_down(move |event, window, cx| {
-                let key = event.keystroke.key.as_str();
-                match key {
-                    // Enter is claimed by the input primitive's binding, so
-                    // activation is observed here: a highlighted item is
-                    // selected; with no highlight the popup closes.
-                    "enter" => {
-                        key_context_handle.activate_highlighted(
-                            ComboboxChangeSource::Keyboard,
-                            window,
-                            cx,
-                        );
-                    }
-                    // Backspace/Delete on a highlighted chip removes it;
-                    // Backspace in an empty input removes the last value.
-                    "backspace" | "delete" => {
-                        if key_context_handle.remove_highlighted_chip(window, cx) {
-                            return;
-                        }
-                        if key == "backspace" {
-                            let input_empty = key_context_handle
-                                .read(cx, |runtime, _| runtime.input_value().is_empty());
-                            if input_empty {
-                                key_context_handle.remove_last_value(window, cx);
-                            }
-                        }
-                    }
-                    _ => {}
-                }
             })
             .on_mouse_down(gpui::MouseButton::Left, move |_event, window, cx| {
                 // Pressing the input opens the popup without toggling it

@@ -2,14 +2,15 @@ use std::rc::Rc;
 
 use gpui::{
     div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    SharedString, StyleRefinement, Styled, Window,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::popover::{
     child_wiring::{PopoverChildNode, PopoverChildWiring},
-    PopoverAlign, PopoverBoundsKind, PopoverCloseAction, PopoverContext, PopoverOpenChangeReason,
-    PopoverOpenChangeSource, PopoverPayloadContentBuilder, PopoverPopupChild,
-    PopoverPopupStyleState, PopoverSide, POPOVER_KEY_CONTEXT,
+    layers::popover_trigger::{evaluate_safe_polygon_move, spawn_delayed_hover},
+    PopoverAlign, PopoverBoundsKind, PopoverCloseAction, PopoverContext, PopoverHoverTarget,
+    PopoverOpenChangeReason, PopoverOpenChangeSource, PopoverPayloadContentBuilder,
+    PopoverPopupChild, PopoverPopupStyleState, PopoverSide, POPOVER_KEY_CONTEXT,
 };
 
 #[derive(IntoElement)]
@@ -66,6 +67,8 @@ impl<P: Clone + 'static> RenderOnce for PopoverPopup<P> {
 
         let context = self.context.clone();
         let close_context = context.clone();
+        let move_context = context.clone();
+        let hover_context = context.clone();
         let measure_context = context.clone();
         let mut children = Vec::new();
         if let Some(payload_content) = self.payload_content {
@@ -92,6 +95,45 @@ impl<P: Clone + 'static> RenderOnce for PopoverPopup<P> {
                 context.close(
                     PopoverOpenChangeReason::EscapeKey,
                     PopoverOpenChangeSource::Keyboard,
+                    window,
+                    cx,
+                );
+            }
+        })
+        .on_mouse_move(move |event, window, cx| {
+            if let Some(context) = move_context.as_ref() {
+                evaluate_safe_polygon_move(context, event.position, window, cx);
+            }
+        })
+        .on_hover(move |hovered, window, cx| {
+            let Some(context) = hover_context.as_ref() else {
+                return;
+            };
+            if *hovered {
+                context.update(cx, |runtime| {
+                    runtime.set_popup_hovered(true);
+                    runtime.cancel_hover();
+                    runtime.disarm_safe_polygon();
+                });
+            } else {
+                // Leaving the popup only closes a hover-opened popover;
+                // click-opened popovers stay until dismissed.
+                let (opened_by_hover, close_delay) = context.update(cx, |runtime| {
+                    runtime.set_popup_hovered(false);
+                    (runtime.opened_by_hover(), runtime.active_close_delay())
+                });
+                if !opened_by_hover {
+                    return;
+                }
+                let generation = context.update(cx, |runtime| {
+                    runtime.schedule_hover(PopoverHoverTarget::Close, None)
+                });
+                spawn_delayed_hover(
+                    context.clone(),
+                    None,
+                    generation,
+                    PopoverHoverTarget::Close,
+                    close_delay.max(std::time::Duration::from_millis(50)),
                     window,
                     cx,
                 );

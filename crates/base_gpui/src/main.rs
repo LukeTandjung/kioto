@@ -48,10 +48,9 @@ use base_gpui::{
     menubar::Menubar,
     meter::{MeterIndicator, MeterLabel, MeterRoot, MeterTrack, MeterValue},
     navigation_menu::{
-        NavigationMenuArrow, NavigationMenuContent, NavigationMenuIcon, NavigationMenuItem,
-        NavigationMenuLink, NavigationMenuList, NavigationMenuPopup, NavigationMenuPortal,
-        NavigationMenuPositioner, NavigationMenuRoot, NavigationMenuTrigger,
-        NavigationMenuViewport,
+        NavigationMenuContent, NavigationMenuIcon, NavigationMenuItem, NavigationMenuLink,
+        NavigationMenuList, NavigationMenuPopup, NavigationMenuPortal, NavigationMenuPositioner,
+        NavigationMenuRoot, NavigationMenuTrigger, NavigationMenuViewport,
     },
     number_field::{
         NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput,
@@ -1070,10 +1069,27 @@ fn menu_trigger_button(label: &'static str) -> MenuTrigger<()> {
         .py_2()
         .rounded_md()
         .border_1()
-        .border_color(rgb(0x9ca3af))
-        .bg(rgb(0xffffff))
         .text_size(px(13.0))
-        .text_color(rgb(0x111827))
+        .style_with_state(|state, trigger| {
+            let trigger = if state.disabled {
+                trigger
+                    .border_color(rgb(0xe5e7eb))
+                    .bg(rgb(0xf3f4f6))
+                    .text_color(rgb(0x9ca3af))
+            } else {
+                trigger
+                    .border_color(rgb(0x9ca3af))
+                    .text_color(rgb(0x111827))
+                    .hover(|style| style.bg(rgb(0xe5e7eb)).border_color(rgb(0x6b7280)))
+            };
+            if state.open {
+                trigger.bg(rgb(0xdbeafe))
+            } else if !state.disabled {
+                trigger.bg(rgb(0xffffff))
+            } else {
+                trigger
+            }
+        })
         .child(label)
 }
 
@@ -2103,7 +2119,6 @@ fn navigation_menu_demo() -> impl IntoElement {
                         .py_2()
                         .px_3()
                         .shadow_lg()
-                        .child(NavigationMenuArrow::<&'static str>::new().bg(rgb(0xd1d5db)))
                         .child(NavigationMenuViewport::<&'static str>::new()),
                 ),
             ),
@@ -2134,8 +2149,9 @@ fn navigation_menu_gallery_item(
                 .child_any(label)
                 .child(
                     NavigationMenuIcon::<&'static str>::new()
-                        .text_size(px(10.0))
-                        .child(div().child("v")),
+                        .text_size(px(12.0))
+                        .text_color(rgb(0x6b7280))
+                        .child(div().child("\u{2304}")),
                 ),
         )
         .child(
@@ -2428,6 +2444,8 @@ fn multiple_combobox_demo() -> impl IntoElement {
                 .child(
                     ComboboxChips::new()
                         .flex()
+                        .flex_wrap()
+                        .min_w(px(0.0))
                         .gap_1()
                         .style_with_state(|_state, chips| chips),
                 )
@@ -2817,9 +2835,7 @@ fn gallery_button(
         .text_size(px(13.0))
         .bg(rgb(0xffffff))
         .text_color(rgb(0x111827))
-        .on_click(|_event, _window, _cx| {
-            println!("button clicked");
-        })
+        .on_click(|_event, _window, _cx| {})
         .style_with_state(|state, button| {
             let button = if state.disabled {
                 button.opacity(0.5)
@@ -2894,10 +2910,11 @@ fn toolbar_demo() -> impl IntoElement {
                         .text_size(px(13.0))
                         .text_color(rgb(0x2563eb))
                         .style_with_state(|state, link| {
+                            let link = link.border_1();
                             if state.focused {
-                                link.shadow_lg()
+                                link.border_color(rgb(0x2563eb)).bg(rgb(0xeff6ff))
                             } else {
-                                link
+                                link.border_color(rgb(0xffffff))
                             }
                         })
                         .child("Help"),
@@ -2936,14 +2953,22 @@ fn toolbar_demo_button(id: &'static str, label: &'static str, disabled: bool) ->
         .rounded_md()
         .text_size(px(13.0))
         .style_with_state(|state, button| {
+            let button = button.border_1();
             let button = if state.disabled {
-                button.bg(rgb(0xf3f4f6)).text_color(rgb(0x9ca3af))
+                button
+                    .bg(rgb(0xf3f4f6))
+                    .text_color(rgb(0x9ca3af))
+                    .border_color(rgb(0xf3f4f6))
             } else {
-                button.bg(rgb(0xffffff)).text_color(rgb(0x111827))
+                button
+                    .bg(rgb(0xffffff))
+                    .text_color(rgb(0x111827))
+                    .hover(|style| style.bg(rgb(0xf3f4f6)))
+                    .border_color(rgb(0xffffff))
             };
 
             if state.focused {
-                button.shadow_lg()
+                button.border_color(rgb(0x2563eb)).bg(rgb(0xeff6ff))
             } else {
                 button
             }
