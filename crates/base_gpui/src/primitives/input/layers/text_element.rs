@@ -1,7 +1,7 @@
 use gpui::{
-    fill, hsla, point, px, rgba, size, App, Bounds, Element, ElementId, ElementInputHandler,
-    Entity, GlobalElementId, InspectorElementId, IntoElement, LayoutId, PaintQuad, Pixels,
-    ShapedLine, SharedString, Style, TextAlign, TextRun, UnderlineStyle, Window,
+    fill, hsla, point, px, rgba, size, App, Bounds, ContentMask, Element, ElementId,
+    ElementInputHandler, Entity, GlobalElementId, InspectorElementId, IntoElement, LayoutId,
+    PaintQuad, Pixels, ShapedLine, SharedString, Style, TextAlign, TextRun, UnderlineStyle, Window,
 };
 
 use crate::primitives::input::InputRuntime;
@@ -21,6 +21,7 @@ pub struct InputTextPrepaintState {
     line: Option<ShapedLine>,
     cursor: Option<PaintQuad>,
     selection: Option<PaintQuad>,
+    scroll_offset: Pixels,
     #[cfg(test)]
     display_text: SharedString,
     #[cfg(test)]
@@ -137,16 +138,24 @@ impl Element for InputTextElement {
             .text_system()
             .shape_line(display_text, font_size, &runs, None);
         let cursor_x = line.x_for_index(cursor);
+        // Keep the cursor visible when the shaped line is wider than the
+        // element: shift painting left so the cursor stays inside bounds.
+        let visible_width = bounds.right() - bounds.left();
+        let scroll_offset = if cursor_x + px(2.0) > visible_width {
+            visible_width - cursor_x - px(2.0)
+        } else {
+            px(0.0)
+        };
         let (selection, cursor) = if !value.is_empty() && !selected_range.is_empty() {
             (
                 Some(fill(
                     Bounds::from_corners(
                         point(
-                            bounds.left() + line.x_for_index(selected_range.start),
+                            bounds.left() + scroll_offset + line.x_for_index(selected_range.start),
                             bounds.top(),
                         ),
                         point(
-                            bounds.left() + line.x_for_index(selected_range.end),
+                            bounds.left() + scroll_offset + line.x_for_index(selected_range.end),
                             bounds.bottom(),
                         ),
                     ),
@@ -159,7 +168,7 @@ impl Element for InputTextElement {
                 None,
                 Some(fill(
                     Bounds::new(
-                        point(bounds.left() + cursor_x, bounds.top()),
+                        point(bounds.left() + scroll_offset + cursor_x, bounds.top()),
                         size(px(1.0), bounds.bottom() - bounds.top()),
                     ),
                     style.color,
@@ -176,6 +185,7 @@ impl Element for InputTextElement {
             line: Some(line),
             cursor,
             selection,
+            scroll_offset,
             #[cfg(test)]
             display_text: debug_display_text,
             #[cfg(test)]
@@ -202,32 +212,42 @@ impl Element for InputTextElement {
             cx,
         );
 
-        if let Some(selection) = prepaint.selection.take() {
-            window.paint_quad(selection);
-        }
-
+        let scroll_offset = prepaint.scroll_offset;
+        let selection = prepaint.selection.take();
         let line = prepaint
             .line
             .take()
             .expect("input text should be shaped during prepaint");
-        line.paint(
-            bounds.origin,
-            window.line_height(),
-            TextAlign::Left,
-            None,
-            window,
-            cx,
-        )
-        .expect("input text should paint");
+        let cursor = prepaint.cursor.take();
+        let line_for_paint = line.clone();
 
-        if focus_handle.is_focused(window) {
-            if let Some(cursor) = prepaint.cursor.take() {
-                window.paint_quad(cursor);
+        // Clip painting to the element so overflowing text never draws over
+        // adjacent siblings (clear buttons, icons, group borders).
+        window.with_content_mask(Some(ContentMask { bounds }), |window| {
+            if let Some(selection) = selection {
+                window.paint_quad(selection);
             }
-        }
+
+            line_for_paint
+                .paint(
+                    bounds.origin + point(scroll_offset, px(0.0)),
+                    window.line_height(),
+                    TextAlign::Left,
+                    None,
+                    window,
+                    cx,
+                )
+                .expect("input text should paint");
+
+            if focus_handle.is_focused(window) {
+                if let Some(cursor) = cursor {
+                    window.paint_quad(cursor);
+                }
+            }
+        });
 
         self.state.update(cx, |input, cx| {
-            input.set_last_layout(line, bounds, cx);
+            input.set_last_layout(line, bounds, scroll_offset, cx);
         });
     }
 }

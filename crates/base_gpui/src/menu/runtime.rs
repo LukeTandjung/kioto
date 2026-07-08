@@ -670,6 +670,9 @@ pub struct MenuRuntime<P: Clone + 'static> {
     pending_child_close: Option<MenuPendingChildClose>,
     child_polygon: SafePolygon,
     child_polygon_item: Option<usize>,
+    /// Armed when a menubar trigger press-down opens this menu; the mouse-up
+    /// click of that same press must not toggle the menu closed again.
+    opened_by_current_press: bool,
 }
 
 impl<P: Clone + 'static> MenuRuntime<P> {
@@ -716,7 +719,19 @@ impl<P: Clone + 'static> MenuRuntime<P> {
             pending_child_close: None,
             child_polygon: SafePolygon::new(SafePolygonConfig::default()),
             child_polygon_item: None,
+            opened_by_current_press: false,
         }
+    }
+
+    /// Arms or clears the press-open marker on trigger mouse-down.
+    pub fn set_opened_by_current_press(&mut self, opened: bool) {
+        self.opened_by_current_press = opened;
+    }
+
+    /// Consumes the press-open marker; true when the current click's
+    /// mouse-down is the one that opened the menu.
+    pub fn take_opened_by_current_press(&mut self) -> bool {
+        std::mem::take(&mut self.opened_by_current_press)
     }
 
     pub fn open_value(&self) -> bool {

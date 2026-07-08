@@ -54,6 +54,10 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxChips<T> {
                 let chip = match self.chip_builder.as_ref() {
                     Some(builder) => builder(value, index),
                     None => ComboboxChip::new()
+                        .flex()
+                        .flex_row()
+                        .items_center()
+                        .gap_1()
                         .child_any(context.read(cx, |runtime, _| runtime.chip_label(index)))
                         .child(ComboboxChipRemove::new()),
                 };

@@ -8,10 +8,9 @@ use base_gpui::{
         AlertDialogViewport,
     },
     autocomplete::{
-        AutocompleteClear, AutocompleteEmpty, AutocompleteIcon, AutocompleteInput,
-        AutocompleteInputGroup, AutocompleteItem, AutocompleteList, AutocompleteMode,
-        AutocompletePopup, AutocompletePortal, AutocompletePositioner, AutocompleteRoot,
-        AutocompleteTrigger, AutocompleteValue,
+        AutocompleteClear, AutocompleteEmpty, AutocompleteInput, AutocompleteInputGroup,
+        AutocompleteItem, AutocompleteList, AutocompleteMode, AutocompletePopup,
+        AutocompletePortal, AutocompletePositioner, AutocompleteRoot, AutocompleteValue,
     },
     avatar::{AvatarFallback, AvatarImage, AvatarRoot},
     button::ButtonRoot,
@@ -86,10 +85,10 @@ use base_gpui::{
         SliderValue, SliderValues,
     },
     switch::{SwitchRoot, SwitchThumb},
-    tabs::{TabsIndicator, TabsList, TabsPanel, TabsRoot, TabsTab},
+    tabs::{TabsIndicator, TabsList, TabsOrientation, TabsPanel, TabsRoot, TabsTab},
     toast::{
         create_toast_manager, ToastClose, ToastDescription, ToastId, ToastManager, ToastOptions,
-        ToastPromiseOptions, ToastProvider, ToastRoot, ToastTitle, ToastViewport,
+        ToastPortal, ToastPromiseOptions, ToastProvider, ToastRoot, ToastTitle, ToastViewport,
     },
     toggle::Toggle,
     toggle_group::ToggleGroup,
@@ -103,8 +102,9 @@ use base_gpui::{
     utils::direction::{DirectionProvider, TextDirection},
 };
 use gpui::{
-    div, hsla, prelude::*, px, rgb, size, uniform_list, App, Bounds, Context, Div, IntoElement,
-    Render, ScrollHandle, UniformListScrollHandle, Window, WindowBounds, WindowOptions,
+    div, hsla, prelude::*, px, rgb, size, uniform_list, AnyElement, App, Bounds, Context, Div,
+    IntoElement, Pixels, Render, ScrollHandle, UniformListScrollHandle, Window, WindowBounds,
+    WindowOptions,
 };
 use gpui_platform::application;
 
@@ -131,309 +131,593 @@ impl Render for ComponentGallery {
             .size_full()
             .overflow_y_scroll()
             .bg(rgb(0xf3f4f6))
+            .flex()
+            .flex_col()
             .child(
                 div()
-                    .w_full()
-                    .p(px(24.0))
+                    .px(px(24.0))
+                    .py(px(14.0))
+                    .border_b_1()
+                    .border_color(rgb(0xe5e7eb))
+                    .bg(rgb(0xffffff))
                     .flex()
                     .flex_col()
-                    .gap_5()
+                    .gap_1()
                     .child(
                         div()
-                            .flex()
-                            .flex_col()
-                            .gap_2()
-                            .child(
-                                div()
-                                    .text_size(px(24.0))
-                                    .text_color(rgb(0x111827))
-                                    .child("base_gpui component gallery"),
-                            )
-                            .child(
-                                div().text_size(px(13.0)).text_color(rgb(0x6b7280)).child(
-                                    "A wrapped grid of the current ported Base UI components.",
-                                ),
-                            ),
+                            .text_size(px(20.0))
+                            .text_color(rgb(0x111827))
+                            .child("base_gpui component gallery"),
                     )
                     .child(
-                        div()
+                        div().text_size(px(13.0)).text_color(rgb(0x6b7280)).child(
+                            "One tab per ported component; each tab collects its usage examples.",
+                        ),
+                    ),
+            )
+            .child(
+                TabsRoot::<&'static str>::new()
+                    .id("gallery-nav")
+                    .orientation(TabsOrientation::Vertical)
+                    .default_value(Some("accordion"))
+                    .flex()
+                    .items_start()
+                    .child(
+                        TabsList::new()
+                            .w(px(220.0))
+                            .flex_shrink_0()
                             .flex()
-                            .flex_wrap()
-                            .items_start()
-                            .gap_3()
-                            .child(component_card(
-                                "Tabs",
-                                "Keyboard-selectable tab list with indicator and panels.",
-                                tabs_demo(),
-                            ))
-                            .child(component_card(
-                                "Switch",
-                                "Toggle state, focus styling, thumb state, and callbacks.",
-                                switch_demo(),
-                            ))
-                            .child(component_card(
-                                "Button",
-                                "Plain pressable with disabled and focusable-when-disabled.",
-                                button_demo(),
-                            ))
-                            .child(component_card(
-                                "Toggle",
-                                "Two-state pressable button with pressed styling.",
-                                toggle_demo(),
-                            ))
-                            .child(component_card(
-                                "Toggle Group",
-                                "Grouped toggles with shared value and roving focus.",
-                                toggle_group_demo(),
-                            ))
-                            .child(component_card(
-                                "Toolbar",
-                                "Roving-focus toolbar with buttons, a group, a separator, a link, and an input.",
-                                toolbar_demo(),
-                            ))
-                            .child(component_card(
-                                "Collapsible",
-                                "Disclosure trigger with controlled panel presence.",
-                                collapsible_demo(),
-                            ))
-                            .child(component_card(
-                                "Accordion",
-                                "Single-open FAQ sections with headings, triggers, and panels.",
-                                accordion_demo(),
-                            ))
-                            .child(component_card(
-                                "Field + Switch",
-                                "Field label, error, description, and registered control focus.",
-                                field_switch_demo(),
-                            ))
-                            .child(component_card(
-                                "Input",
-                                "Public Field-aware text input using Input::new().",
-                                plain_input_demo(),
-                            ))
-                            .child(component_card(
-                                "Field + Input",
-                                "Required validation and Field-derived Input styling.",
-                                input_field_demo(),
-                            ))
-                            .child(component_card(
-                                "Form",
-                                "Form validation-mode inheritance and named Field registration.",
-                                form_demo(),
-                            ))
-                            .child(component_card(
-                                "Fieldset",
-                                "Grouped fields with legend state and disabled propagation.",
-                                fieldset_demo(),
-                            ))
-                            .child(component_card(
-                                "Avatar",
-                                "Image loading status with initials fallback and show-delay.",
-                                avatar_demo(),
-                            ))
-                            .child(component_card(
-                                "Separator",
-                                "Shared horizontal and vertical visual dividers.",
-                                separator_demo(),
-                            ))
-                            .child(component_card(
-                                "Select",
-                                "Trigger, value, popup/list, item labels, and indicator state.",
-                                select_demo(),
-                            ))
-                            .child(component_card(
-                                "Popover",
-                                "Anchored popup with trigger, title, description, arrow, and close.",
-                                popover_demo(),
-                            ))
-                            .child(component_card(
-                                "Menu",
-                                "Dropdown menu with items, separator, and a group.",
-                                menu_demo(),
-                            ))
-                            .child(component_card(
-                                "Menu (checkbox + radio)",
-                                "Checkbox items and a radio group with indicators.",
-                                menu_checkbox_radio_demo(),
-                            ))
-                            .child(component_card(
-                                "Menu (submenu)",
-                                "Nested submenu opened by hover or ArrowRight.",
-                                menu_submenu_demo(),
-                            ))
-                            .child(component_card(
-                                "Context Menu",
-                                "Right-click surface opening a menu at the cursor with items, a checkbox item, and a submenu.",
-                                context_menu_demo(),
-                            ))
-                            .child(component_card(
-                                "Menubar",
-                                "Horizontal menu row with roving focus, hover-switch, and a submenu.",
-                                menubar_demo(),
-                            ))
-                            .child(component_card(
-                                "Dialog",
-                                "Modal overlay with trigger, backdrop, popup, title, description, and close.",
-                                dialog_demo(),
-                            ))
-                            .child(component_card(
-                                "Drawer",
-                                "Swipeable bottom panel; drag the sheet downward to dismiss it.",
-                                drawer_demo(),
-                            ))
-                            .child(component_card(
-                                "Drawer Snap Points",
-                                "Bottom drawer that settles on 25%/50% viewport snap points on release.",
-                                drawer_snap_demo(),
-                            ))
-                            .child(component_card(
-                                "Alert Dialog",
-                                "Always-modal confirmation dialog; only Escape or an explicit action closes it.",
-                                alert_dialog_demo(),
-                            ))
-                            .child(component_card(
-                                "Toast",
-                                "Queued notifications: add/upsert/promise/close-all via the imperative manager; hover the stack to pause dismissal.",
-                                toast_demo(),
-                            ))
-                            .child(component_card(
-                                "Preview Card",
-                                "Hover-opened link preview with 600ms/300ms delays, payload triggers, and a detached handle.",
-                                preview_card_demo(),
-                            ))
-                            .child(component_card(
-                                "Navigation Menu",
-                                "Horizontal menu bar with a shared retargeting panel, hover intent, and a close-on-click link.",
-                                navigation_menu_demo(),
-                            ))
-                            .child(component_card(
-                                "Tooltip",
-                                "Hover/focus visual hint with provider delay and trigger-bounds positioning.",
-                                tooltip_demo(),
-                            ))
-                            .child(component_card(
-                                "Field + Select",
-                                "Required Field registration with a serialized Select value.",
-                                field_select_demo(),
-                            ))
-                            .child(component_card(
-                                "Multiple Select",
-                                "Ordered multi-value toggling with item indicators.",
-                                multiple_select_demo(),
-                            ))
-                            .child(component_card(
-                                "Combobox",
-                                "Input-filtered listbox with clear, trigger, indicators, and empty state.",
-                                combobox_demo(),
-                            ))
-                            .child(component_card(
-                                "Multiple Combobox",
-                                "Multi-select combobox with removable chips and chip keyboard navigation.",
-                                multiple_combobox_demo(),
-                            ))
-                            .child(component_card(
-                                "Field + Combobox",
-                                "Required Field registration with a serialized Combobox value.",
-                                field_combobox_demo(),
-                            ))
-                            .child(component_card(
+                            .flex_col()
+                            .gap_1()
+                            .p_3()
+                            .border_r_1()
+                            .border_color(rgb(0xe5e7eb))
+                            .bg(rgb(0xffffff))
+                            .child(nav_tab("accordion", "Accordion"))
+                            .child(nav_tab("alert-dialog", "Alert Dialog"))
+                            .child(nav_tab("autocomplete", "Autocomplete"))
+                            .child(nav_tab("avatar", "Avatar"))
+                            .child(nav_tab("button", "Button"))
+                            .child(nav_tab("checkbox", "Checkbox"))
+                            .child(nav_tab("checkbox-group", "Checkbox Group"))
+                            .child(nav_tab("collapsible", "Collapsible"))
+                            .child(nav_tab("combobox", "Combobox"))
+                            .child(nav_tab("context-menu", "Context Menu"))
+                            .child(nav_tab("dialog", "Dialog"))
+                            .child(nav_tab("drawer", "Drawer"))
+                            .child(nav_tab("field", "Field"))
+                            .child(nav_tab("fieldset", "Fieldset"))
+                            .child(nav_tab("form", "Form"))
+                            .child(nav_tab("input", "Input"))
+                            .child(nav_tab("menu", "Menu"))
+                            .child(nav_tab("menubar", "Menubar"))
+                            .child(nav_tab("meter", "Meter"))
+                            .child(nav_tab("navigation-menu", "Navigation Menu"))
+                            .child(nav_tab("number-field", "Number Field"))
+                            .child(nav_tab("otp-field", "OTP Field"))
+                            .child(nav_tab("popover", "Popover"))
+                            .child(nav_tab("preview-card", "Preview Card"))
+                            .child(nav_tab("progress", "Progress"))
+                            .child(nav_tab("radio-group", "Radio Group"))
+                            .child(nav_tab("scroll-area", "Scroll Area"))
+                            .child(nav_tab("scrollbar", "Scrollbar"))
+                            .child(nav_tab("select", "Select"))
+                            .child(nav_tab("separator", "Separator"))
+                            .child(nav_tab("slider", "Slider"))
+                            .child(nav_tab("switch", "Switch"))
+                            .child(nav_tab("tabs", "Tabs"))
+                            .child(nav_tab("toast", "Toast"))
+                            .child(nav_tab("toggle", "Toggle"))
+                            .child(nav_tab("toggle-group", "Toggle Group"))
+                            .child(nav_tab("toolbar", "Toolbar"))
+                            .child(nav_tab("tooltip", "Tooltip")),
+                    )
+                    .child(nav_panel(
+                        "accordion",
+                        Vec::from([component_card(
+                            "Accordion",
+                            "Single-open FAQ sections with headings, triggers, and panels.",
+                            accordion_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "alert-dialog",
+                        Vec::from([component_card(
+                            "Alert Dialog",
+                            "Always-modal confirmation dialog; only Escape or an explicit action closes it.",
+                            alert_dialog_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "autocomplete",
+                        Vec::from([
+                            component_card(
                                 "Autocomplete",
                                 "Text input with a filtered suggestion list (mode: List).",
                                 autocomplete_demo(),
-                            ))
-                            .child(component_card(
+                            )
+                            .into_any_element(),
+                            component_card(
                                 "Autocomplete (inline)",
                                 "Keyboard highlight inline-autocompletes the input (mode: Both).",
                                 autocomplete_both_demo(),
-                            ))
-                            .child(component_card(
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "avatar",
+                        Vec::from([component_card(
+                            "Avatar",
+                            "Image loading status with initials fallback and show-delay.",
+                            avatar_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "button",
+                        Vec::from([component_card_sized(
+                            "Button",
+                            "Plain pressable with disabled and focusable-when-disabled.",
+                            px(460.0),
+                            button_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "checkbox",
+                        Vec::from([component_card(
+                            "Checkbox",
+                            "Unchecked and checked states with indicator rendering.",
+                            checkbox_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "checkbox-group",
+                        Vec::from([component_card(
+                            "Checkbox Group",
+                            "Shared selected values, parent state, and disabled propagation.",
+                            checkbox_group_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "collapsible",
+                        Vec::from([component_card(
+                            "Collapsible",
+                            "Disclosure trigger with controlled panel presence.",
+                            collapsible_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "combobox",
+                        Vec::from([
+                            component_card(
+                                "Combobox",
+                                "Input-filtered listbox with clear, trigger, indicators, and empty state.",
+                                combobox_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Multiple Combobox",
+                                "Multi-select combobox with removable chips and chip keyboard navigation.",
+                                multiple_combobox_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Field + Combobox",
+                                "Required Field registration with a serialized Combobox value.",
+                                field_combobox_demo(),
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "context-menu",
+                        Vec::from([component_card(
+                            "Context Menu",
+                            "Right-click surface opening a menu at the cursor with items, a checkbox item, and a submenu.",
+                            context_menu_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "dialog",
+                        Vec::from([component_card(
+                            "Dialog",
+                            "Modal overlay with trigger, backdrop, popup, title, description, and close.",
+                            dialog_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "drawer",
+                        Vec::from([
+                            component_card(
+                                "Drawer",
+                                "Swipeable bottom panel; drag the sheet downward to dismiss it.",
+                                drawer_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Drawer Snap Points",
+                                "Bottom drawer that settles on 25%/50% viewport snap points on release.",
+                                drawer_snap_demo(),
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "field",
+                        Vec::from([component_card(
+                            "Field + Switch",
+                            "Field label, error, description, and registered control focus.",
+                            field_switch_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "fieldset",
+                        Vec::from([component_card(
+                            "Fieldset",
+                            "Grouped fields with legend state and disabled propagation.",
+                            fieldset_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "form",
+                        Vec::from([component_card(
+                            "Form",
+                            "Form validation-mode inheritance and named Field registration.",
+                            form_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "input",
+                        Vec::from([
+                            component_card(
+                                "Input",
+                                "Public Field-aware text input using Input::new().",
+                                plain_input_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Field + Input",
+                                "Required validation and Field-derived Input styling.",
+                                input_field_demo(),
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "menu",
+                        Vec::from([
+                            component_card(
+                                "Menu",
+                                "Dropdown menu with items, separator, and a group.",
+                                menu_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Menu (checkbox + radio)",
+                                "Checkbox items and a radio group with indicators.",
+                                menu_checkbox_radio_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Menu (submenu)",
+                                "Nested submenu opened by hover or ArrowRight.",
+                                menu_submenu_demo(),
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "menubar",
+                        Vec::from([component_card(
+                            "Menubar",
+                            "Horizontal menu row with roving focus, hover-switch, and a submenu.",
+                            menubar_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "meter",
+                        Vec::from([component_card(
+                            "Meter",
+                            "Graphical display of a value within a known range.",
+                            meter_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "navigation-menu",
+                        Vec::from([component_card(
+                            "Navigation Menu",
+                            "Horizontal menu bar with a shared retargeting panel, hover intent, and a close-on-click link.",
+                            navigation_menu_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "number-field",
+                        Vec::from([
+                            component_card(
                                 "Number Field",
                                 "Text editing, stepping, min/max, and formatted numeric value.",
                                 number_field_demo(),
-                            ))
-                            .child(component_card(
+                            )
+                            .into_any_element(),
+                            component_card(
                                 "Field + Number Field",
                                 "Required Field validation with a numeric control.",
                                 field_number_field_demo(),
-                            ))
-                            .child(component_card(
-                                "Field + OTP Field",
-                                "Six-slot one-time code with separator and required validation.",
-                                field_otp_field_demo(),
-                            ))
-                            .child(component_card(
-                                "Radio Group LTR",
-                                "Direction-aware arrow key navigation in LTR mode.",
-                                radio_group_demo("ltr", TextDirection::Ltr, "standard"),
-                            ))
-                            .child(component_card(
-                                "Radio Group RTL",
-                                "Direction-aware arrow key navigation in RTL mode.",
-                                radio_group_demo("rtl", TextDirection::Rtl, "express"),
-                            ))
-                            .child(component_card(
-                                "Checkbox",
-                                "Unchecked and checked states with indicator rendering.",
-                                checkbox_demo(),
-                            ))
-                            .child(component_card(
-                                "Checkbox Group",
-                                "Shared selected values, parent state, and disabled propagation.",
-                                checkbox_group_demo(),
-                            ))
-                            .child(component_card(
-                                "Slider",
-                                "Single-value pointer and keyboard driven slider.",
-                                slider_demo(),
-                            ))
-                            .child(component_card(
-                                "Range Slider",
-                                "Two-thumb range slider with push collision behavior.",
-                                range_slider_demo(),
-                            ))
-                            .child(component_card(
-                                "Field + Slider",
-                                "Field label, registered slider control, and error slot.",
-                                field_slider_demo(),
-                            ))
-                            .child(component_card(
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "otp-field",
+                        Vec::from([component_card(
+                            "Field + OTP Field",
+                            "Six-slot one-time code with separator and required validation.",
+                            field_otp_field_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "popover",
+                        Vec::from([component_card(
+                            "Popover",
+                            "Anchored popup with trigger, title, description, arrow, and close.",
+                            popover_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "preview-card",
+                        Vec::from([component_card(
+                            "Preview Card",
+                            "Hover-opened link preview with 600ms/300ms delays, payload triggers, and a detached handle.",
+                            preview_card_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "progress",
+                        Vec::from([
+                            component_card(
                                 "Progress",
                                 "Determinate task-completion display with label and value.",
                                 progress_demo(),
-                            ))
-                            .child(component_card(
+                            )
+                            .into_any_element(),
+                            component_card(
                                 "Indeterminate Progress",
                                 "Unknown-duration progress exposed as status-only state.",
                                 indeterminate_progress_demo(),
-                            ))
-                            .child(component_card(
-                                "Meter",
-                                "Graphical display of a value within a known range.",
-                                meter_demo(),
-                            ))
-                            .child(component_card(
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "radio-group",
+                        Vec::from([
+                            component_card(
+                                "Radio Group LTR",
+                                "Direction-aware arrow key navigation in LTR mode.",
+                                radio_group_demo("ltr", TextDirection::Ltr, "standard"),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Radio Group RTL",
+                                "Direction-aware arrow key navigation in RTL mode.",
+                                radio_group_demo("rtl", TextDirection::Rtl, "express"),
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "scroll-area",
+                        Vec::from([component_card(
+                            "Scroll Area",
+                            "Compound scroll container with hover/scroll-styled scrollbars.",
+                            scroll_area_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "scrollbar",
+                        Vec::from([
+                            component_card(
                                 "Scrollbar (vertical)",
                                 "Overlay scrollbar primitive over a tracked ScrollHandle.",
                                 scrollbar_vertical_demo(&self.scrollbar_vertical_handle),
-                            ))
-                            .child(component_card(
+                            )
+                            .into_any_element(),
+                            component_card(
                                 "Scrollbar (both axes)",
                                 "Both tracks plus the corner over an overflow_scroll container.",
                                 scrollbar_both_axes_demo(&self.scrollbar_both_handle),
-                            ))
-                            .child(component_card(
+                            )
+                            .into_any_element(),
+                            component_card(
                                 "Scrollbar (uniform list)",
                                 "Scrollbar over a virtualized uniform_list scroll handle.",
                                 scrollbar_uniform_list_demo(&self.scrollbar_list_handle),
-                            ))
-                            .child(component_card(
-                                "Scroll Area",
-                                "Compound scroll container with hover/scroll-styled scrollbars.",
-                                scroll_area_demo(),
-                            )),
-                    ),
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "select",
+                        Vec::from([
+                            component_card(
+                                "Select",
+                                "Trigger, value, popup/list, item labels, and indicator state.",
+                                select_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Multiple Select",
+                                "Ordered multi-value toggling with item indicators.",
+                                multiple_select_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Field + Select",
+                                "Required Field registration with a serialized Select value.",
+                                field_select_demo(),
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "separator",
+                        Vec::from([component_card(
+                            "Separator",
+                            "Shared horizontal and vertical visual dividers.",
+                            separator_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "slider",
+                        Vec::from([
+                            component_card(
+                                "Slider",
+                                "Single-value pointer and keyboard driven slider.",
+                                slider_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Range Slider",
+                                "Two-thumb range slider with push collision behavior.",
+                                range_slider_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Field + Slider",
+                                "Field label, registered slider control, and error slot.",
+                                field_slider_demo(),
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "switch",
+                        Vec::from([component_card(
+                            "Switch",
+                            "Toggle state, focus styling, thumb state, and callbacks.",
+                            switch_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "tabs",
+                        Vec::from([component_card(
+                            "Tabs",
+                            "Keyboard-selectable tab list with indicator and panels.",
+                            tabs_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "toast",
+                        Vec::from([component_card(
+                            "Toast",
+                            "Queued notifications: add/upsert/promise/close-all via the imperative manager; hover the stack to pause dismissal.",
+                            toast_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "toggle",
+                        Vec::from([component_card(
+                            "Toggle",
+                            "Two-state pressable button with pressed styling.",
+                            toggle_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "toggle-group",
+                        Vec::from([
+                            component_card(
+                                "Toggle Group (multiple)",
+                                "Grouped toggles where any number of items can be pressed.",
+                                toggle_group_demo(),
+                            )
+                            .into_any_element(),
+                            component_card(
+                                "Toggle Group (single)",
+                                "Pressing one item releases the previously pressed item.",
+                                single_toggle_group_demo(),
+                            )
+                            .into_any_element(),
+                        ]),
+                    ))
+                    .child(nav_panel(
+                        "toolbar",
+                        Vec::from([component_card_sized(
+                            "Toolbar",
+                            "Roving-focus toolbar with buttons, a group, a separator, a link, and an input.",
+                            px(560.0),
+                            toolbar_demo(),
+                        )
+                        .into_any_element()]),
+                    ))
+                    .child(nav_panel(
+                        "tooltip",
+                        Vec::from([component_card(
+                            "Tooltip",
+                            "Hover/focus visual hint with provider delay and trigger-bounds positioning.",
+                            tooltip_demo(),
+                        )
+                        .into_any_element()]),
+                    )),
             )
     }
+}
+
+fn nav_tab(value: &'static str, label: &'static str) -> TabsTab<&'static str> {
+    TabsTab::new()
+        .id(value)
+        .value(value)
+        .px_3()
+        .py_2()
+        .rounded_md()
+        .text_size(px(13.0))
+        .text_color(rgb(0x374151))
+        .style_with_state(|state, tab| {
+            if state.active {
+                tab.bg(rgb(0xe5e7eb)).text_color(rgb(0x111827))
+            } else if state.highlighted {
+                tab.bg(rgb(0xf3f4f6))
+            } else {
+                tab
+            }
+        })
+        .child(label)
+}
+
+fn nav_panel(value: &'static str, cards: Vec<AnyElement>) -> TabsPanel<&'static str> {
+    TabsPanel::new().value(value).flex_1().min_w(px(0.0)).child(
+        div()
+            .w_full()
+            .p(px(24.0))
+            .flex()
+            .flex_wrap()
+            .items_start()
+            .gap_3()
+            .children(cards),
+    )
 }
 
 fn slider_body(thumb_count: usize) -> SliderControl {
@@ -685,8 +969,17 @@ fn component_card(
     description: &'static str,
     content: impl IntoElement,
 ) -> impl IntoElement {
+    component_card_sized(title, description, px(300.0), content)
+}
+
+fn component_card_sized(
+    title: &'static str,
+    description: &'static str,
+    width: Pixels,
+    content: impl IntoElement,
+) -> impl IntoElement {
     div()
-        .w(px(300.0))
+        .w(width)
         .min_h(px(170.0))
         .rounded_lg()
         .border_1()
@@ -1611,23 +1904,38 @@ fn alert_dialog_demo() -> impl IntoElement {
                                 .shadow_lg()
                                 .p_4()
                                 .flex()
-                                .flex_col()
+                                .flex_wrap()
+                                .justify_end()
                                 .gap_2()
                                 .child(
                                     AlertDialogTitle::<()>::new()
+                                        .w_full()
                                         .text_size(px(15.0))
                                         .text_color(rgb(0x111827))
                                         .child("Discard draft?"),
                                 )
                                 .child(
                                     AlertDialogDescription::<()>::new()
+                                        .w_full()
                                         .text_size(px(12.0))
                                         .text_color(rgb(0x6b7280))
                                         .child("This cannot be undone. Clicking outside will not dismiss this dialog."),
                                 )
                                 .child(
                                     AlertDialogClose::<()>::new()
-                                        .self_start()
+                                        .id("alert-cancel")
+                                        .mt_2()
+                                        .px_2()
+                                        .py_1()
+                                        .rounded_sm()
+                                        .bg(rgb(0xe5e7eb))
+                                        .text_size(px(12.0))
+                                        .text_color(rgb(0x111827))
+                                        .child("Cancel"),
+                                )
+                                .child(
+                                    AlertDialogClose::<()>::new()
+                                        .id("alert-discard")
                                         .mt_2()
                                         .px_2()
                                         .py_1()
@@ -1636,17 +1944,6 @@ fn alert_dialog_demo() -> impl IntoElement {
                                         .text_size(px(12.0))
                                         .text_color(rgb(0xffffff))
                                         .child("Discard"),
-                                )
-                                .child(
-                                    AlertDialogClose::<()>::new()
-                                        .self_start()
-                                        .px_2()
-                                        .py_1()
-                                        .rounded_sm()
-                                        .bg(rgb(0xe5e7eb))
-                                        .text_size(px(12.0))
-                                        .text_color(rgb(0x111827))
-                                        .child("Cancel"),
                                 ),
                         ),
                 ),
@@ -1823,6 +2120,9 @@ fn navigation_menu_gallery_item(
         .value(value)
         .child(
             NavigationMenuTrigger::<&'static str>::new()
+                .flex()
+                .items_center()
+                .gap_1()
                 .px_3()
                 .py_2()
                 .rounded_md()
@@ -2283,6 +2583,12 @@ fn autocomplete_demo() -> impl IntoElement {
         .gap_2()
         .child(autocomplete_input_group("gallery-autocomplete"))
         .child(autocomplete_popup_stack("gallery-autocomplete"))
+        .child_any(
+            div()
+                .text_size(px(11.0))
+                .text_color(rgb(0x9ca3af))
+                .child("Typing filters the list; highlighting never edits the input."),
+        )
         .child(
             AutocompleteValue::<&'static str>::new()
                 .text_size(px(12.0))
@@ -2304,6 +2610,9 @@ fn autocomplete_both_demo() -> impl IntoElement {
         .gap_2()
         .child(autocomplete_input_group("gallery-autocomplete-both"))
         .child(autocomplete_popup_stack("gallery-autocomplete-both"))
+        .child_any(div().text_size(px(11.0)).text_color(rgb(0x9ca3af)).child(
+            "Type, then press ArrowDown: the highlighted item is written into the input inline.",
+        ))
 }
 
 fn autocomplete_input_group(id_prefix: &'static str) -> AutocompleteInputGroup<&'static str> {
@@ -2325,15 +2634,6 @@ fn autocomplete_input_group(id_prefix: &'static str) -> AutocompleteInputGroup<&
                 .flex_1(),
         )
         .child(AutocompleteClear::new().text_color(rgb(0x6b7280)))
-        .child(
-            AutocompleteTrigger::new()
-                .id(format!("{id_prefix}-trigger"))
-                .child(
-                    AutocompleteIcon::<&'static str>::new()
-                        .text_size(px(12.0))
-                        .text_color(rgb(0x6b7280)),
-                ),
-        )
 }
 
 fn autocomplete_popup_stack(id_prefix: &'static str) -> AutocompletePortal<&'static str> {
@@ -2520,17 +2820,15 @@ fn gallery_button(
         .on_click(|_event, _window, _cx| {
             println!("button clicked");
         })
-        // Keyboard-only focus rings use gpui's native `.focus_visible(...)`
-        // builder; `style_with_state` covers disabled/focused styling.
         .style_with_state(|state, button| {
             let button = if state.disabled {
                 button.opacity(0.5)
             } else {
-                button
+                button.hover(|hovered| hovered.bg(rgb(0xf3f4f6)))
             };
 
             if state.focused {
-                button.shadow_lg()
+                button.border_color(rgb(0x2563eb))
             } else {
                 button
             }
@@ -2654,9 +2952,17 @@ fn toolbar_demo_button(id: &'static str, label: &'static str, disabled: bool) ->
 }
 
 fn toggle_group_demo() -> impl IntoElement {
+    toggle_group_demo_variant("example-toggle-group", true)
+}
+
+fn single_toggle_group_demo() -> impl IntoElement {
+    toggle_group_demo_variant("example-toggle-group-single", false)
+}
+
+fn toggle_group_demo_variant(id: &'static str, multiple: bool) -> impl IntoElement {
     ToggleGroup::<gpui::SharedString>::new()
-        .id("example-toggle-group")
-        .multiple(true)
+        .id(id)
+        .multiple(multiple)
         .default_value(vec!["bold".into()])
         .flex()
         .gap_1()
@@ -2664,14 +2970,18 @@ fn toggle_group_demo() -> impl IntoElement {
         .rounded_md()
         .border_1()
         .border_color(rgb(0xd1d5db))
-        .child(gallery_group_toggle("bold", "Bold"))
-        .child(gallery_group_toggle("italic", "Italic"))
-        .child(gallery_group_toggle("underline", "Underline"))
+        .child(gallery_group_toggle(id, "bold", "Bold"))
+        .child(gallery_group_toggle(id, "italic", "Italic"))
+        .child(gallery_group_toggle(id, "underline", "Underline"))
 }
 
-fn gallery_group_toggle(value: &'static str, label: &'static str) -> Toggle<gpui::SharedString> {
+fn gallery_group_toggle(
+    id_prefix: &'static str,
+    value: &'static str,
+    label: &'static str,
+) -> Toggle<gpui::SharedString> {
     Toggle::<gpui::SharedString>::new()
-        .id(value)
+        .id(format!("{id_prefix}-{value}"))
         .value(gpui::SharedString::from(value))
         .rounded_md()
         .px_3()
@@ -3523,48 +3833,50 @@ fn toast_demo() -> impl IntoElement {
                 ),
         )
         .child(
-            ToastViewport::new()
-                .id("gallery-toast-viewport")
-                .absolute()
-                .bottom_4()
-                .right_4()
-                .flex()
-                .flex_col()
-                .gap_2()
-                .content_builder(|_facts| {
-                    ToastRoot::new()
-                        .w(px(280.0))
-                        .p_3()
-                        .rounded_md()
-                        .bg(rgb(0x111827))
-                        .text_color(rgb(0xf9fafb))
-                        .style_with_state(|state, base| {
-                            if state.limited {
-                                base.opacity(0.0)
-                            } else {
-                                base
-                            }
-                        })
-                        .child(
-                            ToastTitle::new()
-                                .text_size(px(13.0))
-                                .font_weight(gpui::FontWeight::SEMIBOLD),
-                        )
-                        .child(
-                            ToastDescription::new()
-                                .text_size(px(12.0))
-                                .text_color(rgb(0x9ca3af)),
-                        )
-                        .child(
-                            ToastClose::new()
-                                .absolute()
-                                .top_1()
-                                .right_2()
-                                .cursor_pointer()
-                                .text_size(px(12.0))
-                                .child_any("✕"),
-                        )
-                }),
+            ToastPortal::new().child(
+                ToastViewport::new()
+                    .id("gallery-toast-viewport")
+                    .absolute()
+                    .bottom_4()
+                    .right_4()
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .content_builder(|_facts| {
+                        ToastRoot::new()
+                            .w(px(280.0))
+                            .p_3()
+                            .rounded_md()
+                            .bg(rgb(0x111827))
+                            .text_color(rgb(0xf9fafb))
+                            .style_with_state(|state, base| {
+                                if state.limited {
+                                    base.opacity(0.0)
+                                } else {
+                                    base
+                                }
+                            })
+                            .child(
+                                ToastTitle::new()
+                                    .text_size(px(13.0))
+                                    .font_weight(gpui::FontWeight::SEMIBOLD),
+                            )
+                            .child(
+                                ToastDescription::new()
+                                    .text_size(px(12.0))
+                                    .text_color(rgb(0x9ca3af)),
+                            )
+                            .child(
+                                ToastClose::new()
+                                    .absolute()
+                                    .top_1()
+                                    .right_2()
+                                    .cursor_pointer()
+                                    .text_size(px(12.0))
+                                    .child_any("✕"),
+                            )
+                    }),
+            ),
         )
 }
 

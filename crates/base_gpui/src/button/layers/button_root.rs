@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, AnyElement, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, Entity,
+    FocusHandle, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::button::{ButtonActivate, ButtonRootStyleState, BUTTON_ROOT_KEY_CONTEXT};
@@ -70,7 +70,7 @@ impl RenderOnce for ButtonRoot {
                     .tab_index(if tab_stop { 0 } else { -1 }),
             )
             .key_context(BUTTON_ROOT_KEY_CONTEXT)
-            .focusable()
+            .when(tab_stop, |base| base.focusable())
             .on_action(move |_: &ButtonActivate, window, cx| {
                 activate(
                     disabled,

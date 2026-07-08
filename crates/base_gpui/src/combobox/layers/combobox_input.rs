@@ -129,7 +129,12 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
             None => self.base,
         };
 
-        let wrapper = base
+        // User sizing styles (e.g. `flex_1`) live on `base`, so `base` must be
+        // the element that participates in the surrounding flex layout; an
+        // unstyled outer div would auto-size a flex-basis-0 child to zero
+        // width and collapse the input.
+        let wrapper = div()
+            .w_full()
             .id((self.id, "combobox-input-wrapper"))
             .key_context(COMBOBOX_KEY_CONTEXT)
             .on_action(move |_: &ComboboxMoveNext, window, cx| {
@@ -186,16 +191,15 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
             })
             .child(input);
 
-        div()
-            .on_children_prepainted(move |bounds, window, cx| {
-                let Some(bounds) = bounds.first().copied() else {
-                    return;
-                };
-                if measure_context.record_input_bounds(bounds, cx) {
-                    window.request_animation_frame();
-                }
-            })
-            .child(wrapper)
+        base.on_children_prepainted(move |bounds, window, cx| {
+            let Some(bounds) = bounds.first().copied() else {
+                return;
+            };
+            if measure_context.record_input_bounds(bounds, cx) {
+                window.request_animation_frame();
+            }
+        })
+        .child(wrapper)
     }
 }
 

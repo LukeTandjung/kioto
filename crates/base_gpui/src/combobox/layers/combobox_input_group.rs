@@ -83,7 +83,10 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInputGroup<T> {
                     .collect::<Vec<_>>(),
             );
 
+        // The measuring wrapper must span the available width so the group's
+        // own percentage sizing (`w_full`) has something to resolve against.
         div()
+            .w_full()
             .on_children_prepainted(move |bounds, window, cx| {
                 let Some(bounds) = bounds.first().copied() else {
                     return;

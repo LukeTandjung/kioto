@@ -138,7 +138,13 @@ impl<P: Clone + 'static> RenderOnce for MenuTrigger<P> {
                             click_focus_handle.focus(window, cx);
                             if let Some(link) = &menubar {
                                 // Seam 5: press-down opens; the paired click
-                                // handler closes the already-open menu.
+                                // handler closes the already-open menu. The
+                                // mouse-up click of the opening press itself
+                                // is marked so it does not immediately close
+                                // the menu it just opened.
+                                click_context.update(cx, |runtime| {
+                                    runtime.set_opened_by_current_press(!was_open)
+                                });
                                 if !was_open {
                                     link.highlight(cx);
                                     click_context.set_open(
@@ -165,6 +171,11 @@ impl<P: Clone + 'static> RenderOnce for MenuTrigger<P> {
                         let context = context.clone();
                         move |_event, window, cx| {
                             if disabled || menubar.is_none() || !was_open {
+                                return;
+                            }
+                            let opened_by_this_press = context
+                                .update(cx, |runtime| runtime.take_opened_by_current_press());
+                            if opened_by_this_press {
                                 return;
                             }
                             context.set_open(

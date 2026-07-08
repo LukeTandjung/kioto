@@ -378,6 +378,7 @@ pub struct TooltipRuntime<P: Clone + 'static> {
     hovered_trigger_id: Option<ElementId>,
     popup_hovered: bool,
     press_suppressed_trigger_id: Option<ElementId>,
+    pointer_focused_trigger_id: Option<ElementId>,
     active_trigger_missing_close_requested: bool,
     popup_bounds: Option<Bounds<Pixels>>,
     previous_popup_size: Option<Size<Pixels>>,
@@ -417,6 +418,7 @@ impl<P: Clone + 'static> TooltipRuntime<P> {
             hovered_trigger_id: None,
             popup_hovered: false,
             press_suppressed_trigger_id: None,
+            pointer_focused_trigger_id: None,
             active_trigger_missing_close_requested: false,
             popup_bounds: None,
             previous_popup_size: None,
@@ -590,6 +592,11 @@ impl<P: Clone + 'static> TooltipRuntime<P> {
     ) -> TooltipFocusChange {
         let previous = self.focused_trigger_id.clone();
         self.focused_trigger_id = focused_trigger_id.clone();
+        if self.pointer_focused_trigger_id.is_some()
+            && self.pointer_focused_trigger_id != focused_trigger_id
+        {
+            self.pointer_focused_trigger_id = None;
+        }
         if focused_trigger_id.is_none() {
             self.press_suppressed_trigger_id = None;
             if self.last_open_reason == TooltipOpenChangeReason::TriggerPress {
@@ -622,7 +629,8 @@ impl<P: Clone + 'static> TooltipRuntime<P> {
     }
 
     fn focus_open_suppressed(&self, trigger_id: &ElementId) -> bool {
-        self.press_suppressed_trigger_id.as_ref() == Some(trigger_id)
+        self.pointer_focused_trigger_id.as_ref() == Some(trigger_id)
+            || self.press_suppressed_trigger_id.as_ref() == Some(trigger_id)
             || (self.last_open_reason == TooltipOpenChangeReason::TriggerPress
                 && self.active_trigger_id.as_ref() == Some(trigger_id))
     }
@@ -735,6 +743,10 @@ impl<P: Clone + 'static> TooltipRuntime<P> {
         close_on_click: bool,
         detached_trigger: bool,
     ) -> TooltipTriggerPressChange {
+        // GPUI focuses any focusable element on mouse down and nothing blurs
+        // it when empty space is later clicked; pointer-sourced focus must
+        // not open the tooltip or hold it open after the pointer leaves.
+        self.pointer_focused_trigger_id = Some(trigger_id.clone());
         if close_on_click || detached_trigger {
             self.cancel_hover();
         }
@@ -773,7 +785,8 @@ impl<P: Clone + 'static> TooltipRuntime<P> {
     pub fn should_keep_open_for_trigger_unhover(&self, trigger_id: &ElementId) -> bool {
         self.open_value()
             && self.active_trigger_id.as_ref() == Some(trigger_id)
-            && (self.focused_trigger_id.as_ref() == Some(trigger_id)
+            && ((self.focused_trigger_id.as_ref() == Some(trigger_id)
+                && self.pointer_focused_trigger_id.as_ref() != Some(trigger_id))
                 || self.last_open_source == TooltipOpenChangeSource::Focus)
     }
 

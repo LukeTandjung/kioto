@@ -373,3 +373,19 @@ fn indicator_states_expose_keep_mounted_presence() {
     assert!(radio.present);
     assert!(radio.checked);
 }
+
+#[test]
+fn opening_press_marker_suppresses_exactly_one_click() {
+    // Menubar seam: mouse-down opens the menu, so the mouse-up click of that
+    // same press must not toggle it closed. The marker is consumed by the
+    // first read and a press on an already-open trigger clears it.
+    let mut runtime: MenuRuntime<()> = MenuRuntime::new(false, MenuParentKind::None);
+
+    runtime.set_opened_by_current_press(true);
+    assert!(runtime.take_opened_by_current_press());
+    assert!(!runtime.take_opened_by_current_press());
+
+    runtime.set_opened_by_current_press(true);
+    runtime.set_opened_by_current_press(false);
+    assert!(!runtime.take_opened_by_current_press());
+}

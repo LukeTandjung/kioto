@@ -21,6 +21,7 @@ pub struct InputRuntime {
     marked_range: Option<Range<usize>>,
     last_layout: Option<ShapedLine>,
     last_bounds: Option<gpui::Bounds<gpui::Pixels>>,
+    last_scroll_offset: gpui::Pixels,
     ime_candidate_bounds: Option<gpui::Bounds<gpui::Pixels>>,
     selecting: bool,
     disabled: bool,
@@ -65,6 +66,7 @@ impl InputRuntime {
             marked_range: None,
             last_layout: None,
             last_bounds: None,
+            last_scroll_offset: gpui::px(0.0),
             ime_candidate_bounds: None,
             selecting: false,
             disabled: false,
@@ -214,10 +216,12 @@ impl InputRuntime {
         &mut self,
         layout: ShapedLine,
         bounds: gpui::Bounds<gpui::Pixels>,
+        scroll_offset: gpui::Pixels,
         _cx: &mut Context<Self>,
     ) {
         self.last_layout = Some(layout);
         self.last_bounds = Some(bounds);
+        self.last_scroll_offset = scroll_offset;
     }
 
     /// Overrides the IME candidate-window anchor used by `bounds_for_range`.
@@ -413,11 +417,6 @@ impl InputRuntime {
     }
 
     fn on_focus(&mut self, _: &mut Window, cx: &mut Context<Self>) {
-        eprintln!(
-            "DBG on_focus select_all={} len={}",
-            self.select_all_on_focus,
-            self.value.len()
-        );
         if self.select_all_on_focus {
             self.selected_range = 0..self.value.len();
             self.selection_reversed = false;
@@ -469,10 +468,10 @@ impl InputRuntime {
         if position.x <= bounds.left() {
             return 0;
         }
-        if position.x >= bounds.right() {
+        if position.x >= bounds.right() && self.last_scroll_offset == gpui::px(0.0) {
             return self.value.len();
         }
-        line.closest_index_for_x(position.x - bounds.left())
+        line.closest_index_for_x(position.x - bounds.left() - self.last_scroll_offset)
     }
 
     fn previous_boundary(&self, offset: usize) -> usize {

@@ -1733,3 +1733,47 @@ fn nested_debug_bounds(
         .debug_bounds(selector)
         .expect("debug bounds should exist")
 }
+
+#[gpui::test]
+fn provider_default_delays_close_after_hover_away(cx: &mut TestAppContext) {
+    // Mirrors the gallery demo: no per-trigger delay overrides, so the
+    // provider's 600ms open delay and zero close delay apply.
+    let window = open_tooltip(
+        cx,
+        TooltipTestConfig {
+            delay: None,
+            close_delay: None,
+            ..TooltipTestConfig::default()
+        },
+    );
+
+    move_over_selector(cx, window, "tooltip-trigger");
+    advance_clock(cx, Duration::from_millis(600));
+    assert!(read_observations(cx, window).root_state().unwrap().open);
+
+    move_over_selector(cx, window, "tooltip-outside-target");
+    advance_clock(cx, Duration::from_millis(1000));
+    assert!(!read_observations(cx, window).root_state().unwrap().open);
+}
+
+#[gpui::test]
+fn pointer_focused_trigger_does_not_pin_tooltip_open(cx: &mut TestAppContext) {
+    // Clicking focuses the trigger; in GPUI nothing blurs it when the
+    // pointer later clicks empty space, so pointer-sourced focus must not
+    // hold the tooltip open after the pointer leaves the trigger.
+    let window = open_tooltip(cx, TooltipTestConfig::default());
+
+    move_over_selector(cx, window, "tooltip-trigger");
+    assert!(read_observations(cx, window).root_state().unwrap().open);
+
+    click_trigger(cx, window);
+    assert!(!read_observations(cx, window).root_state().unwrap().open);
+
+    move_over_selector(cx, window, "tooltip-outside-target");
+    move_over_selector(cx, window, "tooltip-trigger");
+    assert!(read_observations(cx, window).root_state().unwrap().open);
+
+    move_over_selector(cx, window, "tooltip-outside-target");
+    advance_clock(cx, Duration::from_millis(1000));
+    assert!(!read_observations(cx, window).root_state().unwrap().open);
+}
