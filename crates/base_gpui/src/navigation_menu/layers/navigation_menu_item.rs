@@ -1,8 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, App, Div, ElementId, Entity, FocusHandle, IntoElement, ParentElement, RenderOnce,
-    SharedString, StyleRefinement, Styled, Window,
+    div, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _, IntoElement,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::navigation_menu::{
@@ -23,6 +24,7 @@ pub struct NavigationMenuItem<T: Clone + Eq + 'static> {
     children: Vec<NavigationMenuItemChild<T>>,
     context: Option<NavigationMenuContext<T>>,
     value: Option<T>,
+    order: usize,
     style_with_state: Option<NavigationMenuItemStyle>,
 }
 
@@ -33,6 +35,7 @@ impl<T: Clone + Eq + 'static> Default for NavigationMenuItem<T> {
             children: Vec::new(),
             context: None,
             value: None,
+            order: 0,
             style_with_state: None,
         }
     }
@@ -46,16 +49,30 @@ impl<T: Clone + Eq + 'static> Styled for NavigationMenuItem<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for NavigationMenuItem<T> {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let state = self
+        let (state, item_count) = self
             .context
             .as_ref()
-            .map(|context| context.read(cx, |runtime, _| runtime.item_state()))
+            .map(|context| {
+                context.read(cx, |runtime, _| {
+                    (runtime.item_state(), runtime.item_count())
+                })
+            })
             .unwrap_or_default();
 
-        let base = match self.style_with_state {
+        let mut base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
-        };
+        }
+        .id(("navigation-menu-item", self.order));
+
+        // Base UI renders `<li>`; wired items report "item i of n" from the
+        // order/count child wiring assigned.
+        if self.context.is_some() {
+            base = base
+                .role(Role::ListItem)
+                .aria_position_in_set(self.order + 1)
+                .aria_size_of_set(item_count);
+        }
 
         base.children(self.children.into_iter().filter_map(|child| match child {
             NavigationMenuItemChild::Trigger(trigger) => Some((*trigger).into_any_element()),
@@ -115,6 +132,7 @@ impl<T: Clone + Eq + 'static> NavigationMenuChildNode<T> for NavigationMenuItem<
             Some(value.clone()),
             disabled,
         ));
+        self.order = order;
 
         self.children = self
             .children

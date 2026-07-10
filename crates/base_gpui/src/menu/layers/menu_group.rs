@@ -1,7 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, App, Div, ElementId, InteractiveElement as _, IntoElement,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::menu::{
@@ -11,18 +13,22 @@ use crate::menu::{
 
 #[derive(IntoElement)]
 pub struct MenuGroup<P: Clone + 'static = ()> {
+    id: ElementId,
     base: Div,
     children: Vec<MenuGroupChild<P>>,
     context: Option<MenuContext<P>>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(MenuGroupStyleState, Div) -> Div + 'static>>,
 }
 
 impl<P: Clone + 'static> Default for MenuGroup<P> {
     fn default() -> Self {
         Self {
+            id: ElementId::from("menu-group"),
             base: div(),
             children: Vec::new(),
             context: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -46,12 +52,18 @@ impl<P: Clone + 'static> RenderOnce for MenuGroup<P> {
             None => self.base,
         };
 
-        base.children(
-            self.children
-                .into_iter()
-                .map(IntoElement::into_element)
-                .collect::<Vec<_>>(),
-        )
+        // `aria-labelledby` has no gpui builder (documented gap): the group
+        // label registered by `MenuGroupLabel` is surfaced here as a literal
+        // `.aria_label(...)` instead.
+        base.id(self.id)
+            .role(Role::Group)
+            .when_some(self.aria_label, |this, label| this.aria_label(label))
+            .children(
+                self.children
+                    .into_iter()
+                    .map(IntoElement::into_element)
+                    .collect::<Vec<_>>(),
+            )
     }
 }
 
@@ -63,6 +75,13 @@ impl<P: Clone + 'static> MenuChildNode<P> for MenuGroup<P> {
         window: &mut Window,
         cx: &mut App,
     ) -> Self {
+        if self.aria_label.is_none() {
+            self.aria_label = self.children.iter().find_map(|child| match child {
+                MenuGroupChild::GroupLabel(label) => label.label_value(),
+                _ => None,
+            });
+        }
+        self.id = wiring.scope_child_id(&self.id);
         self.children = self
             .children
             .into_iter()
@@ -76,6 +95,18 @@ impl<P: Clone + 'static> MenuChildNode<P> for MenuGroup<P> {
 impl<P: Clone + 'static> MenuGroup<P> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = id.into();
+        self
+    }
+
+    /// Accessible group label. Defaults to the label registered by a
+    /// `MenuGroupLabel` child.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
+        self
     }
 
     pub fn child(mut self, child: impl Into<MenuGroupChild<P>>) -> Self {

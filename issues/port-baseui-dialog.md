@@ -363,13 +363,7 @@ Payload-specific content:
 
 ### Accessibility follow-up
 
-- [ ] Once the target GPUI revision supports the needed AccessKit APIs, map `DialogPopup<P>` to a dialog role and future AlertDialog popup to an alert-dialog role.
-- [ ] Once available, expose modal state through GPUI-native accessibility APIs.
-- [ ] Once available, map trigger semantics to a GPUI/AccessKit button with popup-expanded state.
-- [ ] Once available, expose disabled state for trigger and close through GPUI-native accessibility APIs.
-- [ ] Once available, link popup title/description metadata through GPUI-native label/description relationships; do not port DOM `aria-labelledby` / `aria-describedby` literally.
-- [ ] Once available, ensure hidden/kept-mounted dialog content is hidden or inert in the AccessKit tree through GPUI-native APIs.
-- [ ] Once available, add accessibility tests for roles, modal state, expanded trigger state, title/description relationships, and hidden/inert kept-mounted content.
+See `## AccessKit accessibility follow-up` at the end of this issue for the concrete per-part plan against the pinned gpui AccessKit surface.
 
 ### Tests / verification
 
@@ -443,3 +437,51 @@ Add behavior-level tests under `crates/base_gpui/src/dialog/tests/`.
 - [x] `style_with_state(...)` receives correct description state.
 - [x] `style_with_state(...)` receives correct close state.
 - [ ] Transition/dimension tests are added if GPUI-native transition or measurement behavior is implemented in the first pass.
+
+## AccessKit accessibility follow-up
+
+Written against `docs/accesskit-gpui-reference.md` (gpui revision `1d029c5ff5654fb1b1e8caf4462993c8ee13a133`, accesskit `0.24.0`). Base UI's authoritative ARIA surface for Dialog is: trigger emits `aria-haspopup="dialog"`, `aria-expanded`, `aria-controls`, and `disabled` (`trigger/DialogTrigger.tsx`); popup emits `role="dialog"` (or `alertdialog`), `aria-labelledby` pointing at the title, and `aria-describedby` pointing at the description (`popup/DialogPopup.tsx`); title/description are plain heading/paragraph content; close is a `button`; backdrop is presentational; outside content is made inert while modal.
+
+### Per accessible part
+
+- `DialogTrigger<P>` (`layers/dialog_trigger.rs`): already has a stable scoped `.id(...)` and `.track_focus(...)`. Add `.role(Role::Button)` and `.aria_expanded(state.open && state.active_trigger)` from `DialogTriggerStyleState<P>` (this is Base UI's per-trigger `isOpenedByThisTrigger` semantics). Add `.aria_label(...)` from a new builder prop when the visible trigger content is not plain text.
+- `DialogPopup<P>` (`layers/dialog_popup.rs`): already has a stable `.id(...)` and `.track_focus(&focus_handle...)`. Add `.role(Role::Dialog)` (a future AlertDialog port uses `Role::AlertDialog` on its own popup). Since `aria-labelledby`/`aria-describedby` id-references have no gpui builder, add an `.aria_label(...)` builder on `DialogPopup<P>` that takes the accessible dialog name directly; `DialogRuntime<P>` `title_ids`/`description_ids` metadata stays as-is for a future relationship API.
+- `DialogClose<P>` (`layers/dialog_close.rs`): already has `.id(...)`, `.track_focus(...)`, and `.on_click(...)`. Add `.role(Role::Button)` and an `.aria_label(...)` builder (Base UI users typically render an icon-only close button, so a literal label like "Close" matters here).
+- `DialogTitle<P>` (`layers/dialog_title.rs`): add `.role(Role::Heading)` plus `.aria_level(2)` (Base UI renders an `h2`). Its visible text children remain the accessible name of the heading node.
+- `DialogDescription<P>` (`layers/dialog_description.rs`): no role — leave it out of the a11y tree (no `.role(...)` call) so its text children surface as plain accessible text inside the dialog subtree. `Role::GenericContainer` is filtered/asserted, so do not assign it.
+- `DialogRoot<P>`, `DialogPortal<P>`, `DialogViewport<P>`, `DialogBackdrop<P>`: structural/presentational; assign no role so they do not appear in the a11y tree. The backdrop's dismissal behavior stays pointer-only, matching Base UI's presentational backdrop.
+
+### Actions
+
+- `Action::Focus` is auto-registered by the existing `.track_focus(...)` calls on `DialogTrigger<P>`, `DialogClose<P>`, and `DialogPopup<P>` — do not re-add it.
+- `DialogTrigger<P>` opens via `.on_mouse_down(MouseButton::Left, ...)`, **not** `.on_click(...)`, so `Action::Click` is *not* auto-registered. Add `.on_a11y_action(AccessibleAction::Click, ...)` that routes into the same `context.open_trigger(scoped_id, DialogOpenChangeReason::TriggerPress, DialogOpenChangeSource::Unknown, window, cx)` transition the pointer path uses, guarded by the same `disabled` check.
+- `DialogClose<P>` has `.on_click(...)`, which auto-registers `Action::Click`, but its handler early-returns unless `matches!(event, ClickEvent::Mouse(_))`, so a synthetic AT click would be dropped. Either relax that guard for non-mouse `ClickEvent`s or add an explicit `.on_a11y_action(AccessibleAction::Click, ...)` routing to `context.close(DialogOpenChangeReason::ClosePress, DialogOpenChangeSource::Unknown, window, cx)` with the `disabled` guard.
+- No `Increment`/`Decrement`/`SetValue`/`Expand`/`Collapse` handlers are needed; Escape dismissal already flows through `DialogCloseAction` key dispatch on the popup's key context.
+
+### Labels
+
+- Dialog name: `.aria_label(...)` builder on `DialogPopup<P>`, supplied by the consumer with the same string as the visible title. When set, the demo/gallery title content should use `Text::new_inaccessible(...)` instead of `text!(...)` so the name is not announced twice (once from the popup label, once from the heading text). When the consumer relies on the `DialogTitle<P>` heading alone, skip the popup label and keep the title text accessible.
+- Trigger/close labels: text children announced via the node's subtree when plain `text!(...)` is used; for icon-only triggers/close buttons, set `.aria_label(...)` and render the icon without accessible text.
+
+### Gaps (no gpui builder in this revision)
+
+- `aria-haspopup="dialog"` (trigger): no builder. Omit and document; `Role::Dialog` on the popup conveys the destination once open.
+- `aria-controls` (trigger → popup id): no relationship builders. Omit; blocked pending gpui upstream id-reference support.
+- `aria-labelledby` / `aria-describedby` (popup → title/description): no builders. Fallback is the literal `.aria_label(...)` string on `DialogPopup<P>` described above; `title_ids`/`description_ids` runtime metadata is retained for a future upstream relationship API.
+- `disabled` / `aria-disabled` (trigger, close): no `.aria_disabled(...)` builder and `write_a11y_info` never sets a disabled flag. Fallback: keep suppressing the runtime transition in the existing `disabled` guards (so AT clicks are no-ops) and document that disabled state is not conveyed to AT; track as blocked pending a gpui `set_disabled` addition.
+- Modal state / outside-content inertness (`aria-modal`, Base UI's `aria-hidden` on outside elements): no modal or inert/hidden node API. Fallback: document that `DialogModalMode::Modal` blocks pointer input and traps Tab focus but does not hide outside content from the AccessKit tree; blocked pending gpui upstream.
+- Kept-mounted closed content (`DialogPortal::keep_mounted(true)`): no hidden/inert builder. Fallback: while `open == false`, render kept-mounted popup content without assigning `.role(...)` (a node with no role is not reported), so closed content stays out of the a11y tree without new APIs.
+- Live regions / announcements: not needed for Dialog; no open-state announcement is emitted (matches Base UI, which relies on focus moving into the dialog).
+
+### Checklist
+
+- [ ] Add `.role(Role::Button)` and `.aria_expanded(open && active_trigger)` to `DialogTrigger<P>`, mapped from `DialogTriggerStyleState<P>`.
+- [ ] Add `.on_a11y_action(AccessibleAction::Click, ...)` on `DialogTrigger<P>` routing through `context.open_trigger(...)` with the existing `disabled` guard (its open path is `on_mouse_down`, so Click is not auto-registered).
+- [ ] Add `.role(Role::Dialog)` and an `.aria_label(...)` builder to `DialogPopup<P>`.
+- [ ] Add `.role(Role::Button)` and an `.aria_label(...)` builder to `DialogClose<P>`, and make AT-dispatched clicks reach `context.close(DialogOpenChangeReason::ClosePress, ...)` despite the `ClickEvent::Mouse` guard.
+- [ ] Add `.role(Role::Heading)` + `.aria_level(2)` to `DialogTitle<P>`; leave `DialogDescription<P>`, root, portal, viewport, and backdrop role-less.
+- [ ] Do not re-register `Action::Click` on `DialogClose<P>` beyond the guard fix, nor `Action::Focus` anywhere — `.on_click`/`.track_focus` already provide them.
+- [ ] Use `Text::new_inaccessible(...)` for visible title text in the gallery demo when the popup `.aria_label(...)` is set, to avoid double announcement.
+- [ ] Keep kept-mounted closed popup content role-less so it is absent from the a11y tree without hidden/inert APIs.
+- [ ] Document the gaps above (aria-haspopup, aria-controls, aria-labelledby/describedby, disabled, aria-modal/inert outside content) in module docs as blocked pending gpui upstream.
+- [ ] Add accessibility tests for trigger role/expanded state, popup dialog role and label, close click via a11y action, and absence of role-less parts from the tree.

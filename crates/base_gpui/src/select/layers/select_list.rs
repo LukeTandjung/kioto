@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    div, App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role,
     StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
@@ -67,6 +67,9 @@ impl<T: Clone + Eq + 'static> RenderOnce for SelectList<T> {
 
         let list = base
             .id("select-list")
+            // AccessKit gap in this gpui revision: no `aria-multiselectable`
+            // builder, so multiple-selection mode stays style-state only.
+            .role(Role::ListBox)
             .key_context(SELECT_KEY_CONTEXT)
             .focusable()
             .on_key_down(move |event, window, cx| {

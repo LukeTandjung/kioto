@@ -1,8 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, App, Div, ElementId, Entity, FocusHandle, IntoElement, ParentElement, RenderOnce,
-    SharedString, StyleRefinement, Styled, Window,
+    div, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _, IntoElement,
+    Orientation, ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -37,6 +38,7 @@ pub struct SliderRoot {
     thumb_collision_behavior: SliderThumbCollisionBehavior,
     thumb_alignment: SliderThumbAlignment,
     disabled: bool,
+    aria_label: Option<SharedString>,
     format: Option<SliderFormatHandler>,
     on_value_change: Option<SliderValueChangeHandler>,
     on_value_committed: Option<SliderValueCommitHandler>,
@@ -62,6 +64,7 @@ impl Default for SliderRoot {
             thumb_collision_behavior: SliderThumbCollisionBehavior::default(),
             thumb_alignment: SliderThumbAlignment::default(),
             disabled: false,
+            aria_label: None,
             format: None,
             on_value_change: None,
             on_value_committed: None,
@@ -165,10 +168,27 @@ impl RenderOnce for SliderRoot {
             field_context.register_control(registration, cx);
         }
 
+        let orientation = style_state.orientation;
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
+
+        // Applied after `style_with_state` so the styling closure cannot drop
+        // the accessibility wiring. Base UI renders the root as
+        // `role="group"` with `aria-labelledby` pointing at `SliderLabel`;
+        // gpui has no id-reference builder, so the label is a literal
+        // `.aria_label(...)` string instead.
+        let mut base = base
+            .id(id)
+            .role(Role::Group)
+            .aria_orientation(match orientation {
+                SliderOrientation::Horizontal => Orientation::Horizontal,
+                SliderOrientation::Vertical => Orientation::Vertical,
+            });
+        if let Some(aria_label) = self.aria_label {
+            base = base.aria_label(aria_label);
+        }
 
         base.children(wired.children)
     }
@@ -262,6 +282,16 @@ impl SliderRoot {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Accessible label for the slider group, mirroring what `SliderLabel`
+    /// displays. Base UI links the label by id via `aria-labelledby`; gpui
+    /// has no id-reference builder, so the text is supplied literally.
+    /// Callers who set this should render the visible `SliderLabel` text
+    /// with `Text::new_inaccessible(...)` to avoid double-announcing.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

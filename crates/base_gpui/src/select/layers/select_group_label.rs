@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, SharedString,
-    StyleRefinement, Styled, Window,
+    StyleRefinement, Styled, Text, Window,
 };
 
 use crate::select::{
@@ -50,9 +50,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for SelectGroupLabel<T> {
             None => self.base,
         };
 
+        // The registered label text is mirrored into the parent SelectGroup's
+        // `.aria_label(...)`, so the visible text stays out of the a11y tree.
         if self.children.is_empty() {
             if let Some(label) = self.label {
-                base.child(label)
+                base.child(Text::new_inaccessible(label))
             } else {
                 base
             }

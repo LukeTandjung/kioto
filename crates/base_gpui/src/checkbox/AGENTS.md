@@ -142,11 +142,31 @@ Indicator presence is true when:
 
 Do not add DOM-style data attributes unless they become useful GPUI API.
 
+## Accessibility (AccessKit)
+
+`CheckboxRoot` is the only accessible part:
+
+- `.role(Role::CheckBox)` on the root element chain.
+- `.aria_toggled(...)` from `CheckboxRootStyleState`: `Toggled::Mixed` when `indeterminate`, else `Toggled::True` / `Toggled::False` from `checked`.
+- `.aria_label(...)` builder on `CheckboxRoot` (literal string; gpui has no `aria-labelledby` id wiring).
+- `Action::Click` and `Action::Focus` are auto-registered by the existing `.on_click(...)` / `.track_focus(...)`; AT-dispatched Click is synthesized by gpui as left mouse down/up at the node center, so it arrives as `ClickEvent::Mouse` and passes the root's mouse-only guard into `request_checkbox_toggle`. No explicit `on_a11y_action` handler is needed.
+
+`CheckboxIndicator` is presentational: no role, kept out of the a11y tree, matching Base UI.
+
+Double-announce rule: when a caller renders a visible text label inside `CheckboxRoot` **and** sets `.aria_label(...)`, the visible text should use `Text::new_inaccessible(...)` instead of `text!(...)` so the label is not announced twice.
+
+Known gaps (no gpui builder in the pinned revision; omitted, pending upstream):
+
+- `aria-disabled` / native `disabled` announcement — runtime already blocks toggles and disabled roots are removed from tab order, but AT will not announce "disabled".
+- `aria-readonly` — runtime blocks toggles; no announcement.
+- `aria-required` — kept in `CheckboxRootStyleState` only.
+- `aria-labelledby` — use the literal `.aria_label(...)` instead.
+
 ## Base UI differences / intentionally dropped web details
 
 Do not port:
 
-- ARIA roles/attributes,
+- DOM ARIA attributes (accessibility goes through GPUI AccessKit builders; see above),
 - DOM form submission behavior until explicitly implemented,
 - React hooks/context details,
 - SSR/hydration/prehydration scripts,

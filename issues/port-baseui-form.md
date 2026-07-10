@@ -311,10 +311,7 @@ Async validation can be supported later if needed. Base UI does not let pending 
 
 ### Accessibility follow-up
 
-- [ ] Once GPUI AccessKit APIs support form semantics, expose relevant form/field invalid/required/focused state through GPUI-native accessibility APIs.
-- [ ] Once available, ensure focusing first invalid field is represented correctly in the accessibility tree.
-- [ ] Add accessibility tests if GPUI exposes AccessKit tree test helpers.
-- [x] Do not port DOM `aria-invalid`, `aria-describedby`, generated HTML ids, or browser form roles literally.
+See the dedicated `## AccessKit accessibility follow-up` section at the end of this issue.
 
 ### Tests / verification
 
@@ -345,3 +342,45 @@ Add behavior tests under `crates/base_gpui/src/form/tests/` where practical.
 - [x] `cargo check -p base_gpui` passes.
 - [x] `cargo test -p base_gpui form` passes.
 - [x] `cargo test -p base_gpui` passes.
+
+## AccessKit accessibility follow-up
+
+Written against the pinned gpui AccessKit surface in `docs/accesskit-gpui-reference.md`. Base UI `Form.tsx` renders a plain `<form noValidate>` and sets no `role=`/`aria-*` attributes of its own — the component's accessibility work is (1) making the form container itself a landmark node and (2) documenting that all per-field ARIA (`aria-invalid`, `aria-describedby`, `aria-required`, label ids) is owned by Field and its controls, not by Form. Focus management (focus first invalid field) is already Rust-native via `FormFieldSnapshot::focus_handle(...)` and the registered `FocusHandle`s.
+
+### Per accessible part
+
+- **`Form` (in `crates/base_gpui/src/form/layers/form.rs`)** — the visual container is the `Div` built in `Form::render` (`self.base`, currently only given `.key_context(FORM_KEY_CONTEXT)`), wrapped by the non-rendering `FormScopeElement` (which correctly stays out of the a11y tree: `Element::id` returns `None`).
+  - Give the inner `Div` a stateful id from the existing `Form::id` field (`self.id`, default `ElementId::from("form")`) via `.id(self.id.clone())` — an element only appears in the a11y tree with both an id and a role.
+  - Assign `Role::Form` (verify the exact variant against accesskit 0.24; if absent, fall back to `Role::Group`).
+  - No `.aria_selected` / `.aria_expanded` / `.aria_toggled` / numeric-value props apply: Base UI Form exposes no state attributes, and `FormStyleState` is intentionally empty.
+- **No other Form-owned parts.** Field roots, labels, errors, descriptions, and controls get their roles/aria in the Field / Input / Checkbox / Switch / Radio Group / Number Field issues. Form must not duplicate them.
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are needed on the Form container. Form has no pointer path of its own — submit and validate are dispatched as `FormSubmitAction` / `FormValidateAction` through `.on_action(...)` under `FORM_KEY_CONTEXT`, and AccessKit has no matching form-submit action to route.
+- The submit *trigger* (a future Button) will get `Action::Click` automatically from its own `.on_click(...)` — auto-registered, do not re-add. Likewise `Action::Focus` is auto-registered wherever `.track_focus(...)` / `.focusable()` is already wired on controls; Form itself is not focusable and should stay that way.
+- First-invalid-field focus on failed submit already moves real window focus through the snapshot's `FocusHandle`; that focus change is what AT observes. No extra a11y action wiring is required for it — add a checklist item to verify the focused node is the control's a11y node once tree test helpers exist.
+
+### Labels
+
+- Add an optional `.aria_label(...)` pass-through on the `Form` builder (an `Option<SharedString>` prop applied to the inner `Div`), mirroring how a web form only becomes a distinct landmark when given an accessible name. Base UI leaves naming to the consumer (`aria-labelledby` on `<form>`); since gpui has no `aria-labelledby`, the literal-string `.aria_label(...)` is the only naming path.
+- Form renders no visible text of its own, so there is no `text!(...)` → `Text::new_inaccessible(...)` swap inside `form/layers/form.rs`. Field labels/errors keep their own text handling per the Field issue.
+
+### Gaps (no gpui builder in this revision — do not invent APIs)
+
+- **`aria-describedby` (error text → control association)**: no relationship builders. Field-level gap, but Form's failed-submit UX depends on it: after submit, error messages cannot be programmatically associated with their controls. Fallback: omit + document; consider concatenating the error message into the control's `.aria_label` as an interim measure in the Field issue. Blocked pending gpui upstream relationship support.
+- **`aria-invalid`**: no builder, and `write_a11y_info` never sets an invalid flag, so submit-blocking validity (`FormFieldSnapshot::valid(...)`) is not visible to AT. Fallback: omit + document; blocked pending gpui upstream.
+- **`aria-required`**: no builder. Required state (already carried by `FieldControlRegistration`) cannot be exposed. Omit + document.
+- **`disabled` / `aria-disabled`**: no `.aria_disabled(...)` builder. Form already skips disabled fields for validation/value collection (`FormFieldSnapshot::disabled(...)`), but AT cannot see the disabled state. Fallback per reference doc: controls omit their interactive actions while disabled and the limitation is documented; owned by each control's issue.
+- **Live-region announcement of submit failure**: Base UI relies on focus moving to the first invalid control plus `aria-describedby` error text; there is no `aria-live` or announcement API in this gpui revision. Do not fake it. Blocked pending gpui upstream; the focus move to the first invalid control is the only AT signal today.
+- **`aria-labelledby` on the form landmark**: no id-reference wiring; use literal `.aria_label(...)` as above.
+
+### Checklist
+
+- [ ] Give the Form container `Div` a stateful `.id(self.id.clone())` and `Role::Form` (or `Role::Group` if `Role::Form` is absent in accesskit 0.24) in `crates/base_gpui/src/form/layers/form.rs`.
+- [ ] Add an optional `aria_label` builder prop on `Form` and apply it to the container via `.aria_label(...)`.
+- [ ] Confirm `FormScopeElement` continues to return `None` from `Element::id` so the wrapper never leaks into the a11y tree.
+- [ ] Do not add `Action::Click`/`Action::Focus` handlers on the Form container; document that submit triggers rely on their own auto-registered `on_click` Click action.
+- [ ] Document in `form/mod.rs` (module docs) that per-field invalid/required/described-by exposure is blocked on missing gpui builders and tracked in the Field issue, not silently absent.
+- [ ] Once gpui exposes AccessKit tree test helpers, add a test asserting: the form node exists with `Role::Form`, and after a failed submit, window focus (and thus the a11y focus) is on the first invalid control's node.
+- [x] Do not port DOM `aria-invalid`, `aria-describedby`, generated HTML ids, or browser form roles literally.

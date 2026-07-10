@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc, time::Duration};
 
 use gpui::{
-    div, AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, MouseButton, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AccessibleAction, AnyElement, App, Div, ElementId, Entity,
+    FocusHandle, InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::tooltip::{
@@ -30,6 +30,7 @@ pub struct TooltipTrigger<P: Clone + 'static = ()> {
     close_delay: Option<Duration>,
     close_on_click: bool,
     order: usize,
+    aria_label: Option<SharedString>,
     style_with_state: Option<TooltipTriggerStyle<P>>,
 }
 
@@ -49,6 +50,7 @@ impl<P: Clone + 'static> Default for TooltipTrigger<P> {
             close_delay: None,
             close_on_click: true,
             order: 0,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -157,9 +159,12 @@ impl<P: Clone + 'static> RenderOnce for TooltipTrigger<P> {
         let hover_context = context.clone();
         let move_context = context.clone();
         let measure_context = context.clone();
+        let a11y_press_context = context.clone();
         let press_id = scoped_id.clone();
+        let a11y_press_id = scoped_id.clone();
         let hover_id = scoped_id.clone();
         let press_focus_handle = focus_handle.clone();
+        let a11y_press_focus_handle = focus_handle.clone();
         let measure_id = scoped_id.clone();
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
@@ -183,6 +188,55 @@ impl<P: Clone + 'static> RenderOnce for TooltipTrigger<P> {
             .child(
                 base.occlude()
                     .id(scoped_id)
+                    // Base UI renders the trigger as a native `<button>`;
+                    // Role::Button mirrors that. Base UI emits no
+                    // aria-expanded on tooltip triggers, so we omit it too.
+                    // There is no `.aria_disabled(...)` builder in this gpui
+                    // revision, so AT cannot see a disabled state; disabled
+                    // triggers are kept out of tab order and skip the Click
+                    // a11y handler instead.
+                    .role(Role::Button)
+                    .when_some(self.aria_label, |this, label| this.aria_label(label))
+                    // Mirrors on_mouse_down: an AT-dispatched Click routes
+                    // through the same runtime press transition (with
+                    // close_on_click) as the pointer path. `Action::Focus` is
+                    // auto-registered by `.track_focus(...)`; `on_click` is
+                    // not used here, so Click must be registered manually.
+                    .when(!disabled, |this| {
+                        this.on_a11y_action(AccessibleAction::Click, move |_data, window, cx| {
+                            if let Some(context) = a11y_press_context.as_ref() {
+                                let press_change = context.update(cx, |runtime| {
+                                    runtime.sync_trigger_press(
+                                        a11y_press_id.clone(),
+                                        close_on_click,
+                                        detached_trigger,
+                                    )
+                                });
+                                if press_change.close_active() {
+                                    context.close(
+                                        TooltipOpenChangeReason::TriggerPress,
+                                        TooltipOpenChangeSource::Unknown,
+                                        window,
+                                        cx,
+                                    );
+                                    return;
+                                }
+
+                                a11y_press_focus_handle.focus(window, cx);
+                                if press_change.open_detached_focus() {
+                                    context.open_trigger(
+                                        a11y_press_id.clone(),
+                                        TooltipOpenChangeReason::TriggerFocus,
+                                        TooltipOpenChangeSource::Focus,
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            } else {
+                                a11y_press_focus_handle.focus(window, cx);
+                            }
+                        })
+                    })
                     .track_focus(&focus_handle.tab_stop(!disabled).tab_index(if disabled {
                         -1
                     } else {
@@ -421,6 +475,18 @@ impl<P: Clone + 'static> TooltipTrigger<P> {
 
     pub fn close_on_click(mut self, close_on_click: bool) -> Self {
         self.close_on_click = close_on_click;
+        self
+    }
+
+    /// Accessible name for the trigger. There is no derived default because
+    /// trigger children are arbitrary elements, so icon-only triggers must set
+    /// this. When a visible text child duplicates this label, render it with
+    /// `Text::new_inaccessible(...)` instead of `text!(...)` to avoid
+    /// double-announcing. Tooltip content is *not* an accessible description
+    /// of the trigger (no `aria-describedby` relationship exists in this gpui
+    /// revision), so do not rely on the popup for the trigger's name.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

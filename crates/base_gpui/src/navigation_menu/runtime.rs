@@ -800,6 +800,11 @@ impl<T: Clone + Eq + 'static> NavigationMenuRuntime<T> {
         NavigationMenuListStyleState::new(self.open_value())
     }
 
+    /// Number of registered items; the item layer's `aria_size_of_set`.
+    pub fn item_count(&self) -> usize {
+        self.items.len()
+    }
+
     pub fn item_state(&self) -> NavigationMenuItemStyleState {
         NavigationMenuItemStyleState::new()
     }

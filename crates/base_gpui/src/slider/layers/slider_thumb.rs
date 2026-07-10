@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, px, relative, App, Div, ElementId, InteractiveElement as _, IntoElement, MouseButton,
-    ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    accesskit::ActionData, div, px, relative, AccessibleAction, App, Div, ElementId,
+    InteractiveElement as _, IntoElement, MouseButton, Orientation, ParentElement, RenderOnce,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::slider::{
@@ -21,6 +22,7 @@ pub struct SliderThumb {
     context: Option<SliderContext>,
     index: usize,
     disabled: bool,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(SliderThumbStyleState, Div) -> Div + 'static>>,
 }
 
@@ -33,6 +35,7 @@ impl Default for SliderThumb {
             context: None,
             index: 0,
             disabled: false,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -76,6 +79,10 @@ impl RenderOnce for SliderThumb {
         let style_state = context.read(cx, |runtime, props| runtime.thumb_state(index, props));
         let orientation = style_state.root.orientation;
         let disabled = style_state.disabled;
+        let value = style_state.value;
+        let min = style_state.root.min;
+        let max = style_state.root.max;
+        let thumb_count = context.read(cx, |runtime, _| runtime.thumb_count());
         let fraction = style_state.fraction as f32;
         let positioned = style_state.positioned;
         let half_thumb = style_state.half_thumb_main_axis as f32;
@@ -83,6 +90,9 @@ impl RenderOnce for SliderThumb {
         let z_index = style_state.z_index;
 
         let down_context = context.clone();
+        let a11y_increment_context = context.clone();
+        let a11y_decrement_context = context.clone();
+        let a11y_set_value_context = context.clone();
         let key_contexts = std::iter::repeat_with(|| context.clone())
             .take(12)
             .collect::<Vec<_>>();
@@ -92,7 +102,33 @@ impl RenderOnce for SliderThumb {
             None => self.base,
         };
 
-        let mut base = base.id(id).absolute().occlude();
+        // Applied after `style_with_state` so the styling closure cannot drop
+        // the accessibility wiring. The thumb is the value-bearing node,
+        // replacing Base UI's hidden `<input type="range">`. Min/max are the
+        // root bounds (matching Base UI's per-input `min`/`max`); neighbor
+        // clamping stays a runtime behavior, not an exposed bound.
+        // `aria-valuetext`/`aria-describedby`/disabled have no gpui builders;
+        // position-in-set/size-of-set partially compensate for the missing
+        // range-start/range-end phrasing, and disabled thumbs simply skip
+        // registering a11y actions (AT sees an inert, not announced-as-
+        // disabled, slider).
+        let mut base = base
+            .id(id)
+            .role(Role::Slider)
+            .aria_numeric_value(value)
+            .aria_min_numeric_value(min)
+            .aria_max_numeric_value(max)
+            .aria_orientation(match orientation {
+                SliderOrientation::Horizontal => Orientation::Horizontal,
+                SliderOrientation::Vertical => Orientation::Vertical,
+            })
+            .aria_position_in_set(index + 1)
+            .aria_size_of_set(thumb_count)
+            .absolute()
+            .occlude();
+        if let Some(aria_label) = self.aria_label {
+            base = base.aria_label(aria_label);
+        }
         if !positioned {
             base = base.invisible();
         } else {
@@ -142,103 +178,154 @@ impl RenderOnce for SliderThumb {
         let home_context = next_key_context();
         let end_context = next_key_context();
 
-        base.on_mouse_down(MouseButton::Left, move |event, window, cx| {
-            cx.stop_propagation();
-            down_context.press_thumb(index, event.position, direction, window, cx);
-        })
-        .on_action(move |_: &SliderStepUp, window, cx| {
-            if disabled {
-                return;
-            }
-            up_context.keyboard_step(index, SliderKeyboardStep::Increment, window, cx);
-        })
-        .on_action(move |_: &SliderStepDown, window, cx| {
-            if disabled {
-                return;
-            }
-            down_action_context.keyboard_step(index, SliderKeyboardStep::Decrement, window, cx);
-        })
-        .on_action(move |_: &SliderStepLeft, window, cx| {
-            if disabled {
-                return;
-            }
-            left_context.keyboard_step(
-                index,
-                arrow_step(direction, HorizontalArrowKey::Left, false),
-                window,
-                cx,
-            );
-        })
-        .on_action(move |_: &SliderStepRight, window, cx| {
-            if disabled {
-                return;
-            }
-            right_context.keyboard_step(
-                index,
-                arrow_step(direction, HorizontalArrowKey::Right, false),
-                window,
-                cx,
-            );
-        })
-        .on_action(move |_: &SliderStepUpLarge, window, cx| {
-            if disabled {
-                return;
-            }
-            up_large_context.keyboard_step(index, SliderKeyboardStep::LargeIncrement, window, cx);
-        })
-        .on_action(move |_: &SliderStepDownLarge, window, cx| {
-            if disabled {
-                return;
-            }
-            down_large_context.keyboard_step(index, SliderKeyboardStep::LargeDecrement, window, cx);
-        })
-        .on_action(move |_: &SliderStepLeftLarge, window, cx| {
-            if disabled {
-                return;
-            }
-            left_large_context.keyboard_step(
-                index,
-                arrow_step(direction, HorizontalArrowKey::Left, true),
-                window,
-                cx,
-            );
-        })
-        .on_action(move |_: &SliderStepRightLarge, window, cx| {
-            if disabled {
-                return;
-            }
-            right_large_context.keyboard_step(
-                index,
-                arrow_step(direction, HorizontalArrowKey::Right, true),
-                window,
-                cx,
-            );
-        })
-        .on_action(move |_: &SliderPageUp, window, cx| {
-            if disabled {
-                return;
-            }
-            page_up_context.keyboard_step(index, SliderKeyboardStep::LargeIncrement, window, cx);
-        })
-        .on_action(move |_: &SliderPageDown, window, cx| {
-            if disabled {
-                return;
-            }
-            page_down_context.keyboard_step(index, SliderKeyboardStep::LargeDecrement, window, cx);
-        })
-        .on_action(move |_: &SliderHome, window, cx| {
-            if disabled {
-                return;
-            }
-            home_context.keyboard_step(index, SliderKeyboardStep::Home, window, cx);
-        })
-        .on_action(move |_: &SliderEnd, window, cx| {
-            if disabled {
-                return;
-            }
-            end_context.keyboard_step(index, SliderKeyboardStep::End, window, cx);
-        })
-        .children(self.children)
+        let base = base
+            .on_mouse_down(MouseButton::Left, move |event, window, cx| {
+                cx.stop_propagation();
+                down_context.press_thumb(index, event.position, direction, window, cx);
+            })
+            .on_action(move |_: &SliderStepUp, window, cx| {
+                if disabled {
+                    return;
+                }
+                up_context.keyboard_step(index, SliderKeyboardStep::Increment, window, cx);
+            })
+            .on_action(move |_: &SliderStepDown, window, cx| {
+                if disabled {
+                    return;
+                }
+                down_action_context.keyboard_step(index, SliderKeyboardStep::Decrement, window, cx);
+            })
+            .on_action(move |_: &SliderStepLeft, window, cx| {
+                if disabled {
+                    return;
+                }
+                left_context.keyboard_step(
+                    index,
+                    arrow_step(direction, HorizontalArrowKey::Left, false),
+                    window,
+                    cx,
+                );
+            })
+            .on_action(move |_: &SliderStepRight, window, cx| {
+                if disabled {
+                    return;
+                }
+                right_context.keyboard_step(
+                    index,
+                    arrow_step(direction, HorizontalArrowKey::Right, false),
+                    window,
+                    cx,
+                );
+            })
+            .on_action(move |_: &SliderStepUpLarge, window, cx| {
+                if disabled {
+                    return;
+                }
+                up_large_context.keyboard_step(
+                    index,
+                    SliderKeyboardStep::LargeIncrement,
+                    window,
+                    cx,
+                );
+            })
+            .on_action(move |_: &SliderStepDownLarge, window, cx| {
+                if disabled {
+                    return;
+                }
+                down_large_context.keyboard_step(
+                    index,
+                    SliderKeyboardStep::LargeDecrement,
+                    window,
+                    cx,
+                );
+            })
+            .on_action(move |_: &SliderStepLeftLarge, window, cx| {
+                if disabled {
+                    return;
+                }
+                left_large_context.keyboard_step(
+                    index,
+                    arrow_step(direction, HorizontalArrowKey::Left, true),
+                    window,
+                    cx,
+                );
+            })
+            .on_action(move |_: &SliderStepRightLarge, window, cx| {
+                if disabled {
+                    return;
+                }
+                right_large_context.keyboard_step(
+                    index,
+                    arrow_step(direction, HorizontalArrowKey::Right, true),
+                    window,
+                    cx,
+                );
+            })
+            .on_action(move |_: &SliderPageUp, window, cx| {
+                if disabled {
+                    return;
+                }
+                page_up_context.keyboard_step(
+                    index,
+                    SliderKeyboardStep::LargeIncrement,
+                    window,
+                    cx,
+                );
+            })
+            .on_action(move |_: &SliderPageDown, window, cx| {
+                if disabled {
+                    return;
+                }
+                page_down_context.keyboard_step(
+                    index,
+                    SliderKeyboardStep::LargeDecrement,
+                    window,
+                    cx,
+                );
+            })
+            .on_action(move |_: &SliderHome, window, cx| {
+                if disabled {
+                    return;
+                }
+                home_context.keyboard_step(index, SliderKeyboardStep::Home, window, cx);
+            })
+            .on_action(move |_: &SliderEnd, window, cx| {
+                if disabled {
+                    return;
+                }
+                end_context.keyboard_step(index, SliderKeyboardStep::End, window, cx);
+            });
+
+        // `Action::Focus` is auto-registered by `track_focus` above — do not
+        // re-add it. Registration is skipped entirely while merged-disabled,
+        // the fallback for the missing `aria-disabled` builder.
+        let base = if disabled {
+            base
+        } else {
+            base.on_a11y_action(AccessibleAction::Increment, move |_, window, cx| {
+                a11y_increment_context.keyboard_step(
+                    index,
+                    SliderKeyboardStep::Increment,
+                    window,
+                    cx,
+                );
+            })
+            .on_a11y_action(AccessibleAction::Decrement, move |_, window, cx| {
+                a11y_decrement_context.keyboard_step(
+                    index,
+                    SliderKeyboardStep::Decrement,
+                    window,
+                    cx,
+                );
+            })
+            .on_a11y_action(AccessibleAction::SetValue, move |data, window, cx| {
+                if let Some(ActionData::NumericValue(value)) = data {
+                    a11y_set_value_context.set_thumb_value(index, *value, window, cx);
+                }
+            })
+        };
+
+        base.children(self.children)
     }
 }
 
@@ -276,6 +363,14 @@ impl SliderThumb {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Accessible label for this thumb (e.g. "Minimum" / "Maximum" on a
+    /// range slider). A plain string per thumb replaces Base UI's optional
+    /// `getAriaLabel(index)` closure.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

@@ -1,9 +1,9 @@
 use std::{rc::Rc, time::Duration};
 
 use gpui::{
-    div, AnyElement, App, Div, ElementId, FocusHandle, InteractiveElement as _, IntoElement,
-    MouseButton, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AccessibleAction, AnyElement, App, Div, ElementId,
+    FocusHandle, InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -94,6 +94,8 @@ impl<P: Clone + 'static> RenderOnce for MenuSubmenuTrigger<P> {
         let move_parent = parent.clone();
         let measure_parent = parent.clone();
         let measure_child = child.clone();
+        let expand_child = child.clone();
+        let collapse_child = child.clone();
         let focus_handle = self.focus_handle.clone();
 
         let base = match self.style_with_state {
@@ -103,6 +105,45 @@ impl<P: Clone + 'static> RenderOnce for MenuSubmenuTrigger<P> {
 
         let mut item = base
             .id(self.id)
+            // Item of the parent menu and trigger of the child menu at once.
+            // `aria-haspopup`/`aria-controls` have no gpui builders
+            // (documented gap); `aria_expanded` + the child popup's
+            // `Role::Menu` carry the relationship.
+            .role(Role::MenuItem)
+            .aria_expanded(state.open)
+            .when_some(self.label.clone(), |this, label| this.aria_label(label))
+            .on_a11y_action(AccessibleAction::Expand, move |_data, window, cx| {
+                if disabled {
+                    return;
+                }
+                let open = expand_child.read(cx, |runtime, _| runtime.open_value());
+                if open {
+                    return;
+                }
+                expand_child.set_open(
+                    true,
+                    MenuOpenChangeReason::ImperativeAction,
+                    MenuOpenChangeSource::Imperative,
+                    window,
+                    cx,
+                );
+            })
+            .on_a11y_action(AccessibleAction::Collapse, move |_data, window, cx| {
+                if disabled {
+                    return;
+                }
+                let open = collapse_child.read(cx, |runtime, _| runtime.open_value());
+                if !open {
+                    return;
+                }
+                collapse_child.set_open(
+                    false,
+                    MenuOpenChangeReason::ImperativeAction,
+                    MenuOpenChangeSource::Imperative,
+                    window,
+                    cx,
+                );
+            })
             .on_mouse_move(move |_event, _window, cx| {
                 let should_highlight =
                     move_parent.read(cx, |_runtime, props| props.highlight_item_on_hover());

@@ -308,6 +308,48 @@ Also update:
 - [x] `cargo test -p base_gpui preview_card` passes.
 - [x] `cargo test -p base_gpui` passes.
 
+## AccessKit accessibility follow-up
+
+Preview Card is Base UI's least ARIA-heavy popup: the trigger renders a plain `<a>` (native link role, no `aria-expanded`/`aria-haspopup` — its `triggerProps` carry only dismiss wiring), the popup is a role-less `<div>`, the arrow sets `aria-hidden="true"`, and the backdrop sets `role="presentation"`. The follow-up mirrors that minimalism against the pinned gpui AccessKit surface (`docs/accesskit-gpui-reference.md`); an element enters the a11y tree only when it has both `.id(...)` and `.role(...)`, so the parts Base UI hides are hidden here by simply not assigning a role.
+
+### Per accessible part
+
+- **`PreviewCardTrigger<P>`** (`layers/preview_card_trigger.rs`, the inner `base.occlude().id(scoped_id)` div): assign `.role(Role::Link)` to match Base UI's `<a>` trigger. Set `.aria_expanded(state.open)` from `PreviewCardTriggerStyleState::open` (Base UI's `data-popup-open` fact) only if we decide to deviate — Base UI emits no `aria-expanded` on this trigger, so the default is to omit it and note the parity choice inline. Add an `aria_label(impl Into<SharedString>)` builder prop on `PreviewCardTrigger` that forwards to `.aria_label(...)`.
+- **`PreviewCardPopup<P>`** (`layers/preview_card_popup.rs`): no role, matching Base UI's role-less popup `<div>`. It keeps its `.id(...)` for keyed state but stays out of the a11y tree; text content rendered inside the popup/viewport remains accessible through its own text elements.
+- **`PreviewCardArrow<P>`** (`layers/preview_card_arrow.rs`): Base UI marks it `aria-hidden="true"`. gpui equivalent: assign no role so the arrow never appears in the tree. Nothing to add.
+- **`PreviewCardBackdrop<P>`** (`layers/preview_card_backdrop.rs`): Base UI marks it `role="presentation"`. gpui equivalent: assign no role. Nothing to add.
+- **`PreviewCardRoot<P>` / `PreviewCardPortal<P>` / `PreviewCardPositioner<P>` / `PreviewCardViewport<P>`**: structural containers with no ARIA in Base UI; leave role-less.
+
+### Actions
+
+- The trigger opens on hover/focus and dismisses on press via `on_mouse_down(MouseButton::Left, ...)` → `runtime.sync_trigger_press(...)` → `context.close(PreviewCardOpenChangeReason::TriggerPress, ...)`. Because this is `on_mouse_down` and **not** `.on_click(...)`, `Action::Click` is *not* auto-registered. Add `.on_a11y_action(AccessibleAction::Click, ...)` on the trigger routing into the same `sync_trigger_press` / `close(TriggerPress)` / focus path the pointer handler uses (source `PreviewCardOpenChangeSource::Keyboard` or a dedicated a11y source per the Tooltip/Popover decision).
+- `Action::Focus` is auto-registered by the existing `.track_focus(&focus_handle.tab_stop(true).tab_index(0))` + `.focusable()` wiring and must NOT be re-added. AT focus then flows through `apply_focus_change` / `sync_detached_trigger_focus`, giving the focus-open path for free.
+- Escape dismissal already routes through `PreviewCardCloseAction` in the trigger/popup key context; no extra a11y action is needed.
+
+### Labels
+
+- `.aria_label(...)` on the trigger comes from the new builder prop; consumers pass the link text. When set, the trigger's visible label children should be constructed with `Text::new_inaccessible(...)` instead of `text!(...)` so the label is not announced twice. The trigger accepts arbitrary `children: Vec<AnyElement>`, so this is a documentation obligation on gallery/demo call sites (`main.rs` smoke scenarios) rather than something the layer can enforce.
+- The popup has no accessible name in Base UI (no `aria-labelledby`); do not invent one.
+
+### Gaps (no gpui builder in this revision)
+
+- **`aria-hidden` (arrow)**: no `.aria_hidden(...)` builder. Fallback: omit the role so the node is never reported — equivalent outcome, documented in `preview_card_arrow.rs`.
+- **`role="presentation"` (backdrop)**: `Role::GenericContainer` is filtered and there is no presentation role builder. Fallback: omit the role, documented in `preview_card_backdrop.rs`.
+- **Link navigation semantics**: `Role::Link` conveys "link" but gpui has no `href`/URL property surfaced; navigation stays the consumer's `on_a11y_action(Click)`/press concern, per the existing "GPUI has no anchor element" scope note.
+- **`disabled` / `aria-disabled`**: not applicable — Base UI's Preview Card trigger has no disabled API and the port added none; nothing to represent.
+- **Relationship props (`aria-controls`, `aria-labelledby`, `aria-describedby`, `aria-haspopup`) and live regions**: Base UI Preview Card emits none of these, so no fallback is required; noting explicitly that the absence is parity, not an omission.
+
+### Checklist
+
+- [ ] `PreviewCardTrigger` inner interactive div sets `.role(Role::Link)`.
+- [ ] `PreviewCardTrigger` gains an `aria_label(...)` builder prop forwarded to `.aria_label(...)`.
+- [ ] `PreviewCardTrigger` adds `.on_a11y_action(AccessibleAction::Click, ...)` routed through the same `sync_trigger_press` / `close(PreviewCardOpenChangeReason::TriggerPress, ...)` / focus path as `on_mouse_down`.
+- [ ] No `Action::Focus` handler is manually added (auto-registered by `.track_focus(...)`), and no `Action::Click` is double-registered via a new `.on_click`.
+- [ ] Popup, arrow, backdrop, root, portal, positioner, and viewport remain role-less, with inline comments in `preview_card_arrow.rs` and `preview_card_backdrop.rs` documenting the `aria-hidden` / `role="presentation"` equivalences.
+- [ ] Gallery smoke scenarios in `crates/base_gpui/src/main.rs` use `Text::new_inaccessible(...)` for trigger label text wherever `aria_label` is set.
+- [ ] The `aria-expanded` parity decision (omit, matching Base UI) is recorded in `preview_card_trigger.rs`.
+- [ ] Rendered a11y test (or gallery verification) confirms the trigger appears as a link node with its label and responds to the AT Click action.
+
 ## Uncertain items to confirm during implementation
 
 - Whether the inline-rect approximation (virtual anchor from the hover point at open time) is worth shipping in the first pass or should be descoped entirely.

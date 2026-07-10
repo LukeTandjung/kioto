@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, SharedString,
-    StyleRefinement, Styled, Window,
+    StyleRefinement, Styled, Text, Window,
 };
 
 use crate::combobox::ComboboxContext;
@@ -13,6 +13,11 @@ type AutocompleteValueFormatter = Rc<dyn Fn(&str) -> SharedString + 'static>;
 /// overlay — mirroring Base UI's `Autocomplete.Value`, which reads the
 /// resolved input value context. Static children take precedence, then the
 /// formatter closure, then the raw value.
+///
+/// Accessibility: this part is a purely visual mirror of the input's value —
+/// the input itself is the accessible value surface — so the resolved string
+/// is rendered with `Text::new_inaccessible(...)` and the container carries no
+/// role, keeping the value from being announced twice.
 #[derive(IntoElement)]
 pub struct AutocompleteValue<T: Clone + Eq + 'static> {
     base: Div,
@@ -55,7 +60,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for AutocompleteValue<T> {
             .map(|formatter| formatter(&value))
             .unwrap_or(value);
 
-        self.base.child(display)
+        self.base.child(Text::new_inaccessible(display))
     }
 }
 

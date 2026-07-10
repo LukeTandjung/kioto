@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::accordion::{
@@ -12,18 +13,22 @@ use crate::accordion::{
 
 #[derive(IntoElement)]
 pub struct AccordionHeader<T: Clone + Eq + 'static> {
+    id: Option<ElementId>,
     base: Div,
     children: Vec<AccordionHeaderChild<T>>,
     context: Option<AccordionItemContext<T>>,
+    heading_level: usize,
     style_with_state: Option<Rc<dyn Fn(AccordionHeaderStyleState<T>, Div) -> Div + 'static>>,
 }
 
 impl<T: Clone + Eq + 'static> Default for AccordionHeader<T> {
     fn default() -> Self {
         Self {
+            id: None,
             base: div(),
             children: Vec::new(),
             context: None,
+            heading_level: 3,
             style_with_state: None,
         }
     }
@@ -56,10 +61,19 @@ impl<T: Clone + Eq + 'static> RenderOnce for AccordionHeader<T> {
                 ))
             });
 
+        let index = state.item.index;
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
         };
+
+        let id = self.id.unwrap_or_else(|| {
+            ElementId::from(SharedString::from(format!("accordion-header-{index}")))
+        });
+        let base = base
+            .id(id)
+            .role(Role::Heading)
+            .aria_level(self.heading_level);
 
         match self.context {
             Some(context) => base.children(
@@ -96,6 +110,16 @@ impl<T: Clone + Eq + 'static> AccordionItemChildNode<T> for AccordionHeader<T> {
 impl<T: Clone + Eq + 'static> AccordionHeader<T> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    pub fn heading_level(mut self, heading_level: usize) -> Self {
+        self.heading_level = heading_level;
+        self
     }
 
     pub fn child(mut self, child: impl Into<AccordionHeaderChild<T>>) -> Self {

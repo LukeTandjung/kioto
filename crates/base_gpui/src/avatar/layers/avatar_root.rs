@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    StyleRefinement, Styled, Window,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::avatar::{
@@ -14,6 +14,7 @@ pub struct AvatarRoot {
     id: ElementId,
     base: Div,
     children: Vec<AvatarChild>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(AvatarRootStyleState, Div) -> Div + 'static>>,
 }
 
@@ -23,6 +24,7 @@ impl Default for AvatarRoot {
             id: ElementId::from("avatar"),
             base: div(),
             children: Vec::new(),
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -47,7 +49,11 @@ impl RenderOnce for AvatarRoot {
             None => self.base,
         };
 
-        base.id(self.id).children(wired_children.children)
+        let base = base.id(self.id).children(wired_children.children);
+        match self.aria_label {
+            Some(label) => base.role(Role::Image).aria_label(label),
+            None => base,
+        }
     }
 }
 
@@ -69,6 +75,18 @@ impl AvatarRoot {
     pub fn child_element(mut self, element: impl IntoElement) -> Self {
         self.children
             .push(AvatarChild::Any(element.into_any_element()));
+        self
+    }
+
+    /// Accessible label for the avatar (the GPUI stand-in for `<img alt>`).
+    ///
+    /// When set, the root enters the AccessKit tree as `Role::Image` with this
+    /// label. When unset, the avatar has no role and produces no AccessKit
+    /// node — omitting the label is how you mark an avatar decorative (there
+    /// is no `aria-hidden` builder in this gpui revision). There is also no
+    /// live-region API, so loading status is never announced.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

@@ -10,6 +10,11 @@ use crate::preview_card::{
 /// the card, and never blocks content beneath it. Outside-press dismissal is
 /// handled by the positioner's `on_mouse_down_out` runtime path — this is the
 /// deliberate adaptation from Popover's click-capturing backdrop.
+///
+/// Base UI marks the backdrop `role="presentation"`. This gpui revision has
+/// no presentation role builder (`Role::GenericContainer` is filtered), so
+/// the equivalent is achieved by assigning no role: a role-less element never
+/// enters the AccessKit tree.
 #[derive(IntoElement)]
 pub struct PreviewCardBackdrop<P: Clone + 'static = ()> {
     base: Div,

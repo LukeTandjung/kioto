@@ -1,9 +1,10 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, AnyElement, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AccessibleAction, AnyElement, App, ClickEvent, Div,
+    ElementId, Entity, FocusHandle, InteractiveElement as _, IntoElement, ParentElement,
+    RenderOnce, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window,
 };
 
 use crate::collapsible::{
@@ -19,6 +20,7 @@ pub struct CollapsibleTrigger {
     children: Vec<AnyElement>,
     context: Option<CollapsibleContext>,
     focus_handle: Option<FocusHandle>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(CollapsibleTriggerStyleState, Div) -> Div + 'static>>,
 }
 
@@ -30,6 +32,7 @@ impl Default for CollapsibleTrigger {
             children: Vec::new(),
             context: None,
             focus_handle: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -55,6 +58,7 @@ impl RenderOnce for CollapsibleTrigger {
             children,
             context,
             focus_handle,
+            aria_label,
             style_with_state,
         } = self;
 
@@ -71,9 +75,15 @@ impl RenderOnce for CollapsibleTrigger {
         };
 
         let keyboard_context = context.clone();
-        let pointer_context = context;
+        let pointer_context = context.clone();
+        let expand_context = context.clone();
+        let collapse_context = context;
+        let open = state.open;
 
         base.id(id)
+            .role(Role::Button)
+            .aria_expanded(open)
+            .when_some(aria_label, |this, aria_label| this.aria_label(aria_label))
             .track_focus(
                 &focus_handle
                     .tab_stop(!disabled)
@@ -93,6 +103,22 @@ impl RenderOnce for CollapsibleTrigger {
 
                 if let Some(context) = pointer_context.as_ref() {
                     context.toggle(CollapsibleOpenChangeSource::Pointer, window, cx);
+                }
+            })
+            .on_a11y_action(AccessibleAction::Expand, move |_, window, cx| {
+                if let Some(context) = expand_context.as_ref() {
+                    let open = context.read(cx, |runtime, _| runtime.open());
+                    if !open {
+                        context.toggle(CollapsibleOpenChangeSource::Keyboard, window, cx);
+                    }
+                }
+            })
+            .on_a11y_action(AccessibleAction::Collapse, move |_, window, cx| {
+                if let Some(context) = collapse_context.as_ref() {
+                    let open = context.read(cx, |runtime, _| runtime.open());
+                    if open {
+                        context.toggle(CollapsibleOpenChangeSource::Keyboard, window, cx);
+                    }
                 }
             })
             .children(children)
@@ -125,6 +151,17 @@ impl CollapsibleTrigger {
 
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = id.into();
+        self
+    }
+
+    /// Sets the accessible label announced for this trigger.
+    ///
+    /// Required for icon-only triggers. When the trigger also has a visible text
+    /// label child, pass that child as `Text::new_inaccessible(...)` so screen
+    /// readers do not announce the label twice; without an `aria_label`, leave
+    /// child text accessible (`text!(...)`) so it names the button.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

@@ -700,9 +700,167 @@ Rendered tests: *(none written in this pass — runtime behavior is unit-tested;
       insufficient.
 - [ ] Custom value comparator if `T: Eq` is not enough for real callers.
 - [ ] `submit_on_item_click` wired to a real Form submit command when Form exposes one.
-- [ ] AccessKit semantics (combobox/listbox/option/grid roles, active-descendant
-      equivalent, live-region status/empty announcements) once the pinned GPUI revision
-      exposes the needed APIs — deferred, consistent with Select's audit.
+- [ ] AccessKit semantics — see the concrete `## AccessKit accessibility follow-up`
+      section below for the per-part role/aria plan, actions, and documented gaps
+      (active-descendant and live regions remain blocked pending gpui upstream).
+
+## AccessKit accessibility follow-up
+
+Written against the pinned gpui revision's AccessKit surface only
+(`docs/accesskit-gpui-reference.md`). Every part below already has a stable keyed `.id(...)`;
+the work is adding `.role(...)` + `.aria_*` props and a small number of `on_a11y_action`
+handlers that route into the *same* `ComboboxContext<T>` commands the pointer/keyboard paths
+already use. Base UI's authoritative ARIA emission is in
+`root/AriaCombobox.tsx` (reference = `role="combobox"`, `aria-expanded`, `aria-haspopup`,
+`aria-controls`, `aria-autocomplete`), `list/ComboboxList.tsx` (`role="listbox"`,
+`aria-multiselectable`), `item/ComboboxItem.tsx` (`role="option"`, `aria-selected`),
+`chips/ComboboxChips.tsx` (`role="toolbar"`), `trigger/ComboboxTrigger.tsx`,
+`chip/ComboboxChip.tsx`, `status/ComboboxStatus.tsx` / `empty/ComboboxEmpty.tsx`
+(`aria-live="polite"`), and the `aria-hidden` decorative parts (icon, arrow, item indicator).
+
+### Per accessible part
+
+- **`ComboboxInput<T>`** (`layers/combobox_input.rs`) — the combobox reference itself.
+  `Role::ComboBox`; `.aria_expanded(runtime.open_value())` (Base UI `aria-expanded` on the
+  input); `.aria_label(...)` from a new `.aria_label(...)` prop on `ComboboxInput`/root,
+  defaulting to the `ComboboxLabel` text when statically known (see Labels). Focus is already
+  tracked by the wrapped `primitives/input` runtime, so `Action::Focus` is auto-registered.
+- **`ComboboxTrigger<T>`** (`layers/combobox_trigger.rs`) — `Role::Button`;
+  `.aria_expanded(runtime.open_value())` (Base UI `aria-expanded` on the trigger);
+  `.aria_label(...)` prop (e.g. "Open suggestions"). Its `.on_click` already auto-registers
+  `Action::Click`, which drives `ComboboxContext::toggle_open` — nothing extra needed for
+  activation.
+- **`ComboboxList<T>`** (`layers/combobox_list.rs`) — `Role::ListBox` (grid mode is deferred,
+  so no `Role::Grid` branch yet). No `aria_*` builder exists for `aria-multiselectable`
+  (see Gaps).
+- **`ComboboxItem<T>`** (`layers/combobox_item.rs`) — `Role::ListBoxOption`;
+  `.aria_selected(state.selected)` from the `ComboboxItemStyleState` already computed via
+  `runtime.item_state(...)` (omit when `selection_mode == None`, matching Base UI's
+  `selectable`-gated `aria-selected`); `.aria_position_in_set(pos + 1)` /
+  `.aria_size_of_set(len)` derived from the item's position within
+  `runtime.filtered_indices()` (only visible items count). Label comes from the registered
+  item label (`ComboboxItemMetadata::label`) via `.aria_label(...)`. `.on_click` is already
+  wired, so `Action::Click` (= select) is auto-registered.
+- **`ComboboxChips<T>`** (`layers/combobox_chips.rs`) — `Role::Toolbar` when there is at
+  least one selected value (Base UI renders `role="toolbar"` only with selection chips);
+  `.aria_orientation(Orientation::Horizontal)`.
+- **`ComboboxChip<T>`** (`layers/combobox_chip.rs`) — `Role::ListItem` with
+  `.aria_label(runtime.chip_label(position))`, `.aria_position_in_set(position + 1)` /
+  `.aria_size_of_set(selected_values.len())`. The chip uses `.on_mouse_down`, not
+  `.on_click`, so **no** `Action::Click` is auto-registered — add
+  `.on_a11y_action(AccessibleAction::Click, ...)` routing to the same
+  `context.highlight_chip`-then-`focus_input` path the mouse-down handler runs.
+- **`ComboboxChipRemove<T>`** (`layers/combobox_chip_remove.rs`) — `Role::Button`;
+  `.aria_label(...)` composed as "Remove {chip_label}". Also `.on_mouse_down`-driven, so add
+  `.on_a11y_action(AccessibleAction::Click, ...)` calling `ComboboxContext::remove_chip`
+  (same command the pointer path uses).
+- **`ComboboxClear`** (`layers/combobox_clear.rs`) — `Role::Button`; `.aria_label(...)`
+  prop defaulting to "Clear". Uses `.on_click` → `Action::Click` auto-registered, driving
+  `ComboboxContext::clear_all`.
+- **`ComboboxGroup`** (`layers/combobox_group.rs`) — `Role::Group`; `.aria_label(...)` from
+  the group's `ComboboxGroupMetadata::label` (extracted from `ComboboxGroupLabel` text or an
+  explicit label prop) — this substitutes for Base UI's `aria-labelledby` id wiring, which
+  has no gpui builder.
+- **`ComboboxLabel`** (`layers/combobox_label.rs`) — no id-reference wiring exists, so the
+  label element itself gets no role; its text is mirrored into the input's `.aria_label`
+  (see Labels).
+- **Not in the tree (no `.role(...)`)**: `ComboboxPopup` (Base UI `role="presentation"` in
+  the input-outside-popup topology), `ComboboxPositioner`, `ComboboxPortal`,
+  `ComboboxBackdrop`, `ComboboxIcon`, `ComboboxArrow`, `ComboboxItemIndicator` (all
+  `aria-hidden` or presentational in Base UI), `ComboboxInputGroup`, `ComboboxValue`,
+  `ComboboxSeparator` (optionally `Role::Separator`, matching the shared `Separator` port's
+  own follow-up), `ComboboxRow` (deferred with grid mode), `ComboboxStatus`/`ComboboxEmpty`
+  (live regions — see Gaps).
+
+### Actions
+
+- Do **not** re-add `Action::Click` on the trigger, items, clear, or backdrop — their
+  existing `.on_click` handlers auto-register it. Do **not** add `Action::Focus` anywhere —
+  the input primitive's focus tracking auto-registers it.
+- Add `Action::Click` handlers only where the layer uses `.on_mouse_down` instead of
+  `.on_click`: `ComboboxChip`, `ComboboxChipRemove` (and note `ComboboxInputGroup` opens via
+  mouse-down; AT users reach the same behavior through the input's expand action below, so
+  the group needs nothing).
+- On `ComboboxInput` (or the root-level element carrying `Role::ComboBox`):
+  `.on_a11y_action(AccessibleAction::Expand, ...)` → `context.set_open(true, ...)` and
+  `.on_a11y_action(AccessibleAction::Collapse, ...)` → `context.set_open(false, ...)`, with
+  the same change-reason plumbing (`ComboboxChangeReason`) as the trigger press path so
+  callbacks stay consistent.
+- All handlers must route through existing `ComboboxContext<T>` commands (`set_open`,
+  `toggle_open`, `select_item`, `remove_chip`, `clear_all`) — never mutate the runtime
+  directly from an a11y handler.
+
+### Labels
+
+- `.aria_label` sources: explicit per-part label props (input, trigger, clear), the
+  registered item label for items, `runtime.chip_label(position)` for chips, and
+  `ComboboxGroupMetadata::label` for groups.
+- When `ComboboxLabel` has plain-text children, mirror that string into the input's
+  `.aria_label` during child wiring (`child_wiring.rs` already extracts item/group label
+  text; extend the same extraction to the root label).
+- Wherever a part sets `.aria_label` on itself and also paints that same string as visible
+  text (chip labels, clear glyph text, group labels, item labels rendered from the
+  registered label), render the visible text with `Text::new_inaccessible(...)` instead of
+  `text!(...)` so screen readers do not announce it twice. Arbitrary `AnyElement` children
+  supplied by callers are left as-is.
+
+### Gaps (no gpui builder in this revision — do not invent APIs)
+
+- **`aria-activedescendant`** — the core of the combobox virtual-highlight pattern. No
+  relationship builders exist, so AT cannot be told which option is highlighted while focus
+  stays on the input. Fallback: keep `.aria_selected` accurate on options and document that
+  highlight-following announcement is **blocked pending gpui upstream** (an
+  active-descendant or focus-proxy API). This is the single biggest a11y limitation of the
+  port.
+- **`aria-controls`** (input → list, trigger → popup) and **`aria-labelledby`** /
+  **`aria-describedby`** (label → input, group label → group): no id-reference wiring —
+  fallback is the literal-string `.aria_label` mirroring above; document the substitution.
+- **`aria-haspopup="listbox"`** (input and trigger): no builder. Omit; `Role::ComboBox` +
+  `.aria_expanded` conveys most of the affordance. Document.
+- **`aria-autocomplete="list"/"both"/"inline"`**: no builder. Omit + document (matters more
+  for the Autocomplete follow-up).
+- **`aria-multiselectable`** on the listbox: no builder. Omit + document; multiple-mode
+  state is still conveyed per-option via `.aria_selected`.
+- **`disabled` / `aria-disabled` / `aria-readonly`** (root, input, trigger, items, chips,
+  chip remove, clear): no `.aria_disabled` builder and `write_a11y_info` never sets a
+  disabled flag. Fallback: the disabled paths already no-op their pointer/keyboard commands;
+  additionally skip registering the a11y `Click`/`Expand` handlers while disabled, and
+  document that disabled state itself is not announced (blocked pending gpui upstream).
+- **`aria-required`** (input): no builder. Omit + document; Field-level validation messages
+  remain the signal.
+- **Live regions** — `ComboboxStatus` / `ComboboxEmpty` are `role="status"` +
+  `aria-live="polite"` in Base UI; gpui has no announcement API. They stay plain visual
+  containers; **blocked pending gpui upstream** (shared gap with Toast/Form errors).
+- **Grid roles** (`role="grid"` / `gridcell`) — deferred with grid mode itself.
+
+### Checklist
+
+- [ ] `ComboboxInput`: `Role::ComboBox` + `.aria_expanded(open)` + `.aria_label` (prop or
+      mirrored `ComboboxLabel` text).
+- [ ] `ComboboxTrigger`: `Role::Button` + `.aria_expanded(open)` + `.aria_label` prop.
+- [ ] `ComboboxList`: `Role::ListBox`.
+- [ ] `ComboboxItem`: `Role::ListBoxOption` + `.aria_selected` (gated off in `None` mode) +
+      `.aria_label` + `.aria_position_in_set`/`.aria_size_of_set` over the filtered set.
+- [ ] `ComboboxChips`: `Role::Toolbar` (only when chips exist) + horizontal orientation;
+      `ComboboxChip`: `Role::ListItem` + label + set position/size.
+- [ ] `ComboboxChipRemove`: `Role::Button` + "Remove {label}" `.aria_label`.
+- [ ] `ComboboxClear`: `Role::Button` + `.aria_label` (default "Clear").
+- [ ] `ComboboxGroup`: `Role::Group` + `.aria_label` from the group label text.
+- [ ] `Action::Click` handlers added on the mouse-down-driven chip and chip-remove layers,
+      routed through `ComboboxContext` commands; no duplicate Click/Focus registration on
+      `.on_click`/focus-tracked layers.
+- [ ] `Action::Expand`/`Action::Collapse` on the input routed to `context.set_open` with
+      proper change reasons.
+- [ ] Visible label text that duplicates an `.aria_label` switched to
+      `Text::new_inaccessible(...)`.
+- [ ] Decorative/presentational parts (icon, arrow, indicator, popup, positioner, portal,
+      backdrop, input group, value) confirmed role-less and absent from the a11y tree.
+- [ ] Disabled parts skip registering a11y action handlers; limitation documented.
+- [ ] Gaps documented in `combobox/mod.rs` docs: active-descendant, relationship props,
+      haspopup, autocomplete, multiselectable, disabled/readonly/required, live regions —
+      each marked omit-and-document or blocked-pending-gpui-upstream as listed above.
+- [ ] Node ids stay stable across frames (existing keyed-`ElementId` pattern) so highlight
+      and open/close changes do not appear as node remove+add to AT.
 
 ## Uncertain items needing confirmation
 

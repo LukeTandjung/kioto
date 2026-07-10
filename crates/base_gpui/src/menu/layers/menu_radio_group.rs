@@ -1,7 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, AnyElement, App, Div, IntoElement, ParentElement, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AnyElement, App, Div, ElementId, InteractiveElement as _,
+    IntoElement, ParentElement, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::menu::{
@@ -12,7 +14,9 @@ use crate::menu::{
 type MenuRadioGroupStyle = Rc<dyn Fn(MenuRadioGroupStyleState, Div) -> Div + 'static>;
 
 pub struct MenuRadioGroup<P: Clone + 'static, V: Clone + Eq + 'static> {
+    id: ElementId,
     base: Div,
+    aria_label: Option<SharedString>,
     children: Vec<MenuRadioGroupChild<P, V>>,
     context: Option<MenuContext<P>>,
     value: Option<Option<V>>,
@@ -26,7 +30,9 @@ pub struct MenuRadioGroup<P: Clone + 'static, V: Clone + Eq + 'static> {
 impl<P: Clone + 'static, V: Clone + Eq + 'static> Default for MenuRadioGroup<P, V> {
     fn default() -> Self {
         Self {
+            id: ElementId::from("menu-radio-group"),
             base: div(),
+            aria_label: None,
             children: Vec::new(),
             context: None,
             value: None,
@@ -55,13 +61,21 @@ impl<P: Clone + 'static, V: Clone + Eq + 'static> IntoElement for MenuRadioGroup
             None => self.base,
         };
 
-        base.children(
-            self.children
-                .into_iter()
-                .map(IntoElement::into_element)
-                .collect::<Vec<_>>(),
-        )
-        .into_any_element()
+        // `aria-labelledby` has no gpui builder (documented gap): the group
+        // label registered by `MenuGroupLabel` is surfaced here as a literal
+        // `.aria_label(...)` instead. `disabled` is not announced
+        // (no `.aria_disabled` builder); disabled groups stay inert through
+        // withheld tab stops and activation no-ops.
+        base.id(self.id)
+            .role(Role::Group)
+            .when_some(self.aria_label, |this, label| this.aria_label(label))
+            .children(
+                self.children
+                    .into_iter()
+                    .map(IntoElement::into_element)
+                    .collect::<Vec<_>>(),
+            )
+            .into_any_element()
     }
 }
 
@@ -91,6 +105,16 @@ impl<P: Clone + 'static, V: Clone + Eq + 'static> MenuRadioGroup<P, V> {
     ) -> Self {
         let group_index = wiring.next_radio_group_index();
         self.group_index = Some(group_index);
+        if self.aria_label.is_none() {
+            self.aria_label = self.children.iter().find_map(|child| match child {
+                MenuRadioGroupChild::GroupLabel(label) => label.label_value(),
+                _ => None,
+            });
+        }
+        self.id = wiring.scope_child_id(&ElementId::from(SharedString::from(format!(
+            "{}-{group_index}",
+            self.id
+        ))));
 
         let controlled_value = self.value.clone();
         let default_value = self.default_value.clone();
@@ -132,6 +156,18 @@ impl<P: Clone + 'static, V: Clone + Eq + 'static> MenuRadioGroup<P, V> {
 
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = id.into();
+        self
+    }
+
+    /// Accessible group label. Defaults to the label registered by a
+    /// `MenuGroupLabel` child.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
+        self
     }
 
     pub fn child(mut self, child: impl Into<MenuRadioGroupChild<P, V>>) -> Self {

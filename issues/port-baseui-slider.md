@@ -672,17 +672,134 @@ Runtime/math unit tests (no window) plus rendered behavior tests under
 
 ## AccessKit accessibility follow-up
 
-Base UI exposes the slider through per-thumb `<input type="range">` semantics:
-`aria-valuenow`, `aria-valuetext` (with range start/end phrasing),
-`aria-orientation`, `aria-labelledby` from `SliderLabel`, and `role="group"`
-on the root. GPUI does not currently emit accessibility attributes, so this
-is deferred, consistent with prior ports. When AccessKit support lands:
+Base UI exposes the slider as `role="group"` on the root
+(`SliderRoot.tsx`, with `aria-labelledby` pointing at `SliderLabel`) plus one
+hidden `<input type="range">` per thumb carrying `aria-valuenow`,
+`aria-valuetext`, `aria-orientation`, `aria-label` / `aria-labelledby` /
+`aria-describedby`, and `disabled` (`SliderThumb.tsx` `inputProps`), and an
+`aria-live` region on `SliderValue` (`SliderValue.tsx`). Map that onto the
+pinned gpui revision's AccessKit surface (`docs/accesskit-gpui-reference.md`)
+as follows. All parts already have stable keyed ids via
+`SliderContext::child_id(...)`, which AccessKit node identity requires.
 
-- [ ] Expose each thumb as an AccessKit slider node with numeric
-      value/min/max/step and formatted value text.
-- [ ] Wire `SliderLabel` as the accessible label relation.
-- [ ] Revisit `getAriaLabel` / `getAriaValueText` equivalents as typed
-      closures.
+### Per accessible part
+
+- **`SliderRoot`** (`layers/slider_root.rs`): `.role(Role::Group)` on the
+  root div. Set `.aria_label(...)` from a new root `.aria_label(...)` prop on
+  `SliderProps` (Base UI's `aria-labelledby` id-reference has no gpui
+  equivalent — see gaps). Set
+  `.aria_orientation(...)` mapped from `SliderOrientation`
+  (`Horizontal` → `Orientation::Horizontal`, `Vertical` →
+  `Orientation::Vertical`).
+- **`SliderThumb`** (`layers/slider_thumb.rs`): this is the value-bearing
+  node, replacing Base UI's hidden range input. `.role(Role::Slider)` plus,
+  from the existing `SliderThumbStyleState` returned by
+  `runtime.thumb_state(index, props)`:
+  - `.aria_numeric_value(style_state.value)`
+  - `.aria_min_numeric_value(style_state.root.min)` and
+    `.aria_max_numeric_value(style_state.root.max)` — note these are the
+    root bounds, matching Base UI's per-input `min`/`max`; neighbor clamping
+    stays a runtime behavior, not an exposed bound.
+  - `.aria_orientation(...)` from `style_state.root.orientation`.
+  - `.aria_position_in_set(index + 1)` + `.aria_size_of_set(thumb_count)`
+    (from `runtime.thumb_count()`) so multi-thumb ranges read as "thumb i
+    of N", partially compensating for the missing `aria-valuetext`
+    range-start/range-end phrasing.
+  - `.aria_label(...)` from a new per-thumb `.aria_label(...)` builder
+    (Base UI's `getAriaLabel(index)` closure form is optional; a plain
+    `SharedString` per thumb is the phase-1 shape).
+- **`SliderControl` / `SliderTrack` / `SliderIndicator`**: purely visual;
+  give them **no** role so they stay out of the a11y tree
+  (`Role::GenericContainer` is filtered/asserted — do not use it).
+- **`SliderValue`** (`layers/slider_value.rs`): no role. Its display string
+  duplicates the thumbs' numeric values; render it inaccessibly (see Labels).
+- **`SliderLabel`** (`layers/slider_label.rs`): no role; it cannot be linked
+  by id (see gaps), so its text is instead supplied to the root/thumb via
+  `.aria_label(...)`.
+
+### Actions
+
+- `SliderThumb` already wires `.track_focus(&focus_handle...)`, so
+  `Action::Focus` is auto-registered — do not re-add it. There is no
+  `.on_click` on the thumb, and none is needed (a slider thumb has no click
+  semantics).
+- Add to `SliderThumb`:
+  - `.on_a11y_action(Action::Increment, ...)` →
+    `context.keyboard_step(index, SliderKeyboardStep::Increment, window, cx)`
+  - `.on_a11y_action(Action::Decrement, ...)` →
+    `context.keyboard_step(index, SliderKeyboardStep::Decrement, window, cx)`
+  - `.on_a11y_action(Action::SetValue, ...)` — read the requested numeric
+    value from `ActionData`, route it through the same neighbor-clamped
+    keyboard path (`SliderContext::keyboard_step` / a small
+    `set_thumb_value` runtime command that reuses the `getSliderValue`
+    clamp in `math.rs`), never the collision path.
+  All three must respect merged disabled exactly like the existing
+  `on_action(SliderStep*)` handlers (early-return when
+  `style_state.disabled`).
+- `SliderRoot`, `SliderControl`, `SliderTrack`, `SliderIndicator`,
+  `SliderValue`, `SliderLabel`: no a11y actions.
+
+### Labels
+
+- Root and thumb `.aria_label(...)` come from new props (root-level label
+  text mirroring what `SliderLabel` displays; optional per-thumb labels for
+  range sliders, e.g. "Minimum" / "Maximum").
+- `SliderValue` builds its string via `SharedString` and renders it as a
+  child; when the rendered text would otherwise mirror into the a11y tree,
+  emit it with `Text::new_inaccessible(...)` — the thumbs already announce
+  the numeric values, and a duplicate text node double-announces.
+- `SliderLabel` children are caller-supplied; document that callers should
+  pass `Text::new_inaccessible(...)` (or plain strings the label renders
+  inaccessibly) once the root carries `.aria_label`, to avoid the label
+  reading twice.
+
+### Gaps (no gpui builder in this revision)
+
+- **`aria-labelledby` / `aria-describedby`** (root ← `SliderLabel` id link,
+  thumb `aria-labelledby`/`aria-describedby` props): no id-reference
+  builders exist. Fallback: literal `.aria_label(...)` strings as above;
+  drop `aria-describedby` and document it as blocked pending gpui upstream.
+- **`aria-valuetext` / `getAriaValueText`** (formatted value text,
+  range start/end phrasing): no builder — only raw
+  `.aria_numeric_value(f64)` exists. Fallback: numeric value +
+  position-in-set/size-of-set; track the formatted-text variant as blocked
+  pending gpui upstream. Do not add a `getAriaValueText` closure prop until
+  there is something to feed it into.
+- **`disabled`** on the thumb input: no `.aria_disabled(...)` builder and
+  `write_a11y_info` never sets a disabled flag. Fallback: skip registering
+  `Increment`/`Decrement`/`SetValue` handlers while
+  `style_state.disabled` is true and document that AT sees an inert (but
+  not announced-as-disabled) slider; note as a candidate gpui upstream
+  addition shared with every other port.
+- **`aria-live`** on `SliderValue`: no live-region/announcement API.
+  Fallback: omit; value changes are conveyed by the thumb's
+  `aria_numeric_value` updating on the focused node.
+- **`step` exposure**: accesskit has a numeric-value-step concept but gpui
+  exposes no `.aria_*` builder for it; omit — `Increment`/`Decrement`
+  actions already step by `props.step` internally.
+
+### Checklist
+
+- [ ] `SliderRoot`: `.role(Role::Group)`, `.aria_label(...)` from a new
+      root label prop, `.aria_orientation(...)` from `SliderOrientation`.
+- [ ] `SliderThumb`: `.role(Role::Slider)` with `aria_numeric_value` /
+      `aria_min_numeric_value` / `aria_max_numeric_value` /
+      `aria_orientation` from `SliderThumbStyleState`, plus
+      `aria_position_in_set` / `aria_size_of_set` for range sliders.
+- [ ] `SliderThumb`: optional per-thumb `.aria_label(...)` builder.
+- [ ] `SliderThumb`: `on_a11y_action` for `Increment` / `Decrement` /
+      `SetValue`, routed through `SliderContext::keyboard_step` (same
+      neighbor-clamped path as the keyboard actions); no re-registration of
+      `Focus` (auto from `track_focus`); all inert when merged-disabled.
+- [ ] `SliderControl` / `SliderTrack` / `SliderIndicator` /
+      `SliderValue` / `SliderLabel` get no role; `SliderValue` renders its
+      display string via `Text::new_inaccessible(...)`.
+- [ ] Document the gaps above (labelledby/describedby, valuetext, disabled,
+      aria-live) in the module docs as blocked pending gpui upstream.
+- [ ] A11y-tree test (a11y example pattern): single slider announces
+      value/min/max; two-thumb range exposes two `Role::Slider` nodes with
+      position 1 of 2 / 2 of 2; `Increment` action steps the focused thumb
+      and fires `on_value_change` with reason `Keyboard`.
 
 ## Uncertain items needing confirmation
 

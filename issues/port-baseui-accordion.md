@@ -264,13 +264,50 @@ Decision:
 - [x] Do not expose CSS variable names as the styling API.
 - [x] The docs hero styling pattern can be recreated with GPUI builder methods: item border/state styling, trigger styling changes when open, panel visibility changes when open/closed, and focus styling can use trigger focused style state.
 
-### Accessibility follow-up
+## AccessKit accessibility follow-up
 
-- [ ] Once the target GPUI revision supports the needed AccessKit APIs, map trigger semantics to a GPUI/AccessKit button or disclosure trigger role.
-- [ ] Once available, expose expanded/collapsed state through GPUI-native accessibility APIs.
-- [ ] Once available, expose disabled state through GPUI-native accessibility APIs.
-- [ ] Once available, map `AccordionHeader<T>` to an appropriate heading role/level or provide a builder to configure heading level.
-- [ ] Decide how GPUI Accordion links a trigger to its panel through AccessKit relationships if GPUI supports relationships; do not port DOM `aria-controls` / `aria-labelledby` / `id` linking literally.
+The pinned gpui revision exposes AccessKit through `.role(...)`, the `.aria_*` builders, and `.on_a11y_action(...)` as documented in `docs/accesskit-gpui-reference.md`. An element joins the a11y tree only when it has both a stable `.id(...)` and a `.role(...)`, so the first prerequisite is giving `AccordionItem<T>`, `AccordionHeader<T>`, and `AccordionPanel<T>` keyed ids (currently only `AccordionRoot<T>` and `AccordionTrigger<T>` have `id` builders; derive stable defaults from the item index supplied by `child_wiring.rs`).
+
+### Per accessible part
+
+- `AccordionRoot<T>` (`layers/accordion_root.rs`): assign `Role::Group`. Set `.aria_orientation(...)` mapped from `AccordionRootStyleState::orientation` (`AccordionOrientation::Vertical` → `Orientation::Vertical`, `Horizontal` → `Orientation::Horizontal`). No expanded/selected state at the root — Base UI's root is a plain `<div>` container.
+- `AccordionItem<T>` (`layers/accordion_item.rs`): assign `Role::Group` per Base UI's `<div>` item wrapper, or leave it out of the a11y tree entirely (Base UI gives the item no ARIA role; omitting the role keeps the tree flatter and is acceptable). If included, no `aria_*` state props are required.
+- `AccordionHeader<T>` (`layers/accordion_header.rs`): assign `Role::Heading` (Base UI renders an `<h3>`) and set `.aria_level(3)` by default; add a `heading_level(usize)` builder so callers can override the level, mirroring the note in the original follow-up.
+- `AccordionTrigger<T>` (`layers/accordion_trigger.rs`): assign `Role::Button` (Base UI renders a `<button>` via `useButton`). Set `.aria_expanded(open)` mapped from `AccordionTriggerStyleState::panel_open` (equivalently `state.item.open`), matching Base UI's `aria-expanded` in `AccordionTrigger.tsx`. Optionally set `.aria_position_in_set(state.item.index + 1)` and `.aria_size_of_set(...)` from the runtime's registered item count for "item i of N" announcements.
+- `AccordionPanel<T>` (`layers/accordion_panel.rs`): assign `Role::Group` as the closest available stand-in for Base UI's `role="region"` (verify whether accesskit 0.24 exposes a region-like variant such as `Role::Region`/`Role::Section` before falling back to `Group`). Only give the panel a role while it is present (`AccordionPanelStyleState::present`); a kept-mounted hidden panel should not announce its contents.
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are needed on `AccordionTrigger<T>`: `Action::Click` is auto-registered by the existing `.on_click(...)` (which routes into `AccordionItemContext::toggle(AccordionChangeSource::Pointer, ...)`), and `Action::Focus` is auto-registered by the existing `.track_focus(...)`/`.focusable()`. Do not re-add them.
+- Optionally handle `Action::Expand` / `Action::Collapse` on the trigger by routing into the same `AccordionItemContext::toggle(...)` runtime transition, guarded so `Expand` is a no-op when already open and `Collapse` a no-op when already closed. This must not introduce a second mutation path — it calls the exact context method the pointer/keyboard paths use.
+- Note the auto-registered `Action::Click` fires even when `disabled` is true because the `.on_click` closure is always attached; the closure's routing through `AccordionItemContext::toggle` already refuses disabled activations in the runtime, so no extra guard is needed, but verify with a test.
+
+### Labels
+
+- The trigger's accessible name comes from its visible child text. Add an `.aria_label(impl Into<SharedString>)` builder on `AccordionTrigger<T>` for callers whose trigger content is iconic/non-textual. When a caller sets `.aria_label(...)`, the visible label child should be created with `Text::new_inaccessible(...)` instead of `text!(...)` so the name is not announced twice; document this in the gallery demo.
+- `AccordionHeader<T>` needs no separate label — its child text is the heading content.
+- Do not attempt to label the panel from the trigger; see Gaps.
+
+### Gaps (no gpui builder in this revision)
+
+- `aria-controls` (trigger → panel, `AccordionTrigger.tsx` line 55): no relationship builder in gpui. Fallback: omit and document; AT users still get `Role::Button` + `aria_expanded` which is the essential disclosure pattern. Blocked pending gpui upstream relationship support.
+- `aria-labelledby` (panel ← trigger, `AccordionPanel.tsx` line 117): no relationship builder. Fallback: omit; optionally set a literal `.aria_label(...)` on the panel from a caller-supplied string. Blocked pending gpui upstream.
+- `disabled` / `aria-disabled` on root/item/trigger: no `.aria_disabled(...)` builder and `write_a11y_info` never sets a disabled flag. Fallback: keep the existing behavior where disabled triggers get `tab_index(-1)` / `tab_stop(false)` and the runtime rejects toggles, and document that AT will not hear "dimmed/disabled"; track as blocked pending a gpui `set_disabled` addition.
+- Base UI's `role="region"` on the panel: if accesskit 0.24 has no suitable region variant, `Role::Group` is the documented downgrade.
+- No live-region needs for Accordion; nothing to note there.
+
+### Checklist
+
+- [ ] Add stable keyed `.id(...)` builders (with index-derived defaults from `child_wiring.rs`) to `AccordionItem<T>`, `AccordionHeader<T>`, and `AccordionPanel<T>` so they can join the a11y tree.
+- [ ] `AccordionRoot<T>` sets `Role::Group` and `.aria_orientation(...)` from `AccordionRootStyleState::orientation`.
+- [ ] `AccordionHeader<T>` sets `Role::Heading` with `.aria_level(3)` default and a `heading_level(usize)` override builder.
+- [ ] `AccordionTrigger<T>` sets `Role::Button` and `.aria_expanded(...)` from `AccordionTriggerStyleState::panel_open`.
+- [ ] `AccordionTrigger<T>` optionally sets `.aria_position_in_set(...)` / `.aria_size_of_set(...)` from runtime item metadata.
+- [ ] `AccordionPanel<T>` sets a region-like role (`Role::Region` if present in accesskit 0.24, else `Role::Group`) only while present.
+- [ ] Do not re-register `Action::Click` / `Action::Focus`; they come from the existing `.on_click` / `.track_focus` on the trigger.
+- [ ] Optionally add `.on_a11y_action(Action::Expand, ...)` / `.on_a11y_action(Action::Collapse, ...)` on the trigger, routed through `AccordionItemContext::toggle(...)`.
+- [ ] Add `.aria_label(...)` builder on `AccordionTrigger<T>`; when set, render the visible label with `Text::new_inaccessible(...)` to avoid double announcement.
+- [ ] Document the omitted `aria-controls` / `aria-labelledby` / disabled-state gaps in the module docs and track them as blocked pending gpui upstream support.
 - [ ] Add accessibility tests if GPUI exposes test helpers for AccessKit state.
 
 ### Tests / verification

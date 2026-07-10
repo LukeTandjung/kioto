@@ -224,14 +224,42 @@ Use `crates/base_gpui/src/tabs/` for registration, roving-focus, child-wiring, a
 - [x] Do not expose CSS variable names as the styling API.
 - [x] The docs hero styling pattern can be recreated with GPUI builder methods: checked radio changes background/text color and indicator visibility follows checked state.
 
-### Accessibility follow-up
+### AccessKit accessibility follow-up
 
-- [ ] Once the target GPUI revision supports the needed AccessKit APIs, map root semantics to `Role::RadioGroup`.
-- [ ] Once available, map radio semantics to `Role::RadioButton` or the closest GPUI/AccessKit role.
-- [ ] Once available, expose checked/unchecked state through GPUI-native accessibility APIs.
-- [ ] Once available, expose disabled/read-only/required state through GPUI-native accessibility APIs.
-- [ ] Decide how GPUI Radio Group gets an accessible name through future label/fieldset APIs; do not port DOM `aria-labelledby`/`id` linking literally.
-- [ ] Add accessibility tests if GPUI exposes test helpers for AccessKit state.
+The pinned gpui revision exposes AccessKit through `.role(...)`, `.aria_*(...)`, and `.on_a11y_action(...)` builders on `.id(...)` stateful elements (see `docs/accesskit-gpui-reference.md`). Both layers already carry stable keyed ids, so they only need roles and props to appear in the a11y tree.
+
+Base UI emits (authoritative source: `radio-group/RadioGroup.tsx`, `radio/root/RadioRoot.tsx`): group `role="radiogroup"` with `aria-required`, `aria-disabled`, `aria-readonly`, `aria-labelledby`; radio `role="radio"` with `aria-checked`, `aria-required`, `aria-readonly`, `aria-labelledby`; the indicator is presentational (no role), and the hidden input is `aria-hidden` (not ported).
+
+Per accessible part:
+
+- [ ] `RadioGroupRoot<T>` (`layers/radio_group_root.rs`): add `.role(Role::RadioGroup)` on the root element. No `aria_*` props map here in this revision — `required`/`disabled`/`read_only` from `RadioGroupProps<T>`/`RadioGroupRootStyleState` have no builders (see gaps).
+- [ ] `RadioGroupRadio<T>` (`layers/radio_group_radio.rs`): add `.role(Role::RadioButton)` on the radio element (the same one that gets `.id(id)`, `.track_focus(...)`, and `.on_click(...)`).
+- [ ] `RadioGroupRadio<T>`: map checked state via `.aria_toggled(...)` from `RadioGroupRadioStyleState.checked` (`Toggled::True` when checked, `Toggled::False` when unchecked) — the canonical `aria-checked` mapping in this revision.
+- [ ] `RadioGroupRadio<T>`: set `.aria_position_in_set(...)` / `.aria_size_of_set(...)` from the radio's registered source-order index and the total registered-radio count in `RadioGroupRuntime<T>` (metadata is pre-registered before root reconciliation, so both are available at render time).
+- [ ] `RadioGroupIndicator` (`layers/radio_group_indicator.rs`): keep it out of the a11y tree; do not assign a role. Its checked meaning is already conveyed by the radio's `aria_toggled`.
+
+Actions:
+
+- [ ] No new `.on_a11y_action(...)` handlers are required. `Action::Click` is auto-registered by the existing `.on_click(...)` on `RadioGroupRadio<T>`, and `Action::Focus` is auto-registered by its `.track_focus(...)`/`.focusable()`; both already route into `RadioGroupContext<T>::select(...)`, the same runtime transition the pointer (`RadioGroupValueChangeSource::Pointer`) and keyboard (`RadioGroupActivateFocused`, `RadioGroupValueChangeSource::Keyboard`) paths use. Do not re-add them.
+- [ ] Verify the existing `.on_click` guard (`matches!(event, ClickEvent::Mouse(_))`) does not swallow AT-dispatched `Action::Click`; if AT clicks arrive as non-mouse `ClickEvent`s, route them into the same `context.select(..., RadioGroupValueChangeSource::Pointer, ...)` call rather than adding a separate selection path.
+
+Labels:
+
+- [ ] Add an `.aria_label(impl Into<SharedString>)` builder to both `RadioGroupRoot<T>` and `RadioGroupRadio<T>` that forwards to gpui's `.aria_label(...)` on the layer element; this is the literal-string substitute for Base UI's `aria-labelledby` id wiring (which has no gpui builder).
+- [ ] When a radio's visible label text is rendered as a child and the radio also sets `.aria_label(...)`, render that text with `Text::new_inaccessible(...)` instead of `text!(...)` so the label is not announced twice.
+- [ ] Revisit accessible naming once GPUI-native `Field`/`Fieldset`/`Label` primitives exist (Base UI resolves the group label from `labelId`/`legendId`); until then the literal `.aria_label` is the only mechanism.
+
+Gaps (Base UI ARIA with no gpui builder in this revision — do not invent APIs):
+
+- [ ] `aria-disabled` (group and radio): no `.aria_disabled(...)` builder and `write_a11y_info` never sets a disabled flag. Fallback: rely on the existing behavior that disabled radios are removed from the tab order (`tab_stop`/`tab_index(-1)`) and that `RadioGroupContext<T>::select(...)` rejects disabled selection, and document that AT cannot perceive the disabled state; blocked pending a gpui upstream `set_disabled` addition.
+- [ ] `aria-readonly` (group and radio): no builder. Fallback: omit; selection attempts are already no-ops via `context.select(...)`'s read-only guard. Document the limitation.
+- [ ] `aria-required` (group and radio): no builder. Fallback: omit and document; revisit alongside future field-validation integration.
+- [ ] `aria-labelledby` (group and radio): relationship props have no gpui builders. Fallback: the literal-string `.aria_label(...)` above.
+- [ ] Do not claim or use `.aria_disabled`, `.aria_required`, `.aria_readonly`, or any id-reference builder — none exist in the pinned revision.
+
+Verification:
+
+- [ ] Add accessibility tests if GPUI exposes test helpers for AccessKit state (role, toggled, position-in-set); otherwise verify manually with a platform screen reader against the gallery demo.
 
 ### Field/form integration follow-up
 

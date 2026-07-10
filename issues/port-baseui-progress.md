@@ -157,6 +157,49 @@ Because the runtime holds no mutable state, it does not need `Entity<...>` / key
 - Default formatting is **percent-of-range**, not Base UI's raw `value / 100` Intl percent — **RATIFIED** as the shared Meter/Progress convention: it keeps the displayed text in sync with the indicator fill for any custom `min`/`max`. `issues/port-baseui-meter.md` applies the identical rule. Callers needing Base UI's exact number use the `format` callback, which receives the raw unclamped value.
 - Determinate values are **clamped** into `[min, max]` (Base UI Progress does not clamp; its `valueToPercent` can exceed 100) — **RATIFIED** for parity with Meter and to prevent overflowing fills. The raw unclamped value remains available through the `format` callback.
 
+## AccessKit accessibility follow-up
+
+Base UI Progress emits ARIA on exactly one element: the root carries `role="progressbar"`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow`, `aria-valuetext` (default `"indeterminate progress"` when `value == null`, else the formatted string), and `aria-labelledby` wired to `ProgressLabel`. Every other part is deliberately hidden from AT: `ProgressValue` sets `aria-hidden`, `ProgressLabel` sets `role="presentation"`, and Track/Indicator are plain divs. The root also renders a visually-hidden NVDA-workaround span containing the formatted value. The GPUI translation follows the same shape: one accessible node (the root), everything else stays out of the tree.
+
+All derived values below come from `ProgressRuntime::state()` (`ProgressStyleState { value, clamped_value, percentage, formatted, min, max, status }`), read via `ProgressContext::read` — no new derivation.
+
+### Per accessible part
+
+- **`ProgressRoot`** (`layers/progress_root.rs`) — the only part in the a11y tree. On its already-`.id(...)`ed base div:
+  - `.role(Role::ProgressIndicator)` (accesskit's progressbar role).
+  - `.aria_min_numeric_value(state.min)` and `.aria_max_numeric_value(state.max)` — always.
+  - `.aria_numeric_value(v)` from `state.clamped_value` **only when `Some(v)`** (determinate). When `status == ProgressStatus::Indeterminate`, omit the numeric value entirely — that is the AccessKit idiom for an indeterminate progressbar, standing in for Base UI's `aria-valuenow: undefined` + `"indeterminate progress"` value text.
+  - `.aria_label(...)` from a **new** `ProgressRoot::label(impl Into<SharedString>)` builder prop (see Labels below).
+- **`ProgressTrack`**, **`ProgressIndicator`** (`layers/progress_track.rs`, `layers/progress_indicator.rs`) — no `.role(...)`; with no role they are not reported, matching Base UI's role-less divs. Nothing to add.
+- **`ProgressValue`** (`layers/progress_value.rs`) — must stay out of the tree (Base UI sets `aria-hidden`). No `.role(...)`; render its text inaccessibly (see Labels).
+- **`ProgressLabel`** (`layers/progress_label.rs`) — must stay out of the tree (Base UI sets `role="presentation"`). No `.role(...)`; its visible text becomes the source of the root's `.aria_label` string.
+
+### Actions
+
+None. Progress is purely presentational — Base UI wires no click, focus, or keyboard behavior, and the port has no `on_click`/`track_focus` anywhere in `layers/`. Do **not** add `.on_a11y_action(...)`, `.focusable()`, or tab stops; the root node is value-reporting only. (For interactive components, `Action::Click`/`Action::Focus` come free from `.on_click`/`.track_focus`; that machinery is simply absent here by design.)
+
+### Labels
+
+- Base UI's `aria-labelledby` id plumbing between `ProgressLabel` and the root has no gpui equivalent (no relationship builders). Fallback: a literal-string `.label(...)` prop on `ProgressRoot` that becomes `.aria_label(...)`. Callers pass the same string they render inside `ProgressLabel`.
+- `ProgressLabel` renders arbitrary `IntoElement` children; document that label text passed as `text!(...)` should instead be `Text::new_inaccessible(...)` so the label is not announced twice (once via the root's `aria_label`, once as a stray text node).
+- `ProgressValue`'s rendered `SharedString` child (default formatted string or `display` closure output) should be wrapped in `Text::new_inaccessible(...)` — this is the translation of Base UI's `aria-hidden` on the Value part; the value already reaches AT through the root's `aria_numeric_value`.
+
+### Gaps (no gpui builder in the pinned revision)
+
+- **`aria-valuetext`** (including the default `"indeterminate progress"` string and custom `getAriaValueText`): no builder (`aria_valuetext` does not exist). Fallback: omit + document — AT gets `aria_numeric_value`/min/max instead, and indeterminate is conveyed by omitting the numeric value. Revisit if gpui grows a `set_value` string setter.
+- **`aria-labelledby`**: no relationship builders. Fallback: literal `.aria_label(...)` via the new root `label` prop, as above.
+- **`aria-hidden` / `role="presentation"`**: no builders — not needed; leaving a part without `.role(...)` keeps it out of the tree, which is the equivalent outcome.
+- **NVDA visually-hidden announcement span / live-region updates**: no announcement or live-region API in this gpui revision. Blocked pending gpui upstream; do not attempt a workaround.
+
+### Checklist
+
+- [ ] `ProgressRoot`: add `.role(Role::ProgressIndicator)` plus `.aria_min_numeric_value` / `.aria_max_numeric_value` from `ProgressStyleState`, and `.aria_numeric_value(state.clamped_value)` only when determinate.
+- [ ] `ProgressRoot`: add a `.label(impl Into<SharedString>)` builder prop mapped to `.aria_label(...)` (fallback for `aria-labelledby`).
+- [ ] `ProgressValue`: render its text via `Text::new_inaccessible(...)` (fallback for `aria-hidden`).
+- [ ] `ProgressLabel` / `ProgressTrack` / `ProgressIndicator`: confirm no `.role(...)` is set so they stay out of the a11y tree; document the `Text::new_inaccessible` convention for label text in the module docs.
+- [ ] Document the gaps (`aria-valuetext`, `aria-labelledby`, NVDA announcement span) in `progress/mod.rs` docs with the fallbacks above.
+- [ ] Keep root/part `ElementId`s stable across frames so the AccessKit `NodeId` (derived from the global id) does not churn.
+
 ## Uncertain items
 
 - `ProgressValue` closure signature uses `Option<&str>` / `Option<f64>` instead of Base UI's `'indeterminate'` sentinel string — confirm the typed translation is preferred.

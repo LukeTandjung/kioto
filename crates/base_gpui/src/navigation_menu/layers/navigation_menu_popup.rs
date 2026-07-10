@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    div, App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::navigation_menu::{
@@ -19,6 +19,12 @@ type NavigationMenuPopupStyle = Rc<dyn Fn(NavigationMenuPopupStyleState, Div) ->
 /// The single shared popup surface: one element serving every trigger,
 /// retargeted (never re-created) when the active value changes. Hovering it
 /// keeps the menu open; unhovering schedules the close delay.
+///
+/// Accessibility: `Role::Group` with the same `.aria_label(...)` text as the
+/// root. This diverges from Base UI's `<nav>` deliberately — a second
+/// `Navigation` landmark for one menu is noise in AccessKit. Retargeting the
+/// popup produces no live announcement (no gpui live-region API; omitted,
+/// blocked pending gpui upstream).
 #[derive(IntoElement)]
 pub struct NavigationMenuPopup<T: Clone + Eq + 'static> {
     base: Div,
@@ -27,6 +33,7 @@ pub struct NavigationMenuPopup<T: Clone + Eq + 'static> {
     side: NavigationMenuSide,
     align: NavigationMenuAlign,
     keep_mounted: bool,
+    aria_label: Option<SharedString>,
     style_with_state: Option<NavigationMenuPopupStyle>,
 }
 
@@ -39,6 +46,7 @@ impl<T: Clone + Eq + 'static> Default for NavigationMenuPopup<T> {
             side: NavigationMenuSide::Bottom,
             align: NavigationMenuAlign::Center,
             keep_mounted: false,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -71,7 +79,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for NavigationMenuPopup<T> {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
         }
-        .id(scoped_part_id(&context.root_id(), "navigation-menu-popup"));
+        .id(scoped_part_id(&context.root_id(), "navigation-menu-popup"))
+        .role(Role::Group);
+        if let Some(aria_label) = self.aria_label.clone() {
+            base = base.aria_label(aria_label);
+        }
 
         if state.open {
             base = base
@@ -202,6 +214,13 @@ impl<T: Clone + Eq + 'static> NavigationMenuPopup<T> {
 
     pub fn align(mut self, align: NavigationMenuAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Accessible label for the popup group; use the same text as the root's
+    /// `.aria_label(...)`.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

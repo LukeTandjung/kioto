@@ -157,6 +157,15 @@ impl SliderContext {
         self.resolve_proposal(proposal, window, cx);
     }
 
+    /// Routes an AccessKit `SetValue` request through the same
+    /// neighbor-clamped path as keyboard steps.
+    pub fn set_thumb_value(&self, index: usize, value: f64, window: &mut Window, cx: &mut App) {
+        let proposal = self.update(cx, |runtime| {
+            runtime.set_thumb_value(index, value, self.props.as_ref())
+        });
+        self.resolve_proposal(proposal, window, cx);
+    }
+
     pub fn sync_thumb_focused(&self, index: usize, focused: bool, cx: &mut App) {
         self.update(cx, |runtime| runtime.sync_thumb_focused(index, focused));
     }

@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, MouseButton, ParentElement, RenderOnce, SharedString, StyleRefinement, Styled,
-    Window,
+    div, AccessibleAction, AnyElement, App, Div, ElementId, Entity, FocusHandle,
+    InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::navigation_menu::{
@@ -17,6 +17,12 @@ type NavigationMenuLinkActivateHandler = Rc<dyn Fn(&mut Window, &mut App) + 'sta
 
 /// Link item: GPUI has no href, so activation is a callback. With
 /// `close_on_click(true)` a click closes the menu with reason `LinkPress`.
+///
+/// Accessibility: `Role::Link` with a caller-provided `.aria_label(...)`.
+/// AT `Click` routes through the same `on_activate` + `LinkPress` close path
+/// as the pointer handler. Base UI's `aria-current="page"` has no gpui
+/// builder; `active` stays a visual-only fact (omitted, blocked pending gpui
+/// upstream — `aria_selected` is deliberately not abused for it).
 #[derive(IntoElement)]
 pub struct NavigationMenuLink<T: Clone + Eq + 'static> {
     base: Div,
@@ -27,6 +33,7 @@ pub struct NavigationMenuLink<T: Clone + Eq + 'static> {
     focus_handle: Option<FocusHandle>,
     order: usize,
     on_activate: Option<NavigationMenuLinkActivateHandler>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<NavigationMenuLinkStyle>,
 }
 
@@ -41,6 +48,7 @@ impl<T: Clone + Eq + 'static> Default for NavigationMenuLink<T> {
             focus_handle: None,
             order: 0,
             on_activate: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -74,9 +82,12 @@ impl<T: Clone + Eq + 'static> RenderOnce for NavigationMenuLink<T> {
         let context = self.context.clone();
         let close_on_click = self.close_on_click;
         let on_activate = self.on_activate.clone();
-        let mut base = base.id(("navigation-menu-link", self.order)).on_mouse_down(
-            MouseButton::Left,
-            move |_event, window, cx| {
+        let a11y_context = self.context.clone();
+        let a11y_on_activate = self.on_activate.clone();
+        let mut base = base
+            .id(("navigation-menu-link", self.order))
+            .role(Role::Link)
+            .on_mouse_down(MouseButton::Left, move |_event, window, cx| {
                 if let Some(on_activate) = on_activate.as_ref() {
                     on_activate(window, cx);
                 }
@@ -90,8 +101,27 @@ impl<T: Clone + Eq + 'static> RenderOnce for NavigationMenuLink<T> {
                         );
                     }
                 }
-            },
-        );
+            })
+            // AT-dispatched Click: same activate + LinkPress close path as
+            // the pointer handler.
+            .on_a11y_action(AccessibleAction::Click, move |_data, window, cx| {
+                if let Some(on_activate) = a11y_on_activate.as_ref() {
+                    on_activate(window, cx);
+                }
+                if close_on_click {
+                    if let Some(context) = a11y_context.as_ref() {
+                        context.close(
+                            NavigationMenuValueChangeReason::LinkPress,
+                            NavigationMenuValueChangeSource::Unknown,
+                            window,
+                            cx,
+                        );
+                    }
+                }
+            });
+        if let Some(aria_label) = self.aria_label.clone() {
+            base = base.aria_label(aria_label);
+        }
         if let Some(focus_handle) = self.focus_handle.as_ref() {
             base = base.track_focus(&focus_handle.clone().tab_stop(true).tab_index(0));
         }
@@ -147,6 +177,15 @@ impl<T: Clone + Eq + 'static> NavigationMenuLink<T> {
 
     pub fn close_on_click(mut self, close_on_click: bool) -> Self {
         self.close_on_click = close_on_click;
+        self
+    }
+
+    /// Accessible name for the link; pass one when the visible caption is not
+    /// plain accessible text (no id-reference labelling exists). Render the
+    /// visible caption with `Text::new_inaccessible(...)` when set, to avoid
+    /// double announcement.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

@@ -194,12 +194,47 @@ Use `crates/base_gpui/src/tabs/` as the closest precedent for panel `keep_mounte
 - [x] Do not expose CSS variable names as the styling API.
 - [x] The docs hero styling pattern can be recreated with GPUI builder methods: trigger styling changes when open, panel visibility changes when open/closed, and focus styling can use trigger focused style state.
 
-### Accessibility follow-up
+### AccessKit accessibility follow-up
 
-- [ ] Once the target GPUI revision supports the needed AccessKit APIs, map trigger semantics to a GPUI/AccessKit button or disclosure trigger role.
-- [ ] Once available, expose expanded/collapsed state through GPUI-native accessibility APIs.
-- [ ] Once available, expose disabled state through GPUI-native accessibility APIs.
-- [ ] Decide how GPUI Collapsible links a trigger to its panel through AccessKit relationships if GPUI supports relationships; do not port DOM `aria-controls` / `id` linking literally.
+Written against the AccessKit surface in the pinned gpui revision (see `docs/accesskit-gpui-reference.md`). Base UI's Collapsible emits ARIA only on the trigger button (`aria-expanded`, `aria-controls` when open, `disabled`) — the root and panel are plain `div`s with no role, so only the trigger and (optionally) the panel need a11y-tree presence.
+
+#### Per accessible part
+
+- **`CollapsibleTrigger`** (`layers/collapsible_trigger.rs`): already has a stable `.id(id)` (default `"collapsible-trigger"`), so it enters the a11y tree once it gets a role.
+  - Role: `.role(Role::Button)` — Base UI renders a native `<button>` disclosure trigger; there is no dedicated disclosure role in accesskit 0.24, `Role::Button` + expanded state is the standard mapping.
+  - `.aria_expanded(state.open)` — from the `CollapsibleTriggerStyleState` already computed in `render` via `context.read(cx, |runtime, props| runtime.trigger_state(props))`. This mirrors Base UI's `aria-expanded: open`.
+  - `.aria_label(...)` — see Labels below.
+- **`CollapsibleRoot`** (`layers/collapsible_root.rs`): no role. Base UI's root is a bare `div`; assigning a role would add noise. Do not use `Role::GenericContainer` (filtered out / debug-asserts in gpui).
+- **`CollapsiblePanel`** (`layers/collapsible_panel.rs`): optional. Base UI's panel has no ARIA role, only an `id` targeted by `aria-controls`. Since `aria-controls` has no gpui builder (see Gaps), the panel may stay out of the a11y tree; its text content is reachable as ordinary accessible text while `state.present` is true. If a container node proves useful for AT navigation, `Role::Group` + `.id(...)` is the only candidate — decide during implementation and note the choice. A kept-mounted closed panel is hidden via `.invisible()`; verify its text does not leak to AT while closed, and if it does, gate the children on `state.closed` in addition to `invisible()`.
+
+#### Actions
+
+- `Action::Click` — **already auto-registered** by the existing `.on_click(...)` on `CollapsibleTrigger`; do not re-add. AT "press" will route through the same `context.toggle(CollapsibleOpenChangeSource::Pointer, window, cx)` path as a mouse click — but note the current handler early-returns unless `matches!(event, ClickEvent::Mouse(_))`; confirm the synthesized a11y click still passes that guard, and if not, either relax the guard or add an explicit `.on_a11y_action(AccessibleAction::Click, ...)` that calls `context.toggle(...)` directly.
+- `Action::Focus` — **already auto-registered** by the existing `.track_focus(&focus_handle)`; do not re-add.
+- `.on_a11y_action(AccessibleAction::Expand, ...)` and `.on_a11y_action(AccessibleAction::Collapse, ...)` on the trigger — optional but cheap: route both into the same `CollapsibleContext::toggle(...)` transition (guarding on current `runtime.open()` so Expand is a no-op when already open and Collapse a no-op when closed). All disabled-gating stays in `CollapsibleRuntime::request_toggle(disabled)`, which already refuses toggles when disabled.
+
+#### Labels
+
+- Add a `.aria_label(impl Into<SharedString>)` builder to `CollapsibleTrigger` (stored as `Option<SharedString>`, applied in `render`). Callers with icon-only triggers must set it.
+- When the trigger's visible label is text a caller passes as a child, callers should use `Text::new_inaccessible(...)` for that child whenever they also set `.aria_label(...)`, so the label is not announced twice (`text!(...)` is accessible by default). Document this on the builder. If no `aria_label` is set, leave child text accessible so it names the button.
+
+#### Gaps (no gpui builder in this revision)
+
+- **`aria-controls`** (trigger → panel id, Base UI `CollapsibleTrigger.tsx:55`): no relationship builders in gpui (`aria-controls`/`aria-labelledby`/`aria-owns` all absent). Fallback: omit. `aria-expanded` on the trigger plus the panel appearing/disappearing in the tree conveys the disclosure pattern; document that trigger→panel linking is blocked pending gpui upstream relationship support.
+- **`disabled` / `aria-disabled`** (Base UI sets `disabled` on the trigger button): no `.aria_disabled(...)` builder and `write_a11y_info` never sets a disabled flag. Current behavior already removes a disabled trigger from tab order (`tab_stop(false)` / `tab_index(-1)`) and `CollapsibleRuntime::request_toggle` rejects toggles, so a disabled trigger is inert but may still be announced as an ordinary button. Fallback: keep the inert behavior, document the limitation, and track `set_disabled` as a candidate gpui upstream addition.
+- No live-region needs: Collapsible announces nothing (`aria-live` not used by Base UI here), so the announcement gap does not apply.
+
+#### Checklist
+
+- [ ] Set `.role(Role::Button)` on `CollapsibleTrigger` in `layers/collapsible_trigger.rs`.
+- [ ] Set `.aria_expanded(state.open)` on the trigger from `CollapsibleTriggerStyleState`.
+- [ ] Add an `.aria_label(...)` builder to `CollapsibleTrigger` and document the `Text::new_inaccessible` pattern for visible label children.
+- [ ] Verify AT-dispatched `Action::Click` reaches `context.toggle(...)` despite the `ClickEvent::Mouse` guard; add an explicit `on_a11y_action(AccessibleAction::Click, ...)` handler only if it does not.
+- [ ] Optionally add `on_a11y_action` handlers for `AccessibleAction::Expand` / `AccessibleAction::Collapse` routed through `CollapsibleContext::toggle(...)`.
+- [ ] Do not re-register `Action::Click` / `Action::Focus` where `.on_click` / `.track_focus` already exist.
+- [ ] Decide whether `CollapsiblePanel` gets `Role::Group` + `.id(...)` or stays out of the a11y tree; record the decision.
+- [ ] Verify a kept-mounted closed panel's content is not exposed to AT; gate children on closed state if `invisible()` alone leaks text.
+- [ ] Document the `aria-controls` and disabled-state gaps as blocked pending gpui upstream support.
 - [ ] Add accessibility tests if GPUI exposes test helpers for AccessKit state.
 
 ### Tests / verification

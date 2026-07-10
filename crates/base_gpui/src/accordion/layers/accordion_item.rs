@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    SharedString, StyleRefinement, Styled, Window,
 };
 
 use crate::accordion::{
@@ -15,6 +16,7 @@ use crate::accordion::{
 
 #[derive(IntoElement)]
 pub struct AccordionItem<T: Clone + Eq + 'static> {
+    id: Option<ElementId>,
     base: Div,
     children: Vec<AccordionItemChild<T>>,
     context: Option<AccordionContext<T>>,
@@ -34,6 +36,7 @@ impl<T: Clone + Eq + 'static> Styled for AccordionItem<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for AccordionItem<T> {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let Self {
+            id,
             base,
             children,
             context,
@@ -44,6 +47,9 @@ impl<T: Clone + Eq + 'static> RenderOnce for AccordionItem<T> {
             style_with_state,
         } = self;
         let index = index.unwrap_or(0);
+        let id = id.unwrap_or_else(|| {
+            ElementId::from(SharedString::from(format!("accordion-item-{index}")))
+        });
 
         let state = context
             .as_ref()
@@ -70,6 +76,10 @@ impl<T: Clone + Eq + 'static> RenderOnce for AccordionItem<T> {
             Some(style_with_state) => style_with_state(state, base),
             None => base,
         };
+
+        // Base UI's item wrapper carries no ARIA role, so the item div stays out of
+        // the a11y tree; the keyed id keeps descendant node ids stable across frames.
+        let base = base.id(id);
 
         match item_context {
             Some(item_context) => base.children(
@@ -116,6 +126,7 @@ impl<T: Clone + Eq + 'static> AccordionRootChildNode<T> for AccordionItem<T> {
 impl<T: Clone + Eq + 'static> AccordionItem<T> {
     pub fn new(value: T) -> Self {
         Self {
+            id: None,
             base: div(),
             children: Vec::new(),
             context: None,
@@ -125,6 +136,11 @@ impl<T: Clone + Eq + 'static> AccordionItem<T> {
             on_open_change: None,
             style_with_state: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = Some(id.into());
+        self
     }
 
     pub fn child(mut self, child: impl Into<AccordionItemChild<T>>) -> Self {

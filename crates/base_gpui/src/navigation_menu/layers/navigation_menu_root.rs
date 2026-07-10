@@ -2,7 +2,7 @@ use std::{rc::Rc, time::Duration};
 
 use gpui::{
     div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    StyleRefinement, Styled, Window,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::navigation_menu::{
@@ -18,6 +18,13 @@ type NavigationMenuRootStyle = Rc<dyn Fn(NavigationMenuRootStyleState, Div) -> D
 /// Value-driven root: open is derived from `value: Option<T>` (`None` =
 /// closed). Base UI's `actionsRef.unmount` manual-unmount escape hatch is
 /// deferred alongside transition infrastructure.
+///
+/// Accessibility: a non-nested root enters the AccessKit tree as
+/// `Role::Navigation` (Base UI's `<nav>`); pass `.aria_label(...)` so
+/// multiple navigation landmarks are distinguishable. A nested root gets no
+/// role (plain container, Base UI's nested `<div>`). Live announcements for
+/// content switches have no gpui API and are omitted (blocked pending gpui
+/// upstream).
 #[derive(IntoElement)]
 pub struct NavigationMenuRoot<T: Clone + Eq + 'static> {
     id: ElementId,
@@ -31,6 +38,7 @@ pub struct NavigationMenuRoot<T: Clone + Eq + 'static> {
     nested: bool,
     on_value_change: Option<NavigationMenuValueChangeHandler<T>>,
     on_open_change_complete: Option<NavigationMenuOpenChangeCompleteHandler<T>>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<NavigationMenuRootStyle>,
 }
 
@@ -48,6 +56,7 @@ impl<T: Clone + Eq + 'static> Default for NavigationMenuRoot<T> {
             nested: false,
             on_value_change: None,
             on_open_change_complete: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -90,6 +99,14 @@ impl<T: Clone + Eq + 'static> RenderOnce for NavigationMenuRoot<T> {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
         };
+
+        let mut base = base.id(self.id.clone());
+        if !self.nested {
+            base = base.role(Role::Navigation);
+            if let Some(aria_label) = self.aria_label.clone() {
+                base = base.aria_label(aria_label);
+            }
+        }
 
         let move_context = context.clone();
         base.on_mouse_move(move |event, window, cx| {
@@ -157,6 +174,13 @@ impl<T: Clone + Eq + 'static> NavigationMenuRoot<T> {
     /// (renders inline; style state reports `nested`).
     pub fn nested(mut self, nested: bool) -> Self {
         self.nested = nested;
+        self
+    }
+
+    /// Accessible label for the navigation landmark (non-nested roots only;
+    /// nested roots carry no role).
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

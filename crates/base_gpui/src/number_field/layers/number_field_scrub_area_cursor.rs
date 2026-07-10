@@ -49,6 +49,8 @@ impl RenderOnce for NumberFieldScrubAreaCursor {
             None => self.base,
         };
 
+        // No a11y role on purpose: Base UI marks the scrub cursor `aria-hidden`. Without
+        // a role this element stays out of the AccessKit tree, the gpui equivalent.
         base.id(id).children(self.children)
     }
 }

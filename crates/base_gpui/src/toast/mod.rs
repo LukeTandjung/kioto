@@ -1,3 +1,12 @@
+//! Toast: stacked, auto-dismissing notifications.
+//!
+//! AccessKit gap (blocked pending gpui upstream): this gpui revision exposes
+//! no live-region/announcement API (`aria-live`, `aria-atomic`,
+//! `aria-relevant`, or Base UI's hidden duplicated `role="alert"` tree), so
+//! added toasts are **not** auto-announced to screen readers. The viewport is
+//! exposed as a labeled `Role::Region` ("Notifications") that AT users must
+//! discover; see `docs/accesskit-gpui-reference.md`.
+
 pub mod actions;
 pub mod child;
 mod child_wiring;

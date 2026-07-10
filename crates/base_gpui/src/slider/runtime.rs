@@ -484,6 +484,43 @@ impl SliderRuntime {
         })
     }
 
+    /// An AT-requested absolute value for one thumb (AccessKit `SetValue`):
+    /// same neighbor-clamped path as keyboard steps, never pushes or swaps.
+    pub fn set_thumb_value(
+        &mut self,
+        index: usize,
+        value: f64,
+        props: &SliderProps,
+    ) -> Option<SliderProposal> {
+        if props.disabled() || self.thumb_disabled(index) {
+            return None;
+        }
+        self.values.get(index)?;
+        if !value.is_finite() {
+            return None;
+        }
+
+        let next_value = value.clamp(props.min(), props.max());
+        let next_values =
+            get_slider_value(next_value, index, props.min(), props.max(), &self.values);
+        if !validate_minimum_distance(&next_values, props.step(), props.min_steps_between_values())
+        {
+            return None;
+        }
+        if values_equal(&next_values, &self.values) {
+            return None;
+        }
+
+        Some(SliderProposal {
+            values: next_values,
+            reason: SliderChangeReason::Keyboard,
+            thumb_index: index,
+            new_pressed_index: None,
+            did_swap: false,
+            commit_immediately: true,
+        })
+    }
+
     /// Applies an approved proposal. Mutates internal values only when
     /// uncontrolled; always records interaction bookkeeping. Returns the thumb
     /// index that should receive focus after a swap.

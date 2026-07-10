@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, App, ClickEvent, Div, ElementId, Entity, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 type SelectItemStyle<T> = Rc<dyn Fn(SelectItemStyleState<T>, Div) -> Div + 'static>;
@@ -56,6 +56,7 @@ impl<T: Clone + Eq + 'static> Styled for SelectItem<T> {
 
 impl<T: Clone + Eq + 'static> RenderOnce for SelectItem<T> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let aria_label = self.resolved_label();
         let disabled = self.disabled || current_field_item_disabled();
         let focus_handle = self
             .focus_handle
@@ -92,6 +93,12 @@ impl<T: Clone + Eq + 'static> RenderOnce for SelectItem<T> {
             });
         let item_disabled = state.disabled || state.root_disabled;
         let root_disabled = state.root_disabled;
+        let selected = state.selected;
+        let size_of_set = self
+            .context
+            .as_ref()
+            .map(|context| context.read(cx, |runtime, _| runtime.list_state().item_count))
+            .unwrap_or_default();
         let tab_stop = state.tab_stop;
         let click_context = self.context.clone();
         let hover_context = self.context.clone();
@@ -119,6 +126,14 @@ impl<T: Clone + Eq + 'static> RenderOnce for SelectItem<T> {
 
         let item = base
             .id(self.id)
+            // AccessKit gaps in this gpui revision: no `aria-disabled` or
+            // `aria-activedescendant` builders; disabled items stay behavioral
+            // no-ops and AT tracks the highlighted option through real focus.
+            .role(Role::ListBoxOption)
+            .aria_selected(selected)
+            .when_some(index, |this, index| this.aria_position_in_set(index + 1))
+            .when(size_of_set > 0, |this| this.aria_size_of_set(size_of_set))
+            .when_some(aria_label, |this, label| this.aria_label(label))
             .track_focus(
                 &focus_handle
                     .tab_stop(tab_stop && !root_disabled)

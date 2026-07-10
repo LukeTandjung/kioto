@@ -412,11 +412,96 @@ Runtime tests need no window (inject offsets/bounds/times); rendered tests under
 
 ## AccessKit accessibility follow-up
 
-Base UI marks Root/Viewport/Content as `role="presentation"` and keeps
-non-scrollable viewports out of the tab order. GPUI does not emit DOM ARIA; when
-the project updates to a GPUI revision with AccessKit support, revisit scrollable
-region semantics (scrollable node, scroll offsets/extents) alongside the scrollbar
-primitive's AccessKit follow-up. Not part of this issue.
+Base UI emits almost no ARIA here: Root, Viewport, and Content are all
+`role="presentation"` (`root/ScrollAreaRoot.tsx`, `viewport/ScrollAreaViewport.tsx`,
+`content/ScrollAreaContent.tsx`), Scrollbar/Thumb/Corner emit no role or `aria-*`
+at all, and the only accessibility-relevant behavior is the Viewport's conditional
+`tabIndex: 0 / -1` (scrollable-region-focusable), which the port already translates
+via `ScrollAreaRuntime::viewport_focusable()` gating `track_scroll`'s sibling
+`track_focus(&focus_handle)` in `layers/scroll_area_viewport.rs`. The follow-up is
+therefore small: one real node (the Viewport), everything else deliberately absent
+from the tree.
+
+### Per accessible part
+
+- **`ScrollAreaViewport`** (`layers/scroll_area_viewport.rs`) — the only part that
+  should appear in the a11y tree, and only while it is a tab stop. When
+  `runtime.viewport_focusable()` is true, set `.role(Role::ScrollView)` on the same
+  `div().id(self.id)` that gets `.overflow_scroll().track_scroll(&handle)` (verify
+  the exact variant name against accesskit 0.24; if absent, fall back to
+  `Role::Group`). When `viewport_focusable()` is false, set no role — the element
+  then stays out of the tree entirely, which is also the correct analogue of
+  Base UI's `tabIndex: -1` + `role="presentation"` for a non-scrollable viewport.
+  No `aria_selected`/`aria_expanded`/`aria_toggled`/numeric props apply.
+- **`ScrollAreaRoot`** (`layers/scroll_area_root.rs`) — `role="presentation"` in
+  Base UI; assign **no** `.role(...)`. Elements without a role are not reported to
+  AccessKit, which is exactly the presentation semantics. Nothing to add.
+- **`ScrollAreaContent`** (`layers/scroll_area_content.rs`) — same as Root:
+  `role="presentation"`, assign no role.
+- **`ScrollAreaScrollbar` / `ScrollAreaThumb`** (`layers/scroll_area_scrollbar.rs`,
+  `layers/scroll_area_thumb.rs`) — Base UI emits no role or ARIA on these parts
+  (the DOM scrollbar is decorative; AT scrolls via the scroll region). Do not add
+  `Role::ScrollBar` here; if the composed primitive ever grows scrollbar semantics
+  (`Role::ScrollBar` + `.aria_orientation(Orientation)` +
+  `.aria_numeric_value`/min/max from `ScrollHandle::offset()`/`max_offset()`), that
+  belongs to `issues/add-gpui-scrollbar-primitive.md`'s own follow-up, keyed off
+  the same `ScrollTarget`.
+- **`ScrollAreaCorner`** (`layers/scroll_area_corner.rs`) — purely decorative;
+  assign no role.
+
+### Actions
+
+- `Action::Focus` is auto-registered by the Viewport's existing
+  `track_focus(&focus_handle)`; do **not** re-add it. There is no `on_click`
+  anywhere in this component, so no `Action::Click` concern.
+- Optional enhancement (not required for Base UI parity, since the DOM version
+  relies on native scrollable-region behavior): add
+  `.on_a11y_action(Action::ScrollUp / ScrollDown / ScrollLeft / ScrollRight, ...)`
+  on the Viewport, each mutating the runtime's `ScrollHandle` offset by a page
+  fraction. Because `observe_scroll(...)` / `refresh_overflow(...)` run in the
+  existing `on_children_prepainted` observer, AT-driven scrolling flows through the
+  exact same observed-offset path as wheel and primitive-drag scrolling — no new
+  plumbing into `ScrollAreaRuntime`.
+
+### Labels
+
+- A focusable scroll region should be named. Add an `aria_label(impl
+  Into<SharedString>)` builder prop on `ScrollAreaViewport`, forwarded to
+  `.aria_label(...)` whenever the role is set. There is no Base UI default label;
+  leave it consumer-supplied and document that an unlabeled scroll region announces
+  poorly.
+- Scroll Area renders no text of its own — no `text!(...)` →
+  `Text::new_inaccessible(...)` swaps are needed in any part.
+
+### Gaps (no gpui builder in this revision)
+
+- **Scroll geometry** — AccessKit's `set_scroll_x/scroll_y` + min/max node
+  properties (what lets AT report "scrolled 40%") have no gpui builder;
+  `write_a11y_info` never sets them. Fallback: omit and document; revisit if gpui
+  upstreams scroll-offset reporting for `track_scroll` elements. Do not misuse
+  `.aria_numeric_value(...)` on the viewport for this.
+- **Relationship props** (`aria-controls`, `aria-labelledby`, etc.), **disabled**,
+  and **live regions** — not emitted by Base UI Scroll Area; nothing to work
+  around. Listed here only to record that the omission is deliberate.
+
+### Checklist
+
+- [ ] Viewport sets `.role(Role::ScrollView)` (variant verified against accesskit
+      0.24, `Role::Group` fallback) only while `viewport_focusable()` is true, and
+      no role otherwise.
+- [ ] Viewport gains an `aria_label(...)` builder prop forwarded to
+      `.aria_label(...)` alongside the role.
+- [ ] Root, Content, Scrollbar, Thumb, and Corner assign no role (presentation /
+      decorative), and a rendered a11y-tree test (if the harness exposes one)
+      confirms only the focusable Viewport is reported.
+- [ ] `Action::Focus` is left to the existing `track_focus`; no duplicate
+      registration.
+- [ ] Decision recorded on the optional `Action::ScrollUp/Down/Left/Right`
+      handlers; if added, they mutate the `ScrollHandle` and are covered by the
+      existing `observe_scroll` runtime tests.
+- [ ] Scroll-offset/extent reporting documented as blocked pending gpui upstream;
+      scrollbar-node semantics deferred to
+      `issues/add-gpui-scrollbar-primitive.md`'s follow-up.
 
 ## Cross-links
 

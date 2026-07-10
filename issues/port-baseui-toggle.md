@@ -170,6 +170,45 @@ Add one behavior per file under `crates/base_gpui/src/toggle/tests/`.
 - [x] `style_with_state(...)` receives correct pressed/disabled state.
 - [x] Grouped derivation: with a (real or stubbed) group context whose value contains the Toggle's `value`, the Toggle reports pressed; when membership is removed, it reports unpressed. Full grouped interaction tests (commit routing, veto ordering across Toggle and group callbacks, roving focus) live with `issues/port-baseui-toggle-group.md`.
 
+## AccessKit accessibility follow-up
+
+Base UI Toggle renders a single `<button aria-pressed={pressed} disabled?>` (see `Toggle.tsx`: `'aria-pressed': pressed` plus `useButton`'s disabled handling; `ToggleDataAttributes.ts` adds only `data-pressed`/`data-disabled`, already mapped into `ToggleStyleState`). The port has one accessible part: the `Toggle<T>` layer in `crates/base_gpui/src/toggle/layers/toggle.rs`, in both its standalone render path and `render_grouped(...)`.
+
+### Per accessible part
+
+- **`Toggle<T>` (standalone path, `RenderOnce::render`)** — the element already has a stable `.id(self.id)`, so it only needs a role and state props on the same builder chain:
+  - `.role(Role::Button)` — accesskit 0.24 has no dedicated "toggle button" role; `Role::Button` + toggled state is the correct mapping for `aria-pressed`.
+  - `.aria_toggled(...)` from the resolved pressed value: the layer already computes `style_state = context.read(cx, |runtime, _props| runtime.state())`, so map `style_state.pressed` → `Toggled::True` / `Toggled::False`. This is the AccessKit equivalent of Base UI's `aria-pressed`.
+  - `.aria_label(...)` from a new optional `.aria_label(impl Into<SharedString>)` builder prop on `Toggle<T>` (see Labels).
+- **`Toggle<T>` (grouped path, `render_grouped`)** — same `.role(Role::Button)` and `.aria_toggled(...)`, sourced from the locally computed `pressed` (`runtime.toggle_pressed(value.as_ref())`) and the same `aria_label` prop. Optionally add `.aria_position_in_set(index + 1)` from `toggle.group_index` and `.aria_size_of_set(...)` if the `ToggleGroupContext` runtime exposes the item count; Base UI does not emit `aria-posinset` here, so treat this as optional polish, not parity. The group container's own role/orientation belongs to `issues/port-baseui-toggle-group.md`.
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are required. `Action::Click` is auto-registered by the existing `.on_click(...)` in both paths, and `Action::Focus` is auto-registered by the existing `.track_focus(&focus_handle...)`. Both already route into the same runtime transition as pointer/keyboard (`ToggleContext::toggle(...)` standalone, `grouped_activate(...)` grouped) — but note the standalone `.on_click` closure early-returns unless `matches!(event, ClickEvent::Mouse(_))`. Verify how an AT-dispatched `Action::Click` surfaces through gpui's synthesized `ClickEvent`; if it is not a `ClickEvent::Mouse`, either accept the synthesized variant in the guard or add an explicit `.on_a11y_action(AccessibleAction::Click, ...)` that calls the same `context.toggle(TogglePressedChangeSource::Keyboard, ...)` / `grouped_activate(...)` path. Do not double-register otherwise.
+
+### Labels
+
+- Add `.aria_label(...)` as a builder prop on `Toggle<T>` (stored alongside `disabled`/`pressed`, applied in both render paths). Toggles are frequently icon-only (e.g. a bold "B" glyph), so an explicit label is the primary mechanism; Base UI relies on the button's text content or the caller's `aria-label`.
+- When the caller supplies both an `aria_label` and visible text children rendered via `text!(...)`, the demo/gallery usage should switch that visible text to `Text::new_inaccessible(...)` so the label is not announced twice. Since `Toggle` accepts arbitrary `AnyElement` children, document this caller-side convention in the module docs rather than enforcing it.
+
+### Gaps (no gpui builder in the pinned revision)
+
+- **`disabled` / `aria-disabled`**: no `.aria_disabled(...)` builder exists and `write_a11y_info` never sets a disabled flag. Fallback: the layer already removes the disabled toggle from the tab order (`tab_stop(!disabled)` / `tab_index(-1)`) and the runtime rejects activation, so AT-dispatched Click/Focus are inert; document that AT will not *announce* the disabled state — blocked pending a gpui upstream `set_disabled` addition.
+- **`aria-pressed` as a distinct property**: AccessKit models it via `set_toggled`; `.aria_toggled(...)` is the accepted stand-in. Document that screen readers may announce "toggled"/"checked" phrasing rather than "pressed"; no further fallback available.
+- **Relationship props** (`aria-labelledby`, `aria-describedby`, etc.): Base UI Toggle itself emits none, but callers who would have used `aria-labelledby` must use the literal-string `.aria_label(...)` instead — there is no id-reference wiring in this revision. Omit + document.
+- **Toolbar item metadata** (`ToolbarRoot.ItemMetadata`): already out of scope above; no a11y impact until the Toolbar port.
+
+### Checklist
+
+- [ ] Add `.role(Role::Button)` to the standalone render path in `layers/toggle.rs`.
+- [ ] Add `.aria_toggled(Toggled::True/False)` from `style_state.pressed` in the standalone path.
+- [ ] Add `.role(Role::Button)` and `.aria_toggled(...)` from `pressed` in `render_grouped(...)`.
+- [ ] Add an `.aria_label(impl Into<SharedString>)` builder prop on `Toggle<T>` and apply it in both render paths.
+- [ ] Verify AT-dispatched `Action::Click` reaches the runtime through the `ClickEvent::Mouse(_)` guard; if not, wire an explicit `.on_a11y_action(AccessibleAction::Click, ...)` into `ToggleContext::toggle(...)` / `grouped_activate(...)`. Do not re-add `Action::Focus` (auto-registered by `track_focus`).
+- [ ] Document in module docs that icon-only toggles must set `.aria_label(...)`, and that visible text duplicating the label should use `Text::new_inaccessible(...)`.
+- [ ] Document the disabled-announcement gap (no `.aria_disabled` builder; tab-order removal + inert activation is the interim behavior, blocked pending gpui upstream).
+- [ ] Update the gallery/demo toggle to set `.aria_label(...)`.
+
 ### Uncertain / needs confirmation
 
 - [x] Value type — RESOLVED: `Toggle<T>` with `T: Clone + Eq + 'static`, matching `ToggleGroup<T>` (`issues/port-baseui-toggle-group.md`) and the Tabs/Radio Group precedent. Base UI's `Value extends string` constraint is dropped; standalone use may default the parameter (e.g. `Toggle<T = SharedString>`). (Reconciled with the Toggle Group port.)

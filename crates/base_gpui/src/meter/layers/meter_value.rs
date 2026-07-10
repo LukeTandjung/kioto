@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    SharedString, StyleRefinement, Styled, Window,
+    SharedString, StyleRefinement, Styled, Text, Window,
 };
 
 use crate::meter::{MeterContext, MeterStyleState};
@@ -56,7 +56,10 @@ impl RenderOnce for MeterValue {
             None => self.base,
         };
 
-        base.id(id).child(text)
+        // Base UI marks the value `aria-hidden`; the inaccessible text plus
+        // the absent role keeps it out of the a11y tree (the same string
+        // reaches AT through the root's `aria_label`).
+        base.id(id).child(Text::new_inaccessible(text))
     }
 }
 

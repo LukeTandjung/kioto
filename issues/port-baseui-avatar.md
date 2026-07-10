@@ -165,9 +165,10 @@ before implementing.
 - Do not port SSR/hydration behavior (e.g. the cached-image hydration test).
   gpui's automatic image caching covers the "cached image resolves without a
   fallback flash" concern; test that path natively instead.
-- No ARIA: Base UI Avatar renders plain `<span>`/`<img>` with no roles or
-  aria attributes, so there is no AccessKit follow-up beyond ordinary image
-  alt-text, which GPUI does not currently expose. Nothing to track.
+- No ARIA in Base UI itself: Avatar renders plain `<span>`/`<img>` with no
+  roles or aria attributes. The only accessibility surface is native `<img>`
+  alt-text, which is web-only. See "AccessKit accessibility follow-up" below
+  for the minimal, opt-in GPUI equivalent.
 - Typed children only: `AvatarChild` routes `Image` and `Fallback`; include an
   `AnyElement` escape hatch only because Base UI demos show arbitrary root
   children (initials text directly inside `Fallback`, not `Root`) — confirm
@@ -319,6 +320,89 @@ Rendered behavior tests under `avatar/tests/`:
 - [x] `style_with_state` on each part observes the correct
       `image_loading_status`.
 - [x] Avatar renders inside arbitrary containers without affecting siblings.
+
+## AccessKit accessibility follow-up
+
+Base UI Avatar is deliberately ARIA-silent: `AvatarRoot.tsx`, `AvatarImage.tsx`,
+and `AvatarFallback.tsx` emit no `role=` and no `aria-*` attributes (grep of
+`/home/luke/Projects/base-ui/packages/react/src/avatar/` confirms), and
+`stateAttributesMapping.ts` maps `imageLoadingStatus` to *no* data attribute.
+The whole web accessibility story is the native `<img alt="…">` semantics that
+the browser provides for free. GPUI provides nothing for a bare `img(...)`, so
+the follow-up here is a small **opt-in labeled-image node**, not a per-part
+role mapping. Follow `docs/accesskit-gpui-reference.md` — do not invent APIs.
+
+### Per accessible part
+
+- **`AvatarRoot` (`layers/avatar_root.rs`)** — the only part that should ever
+  enter the a11y tree, and only when the caller provides a label. Add an
+  optional `.aria_label(impl Into<SharedString>)` builder prop on `AvatarRoot`
+  (the GPUI stand-in for `<img alt>`). When set, the root's base div (which
+  already has `.id(self.id)`) gets `.role(Role::Image)` and
+  `.aria_label(label)`. When the caller sets no label, set **no role**, so the
+  avatar stays out of the a11y tree entirely — matching Base UI, where an
+  `<img>` without `alt` and the fallback `<span>` are effectively decorative.
+  No other `aria_*` props apply: `AvatarRootStyleState.image_loading_status`
+  is visual render state only and has no AccessKit mapping.
+- **`AvatarImage` (`layers/avatar_image.rs`)** — no role, no aria props. It is
+  an unnamed child inside the labeled root; giving the inner gpui `img` its
+  own node would double-report the image. Leave it inaccessible.
+- **`AvatarFallback` (`layers/avatar_fallback.rs`)** — no role, no aria props.
+  The initials/icon fallback is a visual substitute for the same labeled root
+  node.
+
+### Actions
+
+- None. Avatar is inert by contract (acceptance criterion: "no focus, no
+  activation, no app-state mutation"), so there is no `.on_a11y_action(...)`
+  to add. There is also no `.on_click` / `.track_focus` anywhere in the avatar
+  layers, so no auto-registered `Action::Click` / `Action::Focus` exists —
+  and none should be introduced.
+
+### Labels
+
+- `.aria_label` comes solely from the new caller-supplied `AvatarRoot` prop
+  (alt-text analogue); there is no derived label.
+- When the root has an `aria_label`, fallback initials passed as visible text
+  children of `AvatarFallback` should be built with
+  `Text::new_inaccessible(...)` instead of `text!(...)`, so "JD" is not
+  announced alongside "Jane Doe". Document this in the `AvatarFallback` docs
+  and use `Text::new_inaccessible` in the `main.rs` demo's initials fallback.
+  (Children arrive as `Vec<AnyElement>`, so this is a caller convention, not
+  something the layer can enforce.)
+
+### Gaps (no gpui builder in the pinned revision)
+
+- **`<img alt>` / accessible image description**: no native equivalent on
+  gpui's `img` element. Fallback chosen: the opt-in `Role::Image` +
+  `.aria_label` on `AvatarRoot` described above; omit the node entirely when
+  unlabeled.
+- **`aria-hidden` / decorative marking**: no builder. Fallback: the "no role
+  ⇒ not in the tree" rule already covers decorative avatars; document that
+  omitting the label is how you mark an avatar decorative.
+- **Loading-status announcement** (`aria-busy` / live region while the image
+  loads): no live-region or announcement API in this revision. Omit and
+  document; blocked pending gpui upstream if ever requested.
+- No `disabled`, relationship props (`aria-labelledby` etc.), or other Base UI
+  ARIA attributes are emitted by Avatar, so none of the other known gpui gaps
+  apply here.
+
+### Checklist
+
+- [ ] Add optional `aria_label` builder prop to `AvatarRoot`
+      (`layers/avatar_root.rs`); when set, apply `.role(Role::Image)` and
+      `.aria_label(...)` to the root's already-`.id(...)`-ed base div.
+- [ ] When no label is provided, set no role — verify the avatar produces no
+      AccessKit node (decorative by default, matching Base UI).
+- [ ] Leave `AvatarImage` and `AvatarFallback` role-free; confirm neither adds
+      an a11y node of its own.
+- [ ] Add no `.on_a11y_action`, `.on_click`, or focus wiring — Avatar stays
+      inert.
+- [ ] Use `Text::new_inaccessible(...)` for the initials fallback in the
+      `main.rs` demo when the root carries an `aria_label`; document the
+      convention on `AvatarFallback`.
+- [ ] Document the gaps above (no alt-text primitive on `img`, no aria-hidden,
+      no live-region loading announcement) in the module docs.
 
 ## Uncertain items needing confirmation
 

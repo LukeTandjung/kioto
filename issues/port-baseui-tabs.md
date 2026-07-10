@@ -143,77 +143,66 @@ Implementation checklist for the follow-up:
 
 ## AccessKit accessibility follow-up
 
-GPUI commit `1d029c5ff5654fb1b1e8caf4462993c8ee13a133` adds AccessKit-backed accessibility APIs to GPUI. Once this project updates to a GPUI revision containing that commit, revisit the earlier ARIA out-of-scope decision and port the accessible semantics from Base UI into GPUI-native AccessKit calls.
+The pinned GPUI revision (`1d029c5ff5654fb1b1e8caf4462993c8ee13a133`, accesskit `0.24.0`) exposes AccessKit-backed builders on `.id(...)` stateful elements. See `docs/accesskit-gpui-reference.md` for the full API surface; everything below is written against that reference and the real implementation in `crates/base_gpui/src/tabs/`.
 
-Relevant new GPUI API from the AccessKit commit:
+An element appears in the accessibility tree only when it has both a non-`None` id and a `.role(...)`. `TabsTab<T>` and `TabsList<T>` already call `.id(...)` (the list uses the literal `"tabs-list"` id in `tabs_list.rs`); `TabsPanel<T>` renders a bare `Div` with no id and will need one before it can carry a role.
 
-- `StatefulInteractiveElement::role(accesskit::Role)`
-- `StatefulInteractiveElement::aria_label(...)`
-- `StatefulInteractiveElement::aria_selected(...)`
-- `StatefulInteractiveElement::aria_orientation(accesskit::Orientation)`
-- `StatefulInteractiveElement::aria_position_in_set(...)`
-- `StatefulInteractiveElement::aria_size_of_set(...)`
-- `StatefulInteractiveElement::on_a11y_action(accesskit::Action, ...)`
-- Re-exported names include `Role`, `AccessibleAction`, and `Toggled`.
+Base UI source audit (authoritative ARIA output):
 
-Base UI source audit:
+- `TabsList.tsx` — `role="tablist"`; `aria-orientation="vertical"` only when vertical (omitted for horizontal); passes through user `aria-label` / `aria-labelledby`.
+- `TabsTab.tsx` — `role="tab"`, `aria-selected={active}`, `aria-controls={tabPanelId}` (only when the matching panel is mounted), generated DOM `id` for the panel's `aria-labelledby`, and `focusableWhenDisabled` semantics for disabled tabs.
+- `TabsPanel.tsx` — `role="tabpanel"`, `aria-labelledby={correspondingTabId}`, `hidden` + `inert` when inactive, `tabIndex` 0/-1.
+- `TabsIndicator.tsx` — no semantic role; purely decorative.
 
-- `TabsList.tsx`
-  - Sets `role="tablist"`.
-  - Sets `aria-orientation="vertical"` only for vertical orientation; horizontal omits the attribute.
-  - Accepts user-provided `aria-label` / `aria-labelledby` so tab lists can have accessible names.
-- `TabsTab.tsx`
-  - Renders a button with `role="tab"`.
-  - Sets `aria-selected={active}`.
-  - Sets `aria-controls={tabPanelId}` only when the corresponding panel is mounted and has an id.
-  - Keeps disabled tabs focusable via `focusableWhenDisabled`, while still exposing disabled behavior.
-  - Uses generated or explicit DOM `id` so panels can point back with `aria-labelledby`.
-- `TabsPanel.tsx`
-  - Sets `role="tabpanel"`.
-  - Sets `aria-labelledby={correspondingTabId}`.
-  - Sets `hidden` and `inert` when inactive.
-  - Sets `tabIndex={0}` when open and `-1` when closed.
-  - Registers mounted panels so `aria-controls` only points at panels actually in the tree, especially when `keepMounted = false`.
-- `TabsRoot.tsx`
-  - Maintains the tab metadata map and mounted panel map used for tab/panel relationships.
-  - Tests assert `aria-controls` / `aria-labelledby` cross-linking, selected state, and vertical `aria-orientation`.
-- `TabsIndicator.tsx`
-  - No user-facing semantic role; it should likely remain absent from the accessibility tree or be treated as decorative.
+### Per accessible part
 
-Proposed GPUI/AccessKit mapping:
+- `TabsList<T>` (`layers/tabs_list.rs`, on the existing `base...id("tabs-list")` chain next to `.focusable()` / `.key_context(TABS_LIST_KEY_CONTEXT)`):
+  - `.role(Role::TabList)`.
+  - `.aria_orientation(Orientation::Vertical)` only when the `orientation` local (from `props.orientation()`) is `TabsOrientation::Vertical`; omit for horizontal, mirroring Base UI.
+  - Add an `aria_label(...)` builder on `TabsList<T>` so callers can name the tab list (Base UI accepts `aria-label`); apply it via `.aria_label(...)` when set.
+- `TabsTab<T>` (`layers/tabs_tab.rs`, on the existing `base.id(id).track_focus(...)` chain):
+  - `.role(Role::Tab)`.
+  - `.aria_selected(active)` from the `active` local (i.e. `TabsTabStyleState.active` computed by `runtime.tab_state(...)`).
+  - `.aria_position_in_set(index + 1)` from the tab's registered `index` (assigned by `wiring.register_tab(...)` / the `TabsTabMetadata` index), and `.aria_size_of_set(n)` where `n` is the registered tab count — expose a small `TabsRuntime<T>` accessor (e.g. tab count) via `context.read(...)` alongside `tab_state`.
+  - `.aria_label(...)` from a new optional builder when the caller's visible label is icon-only or should differ from the text child.
+- `TabsPanel<T>` (`layers/tabs_panel.rs`):
+  - Give the rendered `base` a stable `.id(...)` (add an `id(...)` builder mirroring `TabsTab<T>::id`), then `.role(Role::TabPanel)` on the active mounted panel.
+  - For `keep_mounted = true` inactive panels (currently rendered with `.invisible()`), do **not** set a role/id so the hidden panel stays out of the a11y tree — there is no `aria_hidden`/`inert` builder in this revision (see Gaps).
+- `TabsIndicator<T>` (`layers/tabs_indicator.rs`): decorative; assign no role and no aria props so it never enters the accessibility tree.
 
-- `TabsList<T>`
-  - Add `.role(Role::TabList)`.
-  - Add `.aria_orientation(accesskit::Orientation::Vertical)` only when `TabsOrientation::Vertical`.
-  - Do not set horizontal orientation unless AccessKit consumers require it; this mirrors Base UI's omission of default horizontal `aria-orientation`.
-  - Consider adding explicit builder APIs for accessible naming if GPUI cannot infer names from children:
-    - `.aria_label(...)`
-    - potentially `.aria_labelled_by(...)` only if GPUI supports relationships later.
-- `TabsTab<T>`
-  - Add `.role(Role::Tab)`.
-  - Add `.aria_selected(state.active)`.
-  - Preserve focusability for disabled tabs if the current roving-focus model is updated to match Base UI exactly; our current behavior skips disabled tabs, so decide whether parity requires disabled tabs to be focusable-but-not-activatable.
-  - If GPUI exposes a disabled accessibility state in a future AccessKit API, set it from `TabsTabStyleState.disabled`; the initial AccessKit commit does not appear to expose a dedicated `aria_disabled(...)` helper.
-  - If AccessKit/GPUI later supports relation properties, link the tab to its mounted panel equivalent to `aria-controls`.
-- `TabsPanel<T>`
-  - Add `.role(Role::TabPanel)`.
-  - Make active panels focusable / tab-stop equivalent to Base UI `tabIndex={0}` only if this is desired in GPUI keyboard navigation.
-  - Keep inactive panels omitted when `keep_mounted = false`; for `keep_mounted = true`, ensure hidden/invisible panels are not exposed as active content. The initial GPUI API does not expose an obvious `aria_hidden` or `inert` helper, so this may require GPUI support before full parity.
-  - If AccessKit/GPUI later supports labelled-by relationships, link the panel back to its tab.
-- `TabsIndicator<T>`
-  - Keep decorative. Do not assign `Role::Tab`, `Role::TabPanel`, or `Role::ProgressIndicator`.
+### Actions
 
-Implementation checklist for the follow-up:
+- `Action::Click` is auto-registered by the existing `.on_click(...)` in `TabsTab<T>` (attached only when `selectable`, i.e. enabled and inactive), and `Action::Focus` is auto-registered by the existing `.track_focus(...)` on tabs and `.focusable()` on the list. Do **not** re-add handlers for these.
+- The tab's `on_click` closure already routes through `context.select(Some(value), window, cx)` — the same `TabsContext<T>::select` transition used by the keyboard actions (`TabsSelectLeft`/`Right`/`Up`/`Down`/`First`/`Last`, `TabsActivate`), so an AT-dispatched Click takes the identical path, including `on_value_change` notification and controlled/uncontrolled handling.
+- Note the parity consequence: disabled and already-active tabs have no `on_click`, so they expose no Click action to AT. That matches Base UI's "click is a no-op" behavior; document it rather than adding a separate `on_a11y_action`.
+- No `Increment`/`Decrement`/`SetValue`/`Expand` handlers are needed for Tabs.
 
-- [ ] Bump GPUI/Zed dependency to a revision containing `1d029c5ff5654fb1b1e8caf4462993c8ee13a133` or newer.
-- [ ] Confirm exact AccessKit API names in the checked-out GPUI version.
-- [ ] Add `Role::TabList` and vertical `aria_orientation` to `TabsList<T>`.
-- [ ] Add `Role::Tab` and `aria_selected` to `TabsTab<T>`.
-- [ ] Add `Role::TabPanel` to mounted `TabsPanel<T>` elements.
-- [ ] Decide whether Tabs should match Base UI's disabled-tab roving focus behavior: disabled tabs can receive focus but cannot be selected.
-- [ ] Decide whether to add accessible-name builder APIs for `TabsList<T>` or rely on GPUI text/name inference.
-- [ ] Track whether GPUI supports disabled, hidden/inert, controls, and labelled-by relationships; implement these when available.
-- [ ] Add accessibility tests once GPUI exposes a test helper for the AccessKit tree, or add snapshot-style assertions around AccessKit node roles/states if available.
+### Labels
+
+- Tab names come from the tab's visible child text by default. When a caller sets an explicit `.aria_label(...)` on `TabsTab<T>`, the visible label should be created with `Text::new_inaccessible(...)` instead of `text!(...)` so the name is not announced twice. Same rule for any visible heading a caller pairs with the list's `.aria_label(...)`.
+- `TabsList<T>` has no intrinsic name; the new `aria_label(...)` builder is the only naming path in this revision (no `aria-labelledby`, see Gaps).
+
+### Gaps (no gpui builder in this revision — do not invent APIs)
+
+- `disabled` / `aria-disabled` on `TabsTab<T>`: no `.aria_disabled(...)` exists and `write_a11y_info` never sets a disabled flag. Fallback: keep the current behavior (disabled tabs expose no Click action because `on_click` is skipped) and document that AT cannot see a distinct "disabled" state; revisit when gpui upstreams `set_disabled`. This also defers Base UI's `focusableWhenDisabled` parity.
+- `aria-controls` (tab → panel) and `aria-labelledby` (panel → tab, list naming): no relationship builders. Fallback: omit the cross-links entirely and rely on `Role::Tab` / `Role::TabPanel` adjacency plus `.aria_label`; track as blocked pending gpui relationship support (`aria-controls`, `aria-labelledby`, `aria-owns` all absent).
+- `hidden` / `inert` for `keep_mounted = true` inactive panels: no `aria_hidden`/inert builder. Fallback: withhold the id/role from inactive panels so they are simply absent from the tree, which is semantically equivalent for AT.
+- Panel `tabIndex = 0` when open: GPUI focus primitives (`.focusable()` / `.tab_stop(...)`) cover this if we choose to make active panels tab stops; this is a focus-behavior decision, not an a11y gap, but note Base UI makes open panels focusable.
+
+### Implementation checklist for the follow-up
+
+- [ ] Add `.role(Role::TabList)` and vertical-only `.aria_orientation(Orientation::Vertical)` to `TabsList<T>`.
+- [ ] Add an `aria_label(...)` builder to `TabsList<T>` and wire it through `.aria_label(...)`.
+- [ ] Add `.role(Role::Tab)` and `.aria_selected(active)` to `TabsTab<T>`.
+- [ ] Expose registered tab count from `TabsRuntime<T>` and set `.aria_position_in_set(index + 1)` / `.aria_size_of_set(count)` on `TabsTab<T>`.
+- [ ] Add an optional `aria_label(...)` builder to `TabsTab<T>`; document pairing it with `Text::new_inaccessible(...)` for the visible label.
+- [ ] Add an `id(...)` builder to `TabsPanel<T>` and set `.role(Role::TabPanel)` on the active mounted panel only.
+- [ ] Keep `keep_mounted` inactive panels out of the a11y tree (no id/role) and document this as the hidden/inert fallback.
+- [ ] Keep `TabsIndicator<T>` role-free and out of the a11y tree.
+- [ ] Verify no extra `on_a11y_action` handlers are needed: Click/Focus come from the existing `.on_click` / `.track_focus` / `.focusable()` wiring.
+- [ ] Document the disabled-state gap (no `.aria_disabled`) and the missing `aria-controls`/`aria-labelledby` relationships as blocked pending gpui upstream support.
+- [ ] Decide whether active `TabsPanel<T>` should be a tab stop (`.focusable()` + `.tab_stop(true)`) to match Base UI's `tabIndex={0}`.
+- [ ] Add a11y assertions to `tabs/tests` once gpui exposes an AccessKit-tree test helper.
 
 ## Acceptance Criteria
 

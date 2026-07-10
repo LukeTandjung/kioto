@@ -170,6 +170,8 @@ impl RenderOnce for NumberFieldRoot {
         let max_context = context.clone();
         let wheel_context = context.clone();
 
+        // No a11y role on purpose: Base UI's root is a plain `div`. Without a role this
+        // element stays out of the AccessKit tree, matching that behavior.
         base.id(self.id)
             .key_context(NUMBER_FIELD_KEY_CONTEXT)
             .on_action(move |_: &NumberFieldStepUp, window, cx| {

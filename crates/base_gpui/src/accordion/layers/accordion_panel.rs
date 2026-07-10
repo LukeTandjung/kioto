@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, prelude::FluentBuilder as _, AnyElement, App, Div, Empty, IntoElement, ParentElement,
-    RenderOnce, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AnyElement, App, Div, ElementId, Empty,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::accordion::{
@@ -12,6 +13,7 @@ use crate::accordion::{
 
 #[derive(IntoElement)]
 pub struct AccordionPanel<T: Clone + Eq + 'static> {
+    id: Option<ElementId>,
     base: Div,
     children: Vec<AnyElement>,
     context: Option<AccordionItemContext<T>>,
@@ -22,6 +24,7 @@ pub struct AccordionPanel<T: Clone + Eq + 'static> {
 impl<T: Clone + Eq + 'static> Default for AccordionPanel<T> {
     fn default() -> Self {
         Self {
+            id: None,
             base: div(),
             children: Vec::new(),
             context: None,
@@ -46,6 +49,7 @@ impl<T: Clone + Eq + 'static> Styled for AccordionPanel<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for AccordionPanel<T> {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let Self {
+            id,
             base,
             children,
             context,
@@ -79,6 +83,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for AccordionPanel<T> {
             });
         let should_render = state.present;
         let hidden = state.item.hidden;
+        let index = state.item.index;
 
         let base = match style_with_state {
             Some(style_with_state) => style_with_state(state, base),
@@ -86,7 +91,15 @@ impl<T: Clone + Eq + 'static> RenderOnce for AccordionPanel<T> {
         };
 
         if should_render {
-            base.children(children)
+            let id = id.unwrap_or_else(|| {
+                ElementId::from(SharedString::from(format!("accordion-panel-{index}")))
+            });
+
+            // A kept-mounted but hidden panel keeps its id (stable node identity)
+            // without a role, so its contents are not announced while closed.
+            base.id(id)
+                .when(!hidden, |this| this.role(Role::Region))
+                .children(children)
                 .when(hidden, |this| this.invisible())
                 .into_any_element()
         } else {
@@ -105,6 +118,11 @@ impl<T: Clone + Eq + 'static> AccordionItemChildNode<T> for AccordionPanel<T> {
 impl<T: Clone + Eq + 'static> AccordionPanel<T> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = Some(id.into());
+        self
     }
 
     pub fn keep_mounted(mut self, keep_mounted: bool) -> Self {

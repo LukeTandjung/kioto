@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, AnyElement, App, ClickEvent, Div, ElementId, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Toggled, Window,
 };
 
 use crate::menu::{
@@ -112,6 +112,12 @@ impl<P: Clone + 'static> RenderOnce for MenuCheckboxItem<P> {
             })
             .child(
                 base.id(self.id)
+                    .role(Role::MenuItemCheckBox)
+                    .aria_toggled(match checked {
+                        true => Toggled::True,
+                        false => Toggled::False,
+                    })
+                    .when_some(self.label.clone(), |this, label| this.aria_label(label))
                     .track_focus(
                         &focus_handle
                             .tab_stop(tab_stop && !disabled)

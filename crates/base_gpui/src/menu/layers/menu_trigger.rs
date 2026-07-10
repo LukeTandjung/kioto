@@ -1,9 +1,9 @@
 use std::{rc::Rc, time::Duration};
 
 use gpui::{
-    div, AnyElement, App, Div, ElementId, FocusHandle, InteractiveElement as _, IntoElement,
-    MouseButton, ParentElement, RenderOnce, StatefulInteractiveElement as _, StyleRefinement,
-    Styled, Window,
+    div, prelude::FluentBuilder as _, AccessibleAction, AnyElement, App, Div, ElementId,
+    FocusHandle, InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -31,6 +31,7 @@ pub struct MenuTrigger<P: Clone + 'static = ()> {
     open_on_hover: bool,
     delay: Duration,
     close_delay: Duration,
+    aria_label: Option<SharedString>,
     style_with_state: Option<MenuTriggerStyle<P>>,
 }
 
@@ -47,6 +48,7 @@ impl<P: Clone + 'static> Default for MenuTrigger<P> {
             open_on_hover: false,
             delay: Duration::from_millis(100),
             close_delay: Duration::ZERO,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -90,6 +92,8 @@ impl<P: Clone + 'static> RenderOnce for MenuTrigger<P> {
         let open_up_context = context.clone();
         let hover_context = context.clone();
         let measure_context = context.clone();
+        let expand_context = context.clone();
+        let collapse_context = context.clone();
         let open_on_hover = self.open_on_hover;
         let hover_open_delay = self.delay;
         let hover_close_delay = self.close_delay;
@@ -113,6 +117,41 @@ impl<P: Clone + 'static> RenderOnce for MenuTrigger<P> {
             })
             .child(
                 base.id(self.id)
+                    // Base UI renders a button trigger; under a menubar the
+                    // trigger is itself an item of the bar. `aria-haspopup`
+                    // and `aria-controls` have no gpui builders (documented
+                    // gap); `aria_expanded` + the popup's `Role::Menu` carry
+                    // the relationship.
+                    .role(match &menubar {
+                        Some(_) => Role::MenuItem,
+                        None => Role::Button,
+                    })
+                    .aria_expanded(was_open)
+                    .when_some(self.aria_label, |this, label| this.aria_label(label))
+                    .on_a11y_action(AccessibleAction::Expand, move |_data, window, cx| {
+                        if disabled || was_open {
+                            return;
+                        }
+                        expand_context.set_open(
+                            true,
+                            MenuOpenChangeReason::ImperativeAction,
+                            MenuOpenChangeSource::Imperative,
+                            window,
+                            cx,
+                        );
+                    })
+                    .on_a11y_action(AccessibleAction::Collapse, move |_data, window, cx| {
+                        if disabled || !was_open {
+                            return;
+                        }
+                        collapse_context.set_open(
+                            false,
+                            MenuOpenChangeReason::ImperativeAction,
+                            MenuOpenChangeSource::Imperative,
+                            window,
+                            cx,
+                        );
+                    })
                     .track_focus(&{
                         // Menubar triggers rove: exactly one is the tab stop
                         // and disabled triggers stay keyboard-reachable
@@ -499,6 +538,14 @@ impl<P: Clone + 'static> MenuTrigger<P> {
 
     pub fn close_delay(mut self, close_delay: Duration) -> Self {
         self.close_delay = close_delay;
+        self
+    }
+
+    /// Accessible label announced for the trigger. When set, render the
+    /// visible trigger text as `Text::new_inaccessible(...)` so the label is
+    /// not announced twice.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

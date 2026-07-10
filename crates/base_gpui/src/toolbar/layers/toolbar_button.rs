@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, AnyElement, App, ClickEvent, Div, ElementId, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, StatefulInteractiveElement as _, StyleRefinement,
-    Styled, Window,
+    div, prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::toolbar::{
@@ -23,6 +23,7 @@ pub struct ToolbarButton {
     children: Vec<AnyElement>,
     disabled: bool,
     focusable_when_disabled: bool,
+    aria_label: Option<SharedString>,
     on_click: Option<ToolbarClickHandler>,
     style_with_state: Option<Rc<dyn Fn(ToolbarButtonStyleState, Div) -> Div + 'static>>,
     toolbar: Option<(ToolbarContext, usize, FocusHandle, bool)>,
@@ -36,6 +37,7 @@ impl Default for ToolbarButton {
             children: Vec::new(),
             disabled: false,
             focusable_when_disabled: true,
+            aria_label: None,
             on_click: None,
             style_with_state: None,
             toolbar: None,
@@ -96,7 +98,16 @@ impl RenderOnce for ToolbarButton {
         let pointer_focus_handle = focus_handle.clone();
         let pointer_focusable = !disabled || focusable;
 
+        // `Role::Button` puts the item in the a11y tree; `Action::Click` and
+        // `Action::Focus` are auto-registered by `.on_click` / `.track_focus`
+        // below. Merged `disabled` cannot be exposed to AT in this gpui
+        // revision (no disabled a11y builder); the Click path stays registered
+        // but inert while disabled.
         base.id(self.id)
+            .role(Role::Button)
+            .when_some(self.aria_label, |this, aria_label| {
+                this.aria_label(aria_label)
+            })
             .track_focus(
                 &focus_handle
                     .tab_stop(tab_stop)
@@ -145,6 +156,16 @@ impl ToolbarButton {
 
     pub fn focusable_when_disabled(mut self, focusable_when_disabled: bool) -> Self {
         self.focusable_when_disabled = focusable_when_disabled;
+        self
+    }
+
+    /// Accessible name for icon-only buttons. When set alongside a visible
+    /// text child, render that text with `Text::new_inaccessible(...)` instead
+    /// of `text!(...)` so screen readers do not announce the name twice;
+    /// without an `aria_label`, keep `text!(...)` so the child text remains
+    /// the accessible name source.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

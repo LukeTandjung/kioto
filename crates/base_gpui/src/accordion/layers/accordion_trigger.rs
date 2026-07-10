@@ -1,9 +1,10 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, AnyElement, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AccessibleAction, AnyElement, App, ClickEvent, Div,
+    ElementId, Entity, FocusHandle, InteractiveElement as _, IntoElement, ParentElement,
+    RenderOnce, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window,
 };
 
 use crate::accordion::{
@@ -19,6 +20,7 @@ pub struct AccordionTrigger<T: Clone + Eq + 'static> {
     children: Vec<AnyElement>,
     context: Option<AccordionItemContext<T>>,
     focus_handle: Option<FocusHandle>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(AccordionTriggerStyleState<T>, Div) -> Div + 'static>>,
 }
 
@@ -30,6 +32,7 @@ impl<T: Clone + Eq + 'static> Default for AccordionTrigger<T> {
             children: Vec::new(),
             context: None,
             focus_handle: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -55,31 +58,40 @@ impl<T: Clone + Eq + 'static> RenderOnce for AccordionTrigger<T> {
             children,
             context,
             focus_handle,
+            aria_label,
             style_with_state,
         } = self;
 
         let focus_handle = focus_handle.unwrap_or_else(|| trigger_focus_handle(&id, window, cx));
-        let state = context
+        let (state, item_count) = context
             .as_ref()
             .map(|context| {
                 context.read(cx, |runtime, props, value, index, disabled| {
-                    runtime.trigger_state(value, index, disabled, props)
+                    (
+                        runtime.trigger_state(value, index, disabled, props),
+                        runtime.item_count(),
+                    )
                 })
             })
             .unwrap_or_else(|| {
-                AccordionTriggerStyleState::new(
-                    AccordionItemStyleState::new(
-                        panic_value(),
-                        Vec::new(),
+                (
+                    AccordionTriggerStyleState::new(
+                        AccordionItemStyleState::new(
+                            panic_value(),
+                            Vec::new(),
+                            false,
+                            false,
+                            0,
+                            AccordionOrientation::Vertical,
+                        ),
                         false,
-                        false,
-                        0,
-                        AccordionOrientation::Vertical,
                     ),
-                    false,
+                    0,
                 )
             });
         let disabled = state.item.disabled;
+        let expanded = state.panel_open;
+        let position_in_set = state.item.index + 1;
 
         let base = match style_with_state {
             Some(style_with_state) => style_with_state(state, base),
@@ -87,9 +99,16 @@ impl<T: Clone + Eq + 'static> RenderOnce for AccordionTrigger<T> {
         };
 
         let keyboard_context = context.clone();
+        let expand_context = context.clone();
+        let collapse_context = context.clone();
         let pointer_context = context;
 
         base.id(id)
+            .role(Role::Button)
+            .aria_expanded(expanded)
+            .aria_position_in_set(position_in_set)
+            .when(item_count > 0, |this| this.aria_size_of_set(item_count))
+            .when_some(aria_label, |this, label| this.aria_label(label))
             .track_focus(
                 &focus_handle
                     .tab_stop(!disabled)
@@ -99,6 +118,24 @@ impl<T: Clone + Eq + 'static> RenderOnce for AccordionTrigger<T> {
             .focusable()
             .on_action(move |_: &AccordionToggle, window, cx| {
                 if let Some(context) = keyboard_context.as_ref() {
+                    context.toggle(AccordionChangeSource::Keyboard, window, cx);
+                }
+            })
+            .on_a11y_action(AccessibleAction::Expand, move |_, window, cx| {
+                if expanded {
+                    return;
+                }
+
+                if let Some(context) = expand_context.as_ref() {
+                    context.toggle(AccordionChangeSource::Keyboard, window, cx);
+                }
+            })
+            .on_a11y_action(AccessibleAction::Collapse, move |_, window, cx| {
+                if !expanded {
+                    return;
+                }
+
+                if let Some(context) = collapse_context.as_ref() {
                     context.toggle(AccordionChangeSource::Keyboard, window, cx);
                 }
             })
@@ -141,6 +178,14 @@ impl<T: Clone + Eq + 'static> AccordionTrigger<T> {
 
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = id.into();
+        self
+    }
+
+    /// Accessible name for triggers whose visible content is iconic/non-textual.
+    /// When set, render the visible label with `Text::new_inaccessible(...)` so
+    /// screen readers do not announce the name twice.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

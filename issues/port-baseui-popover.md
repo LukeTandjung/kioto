@@ -446,3 +446,46 @@ Implementation note: `PopoverViewport` currently exposes activation direction an
 - [x] `ast-grep scan crates/base_gpui/src` passes, including the barrel-only `mod.rs` rule.
 - [x] `rg -n "pub\\(" crates/base_gpui/src/popover` returns no scoped visibility.
 - [x] `rg -n "RenderState|render_state" crates/base_gpui/src/popover` returns no results.
+
+## AccessKit accessibility follow-up
+
+The pinned gpui revision now exposes an AccessKit surface (see `docs/accesskit-gpui-reference.md`): `.role(Role)`, `.aria_label(...)`, `.aria_expanded(...)`, `.on_a11y_action(...)`, and `Text::new_inaccessible(...)` on `.id(...)`-stateful elements. Base UI Popover emits (authoritative sources: `popover/trigger/PopoverTrigger.tsx`, `popover/popup/PopoverPopup.tsx`, `popover/arrow/PopoverArrow.tsx`): trigger `aria-haspopup="dialog"` + `aria-expanded` + `aria-controls`, popup `role="dialog"` + `aria-labelledby` (title id) + `aria-describedby` (description id), and arrow `aria-hidden`. Map those onto the real base_gpui layers as follows.
+
+### Per accessible part
+
+- `PopoverTrigger<P>` (`layers/popover_trigger.rs`): set `.role(Role::Button)` on the trigger's interactive div and `.aria_expanded(state.open && state.active_trigger)` from `PopoverTriggerStyleState` (`open` / `active_trigger` fields), matching Base UI's per-trigger `isOpenedByThisTrigger` semantics. Set `.aria_label(...)` from a new builder prop when the visible child is not plain text.
+- `PopoverPopup<P>` (`layers/popover_popup.rs`): set `.role(Role::Dialog)` on the popup container (it already has a stable scoped `.id(...)`). Set `.aria_label(...)` from a new `PopoverPopup::aria_label(...)` builder prop as the fallback for the missing `aria-labelledby` relationship (see Gaps).
+- `PopoverClose<P>` (`layers/popover_close.rs`): set `.role(Role::Button)` and `.aria_label(...)` (e.g. a builder prop defaulting to "Close").
+- `PopoverTitle<P>` / `PopoverDescription<P>` (`layers/popover_title.rs`, `layers/popover_description.rs`): keep runtime registration (`PopoverRuntime::register_title` / `register_description` / `sync_titles`) as the future relationship source; their text renders as ordinary accessible static text. Do not assign a role beyond what plain text gets (no `Role::GenericContainer`).
+- `PopoverBackdrop<P>`, `PopoverPositioner<P>`, `PopoverPortal<P>`, `PopoverArrow<P>`, `PopoverViewport<P>`, `PopoverRoot<P>`: leave role-less so they stay out of the a11y tree. This automatically satisfies Base UI's arrow `aria-hidden` intent — a node with no role is not reported.
+
+### Actions
+
+- `PopoverTrigger` and `PopoverClose` already wire `.on_click(...)` and `.track_focus(...)` / `.focusable()`, so `Action::Click` and `Action::Focus` are auto-registered — do NOT re-add them.
+- `PopoverTrigger`: add `.on_a11y_action(AccessibleAction::Expand, ...)` and `.on_a11y_action(AccessibleAction::Collapse, ...)` routed through the same `PopoverContext::open_trigger(...)` / `PopoverContext::close(...)` commands the pointer path uses, with reason `PopoverOpenChangeReason::TriggerPress` and the trigger's scoped id, guarded on `state.disabled`.
+- `PopoverPopup`: no extra action handlers needed; Escape dismissal already flows through the `PopoverCloseAction` key binding (`actions.rs`) and `PopoverOpenChangeReason::EscapeKey`.
+
+### Labels
+
+- `.aria_label` values come from new builder props on `PopoverTrigger`, `PopoverPopup`, and `PopoverClose`; for the popup, callers should pass the same string they render inside `PopoverTitle` until relationship wiring exists.
+- Where a trigger or close button renders a visible text label that duplicates its `.aria_label(...)`, render it with `Text::new_inaccessible(...)` instead of `text!(...)` so the label is not announced twice. Title/description text should stay accessible (`text!` is fine there) since no `aria-labelledby` relationship consumes them yet.
+
+### Gaps (no gpui builder in this revision — do not invent APIs)
+
+- `aria-haspopup="dialog"` on the trigger: no builder. Fallback: omit; `Role::Button` + `.aria_expanded(...)` is the best available signal. Document; revisit if gpui exposes `set_has_popup`.
+- `aria-controls` (trigger → popup id): no relationship builder. Fallback: omit and document; blocked pending gpui upstream id-reference wiring.
+- `aria-labelledby` / `aria-describedby` (popup → title/description ids): no builders. Fallback: literal `.aria_label(...)` on `PopoverPopup`; keep `title_ids` / `description_ids` in `PopoverRuntime` so the relationship can be wired when gpui supports it. Blocked pending gpui upstream.
+- `disabled` / `aria-disabled` on `PopoverTrigger` / `PopoverClose`: no `.aria_disabled(...)` builder. Fallback: keep the existing behavior (handlers early-return and `tab_index(-1)` when `state.disabled`) and document that AT cannot perceive the disabled state; candidate for a gpui upstream `set_disabled` addition.
+- `aria-modal` for `PopoverRoot::modal(true)` and focus-trap semantics: no builder or trap API. Fallback: omit and document; blocked pending gpui upstream.
+
+### Checklist
+
+- [ ] `PopoverTrigger` sets `.role(Role::Button)` and `.aria_expanded(open && active_trigger)` from `PopoverTriggerStyleState`.
+- [ ] `PopoverTrigger` adds `Expand`/`Collapse` `on_a11y_action` handlers routed through `PopoverContext::open_trigger` / `PopoverContext::close` with reason `TriggerPress`, no-op when disabled.
+- [ ] `PopoverPopup` sets `.role(Role::Dialog)` and gains an `aria_label(...)` builder prop.
+- [ ] `PopoverClose` sets `.role(Role::Button)` with a default "Close" `.aria_label(...)`.
+- [ ] Trigger/close visible text labels that duplicate `.aria_label(...)` use `Text::new_inaccessible(...)`.
+- [ ] Backdrop, positioner, portal, arrow, viewport, and root remain role-less and out of the a11y tree.
+- [ ] Click/Focus a11y actions are NOT re-registered where `.on_click` / `.track_focus` already exist.
+- [ ] The `aria-haspopup`, `aria-controls`, `aria-labelledby`/`aria-describedby`, `aria-disabled`, and `aria-modal` gaps above are documented in code comments where each would apply.
+- [ ] Rendered tests assert trigger `aria_expanded` flips with open state and that a11y `Expand`/`Collapse` actions open/close the popover.

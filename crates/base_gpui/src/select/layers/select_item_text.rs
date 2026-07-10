@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, SharedString,
-    StyleRefinement, Styled, Window,
+    StyleRefinement, Styled, Text, Window,
 };
 
 use crate::select::{
@@ -69,10 +69,12 @@ impl<T: Clone + Eq + 'static> RenderOnce for SelectItemText<T> {
             None => self.base,
         };
 
+        // The parent SelectItem sets `.aria_label(...)` from the registered
+        // label, so the visible item text stays out of the a11y tree.
         let text = if has_custom_children {
             base.children(self.children)
         } else if let Some(label) = label {
-            base.child(label)
+            base.child(Text::new_inaccessible(label))
         } else {
             base
         };

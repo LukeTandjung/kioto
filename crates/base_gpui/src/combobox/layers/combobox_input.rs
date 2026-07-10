@@ -1,16 +1,17 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _, IntoElement,
-    ParentElement, RenderOnce, SharedString, StyleRefinement, Styled, Window,
+    div, AccessibleAction, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
+    IntoElement, ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::{
     combobox::{
         child_wiring::{ComboboxChildNode, ComboboxChildWiring},
-        ComboboxChangeSource, ComboboxChipMoveOutcome, ComboboxContext, ComboboxEscape,
-        ComboboxInputStyleState, ComboboxMove, ComboboxMoveNext, ComboboxMovePrevious,
-        ComboboxSide, COMBOBOX_KEY_CONTEXT,
+        ComboboxChangeReason, ComboboxChangeSource, ComboboxChipMoveOutcome, ComboboxContext,
+        ComboboxEscape, ComboboxInputStyleState, ComboboxMove, ComboboxMoveNext,
+        ComboboxMovePrevious, ComboboxSide, COMBOBOX_KEY_CONTEXT,
     },
     primitives::input::{Input, InputStyleState},
 };
@@ -34,6 +35,7 @@ pub struct ComboboxInput<T: Clone + Eq + 'static> {
     base: Div,
     context: Option<ComboboxContext<T>>,
     placeholder: SharedString,
+    aria_label: Option<SharedString>,
     disabled: bool,
     focus_handle: Option<FocusHandle>,
     style_with_state: Option<ComboboxInputStyle<T>>,
@@ -47,6 +49,7 @@ impl<T: Clone + Eq + 'static> Default for ComboboxInput<T> {
             base: div(),
             context: None,
             placeholder: SharedString::default(),
+            aria_label: None,
             disabled: false,
             focus_handle: None,
             style_with_state: None,
@@ -81,6 +84,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
         });
         let disabled = self.disabled || state.root.disabled;
         let read_only = state.root.read_only;
+        let open = state.root.open;
         let open_on_input_click = context.props().open_on_input_click;
 
         let typed_context = context.clone();
@@ -93,6 +97,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
         let escape_context = context.clone();
         let edge_left_context = context.clone();
         let edge_right_context = context.clone();
+        let expand_context = context.clone();
+        let collapse_context = context.clone();
         let measure_context = context.clone();
 
         let mut input = Input::new()
@@ -162,9 +168,43 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxInput<T> {
         // the element that participates in the surrounding flex layout; an
         // unstyled outer div would auto-size a flex-basis-0 child to zero
         // width and collapse the input.
-        let wrapper = div()
+        // AccessKit: the wrapper is the `Role::ComboBox` reference node.
+        // Base UI's `aria-controls`/`aria-haspopup`/`aria-autocomplete` and
+        // `aria-activedescendant` have no gpui builders and are documented
+        // gaps in `combobox/mod.rs`. Focus is tracked by the wrapped input
+        // primitive, so `Action::Focus` is auto-registered there.
+        let mut wrapper = div()
             .w_full()
             .id((self.id, "combobox-input-wrapper"))
+            .role(Role::ComboBox)
+            .aria_expanded(open);
+        if let Some(aria_label) = self.aria_label.clone() {
+            wrapper = wrapper.aria_label(aria_label);
+        }
+        if !disabled && !read_only {
+            // Same change-reason plumbing as the trigger press path so
+            // open-change callbacks stay consistent for AT-driven changes.
+            wrapper = wrapper
+                .on_a11y_action(AccessibleAction::Expand, move |_data, window, cx| {
+                    expand_context.set_open(
+                        true,
+                        ComboboxChangeReason::TriggerPress,
+                        ComboboxChangeSource::Keyboard,
+                        window,
+                        cx,
+                    );
+                })
+                .on_a11y_action(AccessibleAction::Collapse, move |_data, window, cx| {
+                    collapse_context.set_open(
+                        false,
+                        ComboboxChangeReason::TriggerPress,
+                        ComboboxChangeSource::Keyboard,
+                        window,
+                        cx,
+                    );
+                });
+        }
+        let wrapper = wrapper
             .key_context(COMBOBOX_KEY_CONTEXT)
             .on_action(move |_: &ComboboxMoveNext, window, cx| {
                 next_context.navigate_list(ComboboxMove::Next, window, cx);
@@ -235,6 +275,13 @@ impl<T: Clone + Eq + 'static> ComboboxInput<T> {
 
     pub fn placeholder(mut self, placeholder: impl Into<SharedString>) -> Self {
         self.placeholder = placeholder.into();
+        self
+    }
+
+    /// Accessible label for the combobox reference node; substitutes for Base
+    /// UI's `aria-labelledby` wiring, which has no gpui builder.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

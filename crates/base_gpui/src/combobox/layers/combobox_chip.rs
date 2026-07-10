@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce,
-    StyleRefinement, Styled, Window,
+    div, AccessibleAction, App, Div, InteractiveElement as _, IntoElement, MouseButton,
+    ParentElement, RenderOnce, Role, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window,
 };
 
 use crate::combobox::{
@@ -41,11 +42,15 @@ impl<T: Clone + Eq + 'static> Styled for ComboboxChip<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for ComboboxChip<T> {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let Some(context) = self.context.clone() else {
-            return div();
+            return div().into_any_element();
         };
         let index = self.index.unwrap_or(0);
         let state = context.read(cx, |runtime, props| runtime.chip_state(index, props));
+        let (chip_label, set_size) = context.read(cx, |runtime, _| {
+            (runtime.chip_label(index), runtime.selected_values().len())
+        });
         let press_context = context.clone();
+        let a11y_context = context.clone();
         let children = self
             .children
             .into_iter()
@@ -62,11 +67,24 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxChip<T> {
             None => self.base,
         };
 
-        base.on_mouse_down(MouseButton::Left, move |_event, window, cx| {
-            press_context.update(cx, |runtime| runtime.highlight_chip(Some(index)));
-            press_context.focus_input(window, cx);
-        })
-        .children(children)
+        // AccessKit: the chip is `.on_mouse_down`-driven, so `Action::Click`
+        // is NOT auto-registered — add it explicitly, routed through the same
+        // highlight-then-focus path the pointer runs.
+        base.id(("combobox-chip", index))
+            .role(Role::ListItem)
+            .aria_label(chip_label)
+            .aria_position_in_set(index + 1)
+            .aria_size_of_set(set_size)
+            .on_a11y_action(AccessibleAction::Click, move |_data, window, cx| {
+                a11y_context.update(cx, |runtime| runtime.highlight_chip(Some(index)));
+                a11y_context.focus_input(window, cx);
+            })
+            .on_mouse_down(MouseButton::Left, move |_event, window, cx| {
+                press_context.update(cx, |runtime| runtime.highlight_chip(Some(index)));
+                press_context.focus_input(window, cx);
+            })
+            .children(children)
+            .into_any_element()
     }
 }
 

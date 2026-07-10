@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement,
-    RenderOnce, StyleRefinement, Styled, Window,
+    RenderOnce, SharedString, StyleRefinement, Styled, Text, Window,
 };
 
 use crate::meter::{MeterContext, MeterStyleState};
@@ -70,6 +70,14 @@ impl MeterLabel {
 
     pub fn child(mut self, child: impl IntoElement) -> Self {
         self.children.push(child.into_any_element());
+        self
+    }
+
+    /// Visible label text, kept out of the a11y tree so it is not announced
+    /// twice — the same string should be passed to `MeterRoot::aria_label`.
+    pub fn text(mut self, text: impl Into<SharedString>) -> Self {
+        self.children
+            .push(Text::new_inaccessible(text.into()).into_any_element());
         self
     }
 

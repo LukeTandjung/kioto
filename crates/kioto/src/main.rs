@@ -1,6 +1,5 @@
 use editor::{DocumentLocation, EditorConfig, create_editor, open_editor};
 use gpui::*;
-use gpui_component::*;
 use gpui_platform::application;
 
 const SAMPLE: &str = r#"= Metric Spaces
@@ -30,9 +29,6 @@ converges to a point within the space. $RR$ is complete; $QQ$ is not.
 
 fn main() {
     application().run(move |cx: &mut App| {
-        // This must be called before using any GPUI Component features.
-        gpui_component::init(cx);
-
         cx.spawn(async move |cx| {
             cx.open_window(WindowOptions::default(), |window, cx| {
                 // The sample seeds the buffer on first run; once saved
@@ -52,8 +48,7 @@ fn main() {
                     create_editor(config, window, cx)
                 };
 
-                // This first level on the window, should be a Root.
-                cx.new(|cx| Root::new(view, window, cx))
+                view
             })
             .expect("Failed to open window");
         })

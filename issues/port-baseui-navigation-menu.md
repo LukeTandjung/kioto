@@ -488,6 +488,129 @@ Rendered tests under `crates/base_gpui/src/navigation_menu/tests/`:
 - [ ] AccessKit roles/relationships (menubar-like list semantics, expanded/controls, `aria-current` equivalent for links) when the pinned GPUI revision supports them.
 - [ ] Full tab-order parity with Base UI's focus-guard chains if the first pass documents gaps.
 
+## AccessKit accessibility follow-up
+
+Written against the pinned gpui revision per `docs/accesskit-gpui-reference.md`. A part
+enters the a11y tree only when it has both a stable `.id(...)` and a `.role(...)`; the
+layers below already carry stable keyed ids. Base UI's emitted ARIA (authoritative:
+`NavigationMenuTrigger.tsx` `aria-expanded`/`aria-controls`/`aria-owns`,
+`NavigationMenuLink.tsx` `aria-current="page"`, `NavigationMenuIcon.tsx` and
+`NavigationMenuArrow.tsx` `aria-hidden`, plus the `nav`/`ul`/`li`/`button`/`a` semantic
+tags) maps onto AccessKit as follows.
+
+### Per accessible part
+
+- **`NavigationMenuRoot<T>`** (`layers/navigation_menu_root.rs`): Base UI renders
+  `<nav>` (or `<div>` when nested). Assign `Role::Navigation` on the non-nested root
+  (verify the exact accesskit 0.24 variant name; fall back to `Role::Group` if absent)
+  plus a caller-provided `.aria_label(...)` so multiple navigation landmarks are
+  distinguishable. Nested roots (`NavigationMenuRootStyleState.nested == true`) get no
+  role — plain container.
+- **`NavigationMenuList<T>`** (`layers/navigation_menu_list.rs`): Base UI renders
+  `<ul>`. Assign `Role::List` and `.aria_orientation(...)` from the root's orientation
+  prop (`Orientation::Horizontal`/`Vertical`).
+- **`NavigationMenuItem<T>`** (`layers/navigation_menu_item.rs`): Base UI renders
+  `<li>`. Assign `Role::ListItem` and set `.aria_position_in_set(i)` /
+  `.aria_size_of_set(n)` from the index/count `child_wiring.rs` already assigns while
+  walking the list's children.
+- **`NavigationMenuTrigger<T>`** (`layers/navigation_menu_trigger.rs`): Base UI renders
+  `<button aria-expanded={isActiveItem}>`. Assign `Role::Button` and
+  `.aria_expanded(state.open)` from the existing
+  `runtime.trigger_state(&value, disabled)` query
+  (`NavigationMenuTriggerStyleState.open` is the active-item fact). `.aria_label(...)`
+  from a new trigger builder prop (see Labels).
+- **`NavigationMenuLink<T>`** (`layers/navigation_menu_link.rs`): Base UI renders
+  `<a aria-current={active ? 'page' : undefined}>`. Assign `Role::Link` with
+  `.aria_label(...)`; `aria-current` has no builder (see Gaps).
+- **`NavigationMenuPopup<T>`** (`layers/navigation_menu_popup.rs`): Base UI renders
+  `<nav>`. Assign `Role::Group` with the same `.aria_label(...)` text as the root
+  (a second `Navigation` landmark for one menu is noise in AccessKit; document the
+  divergence in the layer doc comment).
+- **No role (excluded from the tree)**: `NavigationMenuContent`, `NavigationMenuPortal`,
+  `NavigationMenuPositioner`, `NavigationMenuViewport`, `NavigationMenuBackdrop` are
+  structural (Base UI backdrop/positioner are presentational `div`s);
+  `NavigationMenuArrow` and `NavigationMenuIcon` are `aria-hidden` in Base UI — in gpui
+  the equivalent is simply giving them no `.role(...)`, which keeps them out of the
+  tree entirely. Nothing to add on these seven layers.
+
+### Actions
+
+- `NavigationMenuTrigger` and `NavigationMenuLink` are wired with **`on_mouse_down`,
+  not `on_click`** (`navigation_menu_trigger.rs:124`, `navigation_menu_link.rs:77`), so
+  the auto-registered `Action::Click` handler from `.on_click` does **not** exist here.
+  Add `.on_a11y_action(AccessibleAction::Click, ...)` on both, routing into the exact
+  same runtime path the mouse handler uses: the trigger's toggle/retarget branch
+  (`runtime.is_active_value` + value-change with reason `TriggerPress`, bypassing the
+  patient-click `stick_if_open` window, which is pointer-only), and the link's
+  `on_activate` + `close_on_click` `LinkPress` close. Alternatively switch these two
+  handlers to `.on_click(...)` and get `Action::Click` for free — either satisfies the
+  checklist.
+- `Action::Focus` **is** auto-registered: both layers already call
+  `.track_focus(&focus_handle.tab_stop(true).tab_index(0))`. Do not re-add it.
+- Optional parity: `.on_a11y_action(AccessibleAction::Expand, ...)` /
+  `AccessibleAction::Collapse` on the trigger, mapping to the same open/close
+  transitions with reason `ListNavigation`-equivalent semantics; skip if AT coverage of
+  Click suffices.
+
+### Labels
+
+- Add `.aria_label(impl Into<SharedString>)` builder props on `NavigationMenuRoot`,
+  `NavigationMenuTrigger`, `NavigationMenuLink`, and `NavigationMenuPopup`; when omitted
+  on trigger/link, derive nothing (no id-reference labelling exists — see Gaps), so the
+  demo in `main.rs` should pass explicit labels.
+- Where a trigger/link's visible caption is rendered with `text!(...)` (which derives an
+  id and *is* mirrored into the tree), switch it to `Text::new_inaccessible(...)`
+  whenever the parent sets `.aria_label(...)`, to avoid double announcement. The
+  `NavigationMenuIcon`'s children need no change — the icon has no role/id and stays
+  out of the tree.
+
+### Gaps (no builder in this gpui revision — do not invent)
+
+- **`aria-controls`** (trigger → popup id) and **`aria-owns`** (trigger's hidden
+  viewport-owner span): no relationship builders exist. The `aria-owns` bridge is
+  already architecturally obsolete (content renders inside the popup), so it is
+  dropped-by-design; `aria-controls` is **omitted + documented**, blocked pending gpui
+  upstream relationship support.
+- **`disabled` / `aria-disabled`** on the trigger: no `.aria_disabled(...)` exists.
+  Fallback: while `NavigationMenuTrigger.disabled` is true, do not register the
+  `Action::Click` a11y handler (mirroring the pointer path's early return at
+  `navigation_menu_trigger.rs:125`) and document that AT cannot perceive the disabled
+  state; track "expose disabled" as blocked pending gpui upstream.
+- **`aria-current="page"`** on an active link: no builder. Fallback: omit + document;
+  `NavigationMenuLinkStyleState.active` remains the visual-only fact. (Do not abuse
+  `.aria_selected` — `Link` is not a selectable widget role.)
+- **`aria-haspopup`**: Base UI does not set it here and gpui has no builder — nothing
+  to do beyond noting it.
+- **Live regions / announcements** for content switches: no API; retargeting the shared
+  popup produces no announcement. Omit + document.
+
+### Checklist
+
+- [ ] `NavigationMenuRoot` (non-nested): `.role(Role::Navigation)` (or `Role::Group`
+  fallback after verifying accesskit 0.24) + `.aria_label(...)` builder prop.
+- [ ] `NavigationMenuList`: `.role(Role::List)` + `.aria_orientation(...)` from root
+  orientation.
+- [ ] `NavigationMenuItem`: `.role(Role::ListItem)` + `.aria_position_in_set` /
+  `.aria_size_of_set` from `child_wiring.rs` indices.
+- [ ] `NavigationMenuTrigger`: `.role(Role::Button)` +
+  `.aria_expanded(state.open)` from `runtime.trigger_state(...)` +
+  `.aria_label(...)` prop.
+- [ ] `NavigationMenuLink`: `.role(Role::Link)` + `.aria_label(...)` prop.
+- [ ] `NavigationMenuPopup`: `.role(Role::Group)` + `.aria_label(...)`, divergence from
+  Base UI's `<nav>` documented in the layer doc comment.
+- [ ] `Action::Click` a11y handlers on trigger and link (added explicitly or via
+  switching `on_mouse_down` → `on_click`), routed through the same runtime transitions;
+  no re-registration of `Action::Focus` (already provided by `track_focus`).
+- [ ] Disabled trigger: a11y Click handler withheld while `disabled`; limitation
+  documented.
+- [ ] Visible trigger/link captions use `Text::new_inaccessible(...)` when the parent
+  carries `.aria_label(...)`.
+- [ ] Arrow/Icon/Backdrop/Positioner/Portal/Viewport/Content confirmed role-less
+  (absent from the a11y tree), matching Base UI's `aria-hidden`/presentational intent.
+- [ ] Gaps documented in the module: `aria-controls`, `aria-disabled`,
+  `aria-current="page"`, live announcements — all omit + document, blocked pending gpui
+  upstream.
+
 ## Uncertain items needing confirmation
 
 - **Required item value**: Base UI auto-generates an item value when omitted

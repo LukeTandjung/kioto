@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, prelude::FluentBuilder as _, App, Div, ElementId, Entity, FocusHandle,
-    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, SharedString, StyleRefinement,
-    Styled, Window,
+    accesskit::ActionData, div, prelude::FluentBuilder as _, AccessibleAction, App, Div, ElementId,
+    Entity, FocusHandle, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -30,6 +30,7 @@ pub struct OTPFieldRoot {
     children: Vec<OTPFieldChild>,
     context: Option<FieldContext>,
     name: Option<SharedString>,
+    aria_label: Option<SharedString>,
     length: usize,
     default_value: SharedString,
     value: Option<SharedString>,
@@ -54,6 +55,7 @@ impl Default for OTPFieldRoot {
             children: Vec::new(),
             context: None,
             name: None,
+            aria_label: None,
             length: 0,
             default_value: SharedString::default(),
             value: None,
@@ -95,6 +97,7 @@ impl RenderOnce for OTPFieldRoot {
         let disabled = self.disabled || field_disabled || item_disabled || fieldset_disabled;
         let id = self.id.clone();
         let name = self.name.clone();
+        let aria_label = self.aria_label.clone();
 
         #[cfg(debug_assertions)]
         if self.length == 0 {
@@ -129,7 +132,8 @@ impl RenderOnce for OTPFieldRoot {
                 self.on_value_change,
                 self.on_value_complete,
                 self.on_value_invalid,
-            ),
+            )
+            .with_aria_label(self.aria_label),
             focus_handle.clone(),
             form_context,
             field_valid,
@@ -213,8 +217,23 @@ impl RenderOnce for OTPFieldRoot {
         let backspace_context = context.clone();
         let delete_context = context.clone();
         let clear_context = context.clone();
+        let a11y_set_value_context = context.clone();
 
+        // Accessibility: Base UI's root `role="group"`. `aria-labelledby` /
+        // `aria-describedby` linkage to `FieldLabel` / `FieldDescription` /
+        // `FieldError` has no relationship builders in this gpui revision, so
+        // the literal `.aria_label(...)` prop stands in. `disabled`,
+        // `read_only`, `required`, and `aria-invalid` have no a11y builders
+        // either and are blocked pending gpui upstream; `Action::Focus` is
+        // auto-registered by `.track_focus`.
         base.id(self.id)
+            .role(Role::Group)
+            .when_some(aria_label, |this, aria_label| this.aria_label(aria_label))
+            .on_a11y_action(AccessibleAction::SetValue, move |data, window, cx| {
+                if let Some(ActionData::Value(value)) = data {
+                    a11y_set_value_context.paste(SharedString::from(value.to_string()), window, cx);
+                }
+            })
             .when(!disabled, |this| {
                 this.track_focus(&focus_handle.tab_stop(true))
             })
@@ -281,6 +300,14 @@ impl OTPFieldRoot {
 
     pub fn name(mut self, name: impl Into<SharedString>) -> Self {
         self.name = Some(name.into());
+        self
+    }
+
+    /// Accessible name for the OTP group. Mirror the visible `FieldLabel`
+    /// text here manually: relationship props (`aria-labelledby`) do not
+    /// exist in this gpui revision.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

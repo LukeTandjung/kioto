@@ -2,7 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, ClickEvent, Div, ElementId, InteractiveElement as _, IntoElement,
-    ParentElement, RenderOnce, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::combobox::{
@@ -19,6 +20,7 @@ pub struct ComboboxClear<T: Clone + Eq + 'static> {
     children: Vec<AnyElement>,
     context: Option<ComboboxContext<T>>,
     keep_mounted: bool,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(ComboboxClearStyleState, Div) -> Div + 'static>>,
 }
 
@@ -30,6 +32,7 @@ impl<T: Clone + Eq + 'static> Default for ComboboxClear<T> {
             children: Vec::new(),
             context: None,
             keep_mounted: false,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -66,17 +69,27 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxClear<T> {
             None => self.base,
         };
 
-        let clear = base.id(self.id).on_click(move |event, window, cx| {
-            if !matches!(event, ClickEvent::Mouse(_)) || disabled {
-                return;
-            }
-            click_context.clear_all(
-                ComboboxChangeReason::ClearPress,
-                ComboboxChangeSource::Pointer,
-                window,
-                cx,
-            );
-        });
+        // AccessKit: `.on_click` auto-registers `Action::Click`; the "×"
+        // glyph is a plain string child with no a11y id, so it is not
+        // announced alongside the label.
+        let clear = base
+            .id(self.id)
+            .role(Role::Button)
+            .aria_label(
+                self.aria_label
+                    .unwrap_or_else(|| SharedString::from("Clear")),
+            )
+            .on_click(move |event, window, cx| {
+                if !matches!(event, ClickEvent::Mouse(_)) || disabled {
+                    return;
+                }
+                click_context.clear_all(
+                    ComboboxChangeReason::ClearPress,
+                    ComboboxChangeSource::Pointer,
+                    window,
+                    cx,
+                );
+            });
 
         if has_custom_children {
             clear.children(self.children).into_any_element()
@@ -105,6 +118,12 @@ impl<T: Clone + Eq + 'static> ComboboxClear<T> {
 
     pub fn keep_mounted(mut self, keep_mounted: bool) -> Self {
         self.keep_mounted = keep_mounted;
+        self
+    }
+
+    /// Accessible label for the clear button; defaults to "Clear".
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

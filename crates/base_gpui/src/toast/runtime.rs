@@ -914,6 +914,7 @@ impl<P: Clone + 'static> ToastRuntime<P> {
             .filter(|gesture| gesture.id == *id && gesture.real);
         ToastRootStyleState {
             transition_status: record.transition.clone(),
+            priority: record.priority,
             expanded: self.hovering || self.focused,
             limited: record.limited,
             toast_type: record.toast_type.clone(),
@@ -961,6 +962,7 @@ impl<P: Clone + 'static> ToastRuntime<P> {
             toast_type: self
                 .find(id)
                 .and_then(|index| self.toasts[index].toast_type.clone()),
+            expanded: self.hovering || self.focused,
         }
     }
 

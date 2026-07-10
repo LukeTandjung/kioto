@@ -2,8 +2,8 @@ use std::{rc::Rc, sync::Arc};
 
 use gpui::{
     div, prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, Entity,
-    FocusHandle, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    FocusHandle, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::tabs::{
@@ -21,6 +21,7 @@ pub struct TabsTab<T: Clone + Eq + 'static> {
     disabled: bool,
     index: Option<usize>,
     focus_handle: Option<FocusHandle>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(TabsTabStyleState, Div) -> Div + 'static>>,
 }
 
@@ -35,6 +36,7 @@ impl<T: Clone + Eq + 'static> Default for TabsTab<T> {
             disabled: false,
             index: None,
             focus_handle: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -63,20 +65,27 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
             disabled,
             index,
             focus_handle,
+            aria_label,
             style_with_state,
         } = self;
 
         let focus_handle = focus_handle.unwrap_or_else(|| tab_focus_handle(&id, window, cx));
 
-        let state = context
+        let (state, tab_count) = context
             .as_ref()
             .map(|context| {
                 context.read(cx, |runtime, props| {
-                    runtime.tab_state(value.as_ref(), disabled, index, props.orientation())
+                    (
+                        runtime.tab_state(value.as_ref(), disabled, index, props.orientation()),
+                        runtime.tab_count(),
+                    )
                 })
             })
             .unwrap_or_else(|| {
-                TabsTabStyleState::new(false, disabled, false, TabsOrientation::Horizontal)
+                (
+                    TabsTabStyleState::new(false, disabled, false, TabsOrientation::Horizontal),
+                    0,
+                )
             });
         let active = state.active;
         let highlighted = state.highlighted;
@@ -97,6 +106,13 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsTab<T> {
                     .tab_stop(highlighted && !disabled)
                     .tab_index(if highlighted { 0 } else { -1 }),
             )
+            .role(Role::Tab)
+            .aria_selected(active)
+            .when_some(aria_label, |this, aria_label| this.aria_label(aria_label))
+            .when_some(index.filter(|_| tab_count > 0), |this, index| {
+                this.aria_position_in_set(index + 1)
+                    .aria_size_of_set(tab_count)
+            })
             .children(children)
             .when_some(selectable, |this, (context, value)| {
                 this.on_click(move |event, window, cx| {
@@ -132,6 +148,15 @@ impl<T: Clone + Eq + 'static> TabsTab<T> {
 
     pub fn index(mut self, index: usize) -> Self {
         self.index = Some(index);
+        self
+    }
+
+    /// Accessible name for the tab, for icon-only tabs or when the name
+    /// should differ from the visible child text. When set, create the
+    /// visible label with `Text::new_inaccessible(...)` instead of
+    /// `text!(...)` so the name is not announced twice.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

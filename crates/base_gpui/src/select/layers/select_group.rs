@@ -1,7 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, App, Div, ElementId, InteractiveElement as _, IntoElement,
+    ParentElement, RenderOnce, Role, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window,
 };
 
 use crate::select::{
@@ -11,6 +13,7 @@ use crate::select::{
 
 #[derive(IntoElement)]
 pub struct SelectGroup<T: Clone + Eq + 'static> {
+    id: ElementId,
     base: Div,
     children: Vec<SelectGroupChild<T>>,
     context: Option<SelectContext<T>>,
@@ -21,6 +24,7 @@ pub struct SelectGroup<T: Clone + Eq + 'static> {
 impl<T: Clone + Eq + 'static> Default for SelectGroup<T> {
     fn default() -> Self {
         Self {
+            id: ElementId::from("select-group"),
             base: div(),
             children: Vec::new(),
             context: None,
@@ -50,17 +54,24 @@ impl<T: Clone + Eq + 'static> RenderOnce for SelectGroup<T> {
                 context.read(cx, |runtime, _| runtime.group_state(self.index, item_count))
             })
             .unwrap_or_else(|| SelectGroupStyleState::new(item_count, self.index, None));
+        let aria_label = state.label.clone();
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
         };
 
-        base.children(
-            self.children
-                .into_iter()
-                .map(IntoElement::into_element)
-                .collect::<Vec<_>>(),
-        )
+        base.id(self.id)
+            // AccessKit gap in this gpui revision: no `aria-labelledby`
+            // builder, so the registered group-label text becomes a literal
+            // `.aria_label(...)` instead of an id reference.
+            .role(Role::Group)
+            .when_some(aria_label, |this, label| this.aria_label(label))
+            .children(
+                self.children
+                    .into_iter()
+                    .map(IntoElement::into_element)
+                    .collect::<Vec<_>>(),
+            )
     }
 }
 
@@ -84,6 +95,10 @@ impl<T: Clone + Eq + 'static> SelectChildNode<T> for SelectGroup<T> {
         let group_index = wiring.begin_group();
         self.children = wiring.wire_group_children(self.children, window, cx);
         wiring.end_group();
+        self.id = wiring.scope_child_id(&ElementId::from(gpui::SharedString::from(format!(
+            "{}-{}",
+            self.id, group_index
+        ))));
         self.index = Some(group_index);
         self
     }
@@ -92,6 +107,11 @@ impl<T: Clone + Eq + 'static> SelectChildNode<T> for SelectGroup<T> {
 impl<T: Clone + Eq + 'static> SelectGroup<T> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn child(mut self, child: impl Into<SelectGroupChild<T>>) -> Self {

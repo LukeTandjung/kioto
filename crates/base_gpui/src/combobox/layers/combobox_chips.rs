@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    div, App, Div, InteractiveElement as _, IntoElement, Orientation, ParentElement, RenderOnce,
+    Role, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::combobox::{
@@ -42,7 +43,7 @@ impl<T: Clone + Eq + 'static> Styled for ComboboxChips<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for ComboboxChips<T> {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let Some(context) = self.context.clone() else {
-            return div();
+            return div().into_any_element();
         };
         let (state, values) = context.read(cx, |runtime, _| {
             (runtime.chips_state(), runtime.selected_values())
@@ -71,7 +72,17 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxChips<T> {
             None => self.base,
         };
 
-        base.children(chips)
+        // AccessKit: Base UI renders `role="toolbar"` only when selection
+        // chips exist.
+        if chips.is_empty() {
+            base.into_any_element()
+        } else {
+            base.id("combobox-chips")
+                .role(Role::Toolbar)
+                .aria_orientation(Orientation::Horizontal)
+                .children(chips)
+                .into_any_element()
+        }
     }
 }
 

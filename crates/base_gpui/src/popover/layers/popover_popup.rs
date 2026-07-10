@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, App, Div, ElementId, InteractiveElement as _, IntoElement,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::popover::{
@@ -23,6 +24,7 @@ pub struct PopoverPopup<P: Clone + 'static = ()> {
     align: PopoverAlign,
     keep_mounted: bool,
     payload_content: Option<PopoverPayloadContentBuilder<P>>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(PopoverPopupStyleState, Div) -> Div + 'static>>,
 }
 
@@ -37,6 +39,7 @@ impl<P: Clone + 'static> Default for PopoverPopup<P> {
             align: PopoverAlign::Center,
             keep_mounted: false,
             payload_content: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -89,6 +92,12 @@ impl<P: Clone + 'static> RenderOnce for PopoverPopup<P> {
             None => self.base,
         }
         .id(self.id)
+        // AccessKit gaps in this gpui revision: no `aria-labelledby` /
+        // `aria-describedby` relationship builders (title/description ids are
+        // kept in PopoverRuntime for future wiring) and no `aria-modal`
+        // builder for modal roots, so a literal aria_label is the fallback.
+        .role(Role::Dialog)
+        .when_some(self.aria_label, |this, label| this.aria_label(label))
         .key_context(POPOVER_KEY_CONTEXT)
         .on_action(move |_: &PopoverCloseAction, window, cx| {
             if let Some(context) = close_context.as_ref() {
@@ -215,6 +224,14 @@ impl<P: Clone + 'static> PopoverPopup<P> {
 
     pub fn keep_mounted(mut self, keep_mounted: bool) -> Self {
         self.keep_mounted = keep_mounted;
+        self
+    }
+
+    /// Accessible label for the dialog popup. Until gpui supports
+    /// `aria-labelledby` relationships, pass the same string rendered inside
+    /// `PopoverTitle`.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

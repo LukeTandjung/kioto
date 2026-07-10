@@ -55,6 +55,13 @@ impl RenderOnce for FieldsetLegend {
 }
 
 impl FieldsetLegend {
+    /// Creates a legend for a Fieldset.
+    ///
+    /// AccessKit: like Base UI's plain-`div` legend, this element has no role
+    /// and is deliberately kept out of the a11y tree. Expose the group's label
+    /// via `FieldsetRoot::aria_label(...)` instead. When you do, render the
+    /// legend's visible text with `Text::new_inaccessible(...)` (not
+    /// `text!(...)`) so screen readers do not announce the label twice.
     pub fn new() -> Self {
         Self::default()
     }

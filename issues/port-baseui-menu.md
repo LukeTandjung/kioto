@@ -533,6 +533,129 @@ Rendered tests under `crates/base_gpui/src/menu/tests/`:
 - [ ] AccessKit menu/menuitem/menuitemcheckbox/menuitemradio/group roles and group-label relationships when the pinned GPUI revision supports them.
 - [ ] Scroll locking for modal menus if not inherited from the Popover/Dialog approach.
 
+## AccessKit accessibility follow-up
+
+Written against the pinned gpui revision's AccessKit surface
+(`docs/accesskit-gpui-reference.md`, accesskit `0.24.0`). Every part below already
+carries a stable keyed `.id(...)`; the work is adding `.role(...)` + `.aria_*`
+props and closing the action loop. Base UI's authoritative ARIA emissions come
+from `menu/root/MenuRoot.tsx` (trigger props + popup `role="menu"`),
+`item/useMenuItemCommonProps.ts` (`role="menuitem"`, roving `tabIndex`),
+`checkbox-item/MenuCheckboxItem.tsx` (`role="menuitemcheckbox"` + `aria-checked`),
+`radio-item/MenuRadioItem.tsx` (`role="menuitemradio"` + `aria-checked`),
+`group/MenuGroup.tsx` / `radio-group/MenuRadioGroup.tsx` (`role="group"` +
+`aria-labelledby`), `group-label/MenuGroupLabel.tsx` and
+`backdrop/MenuBackdrop.tsx` (`role="presentation"`), and the `aria-hidden` on
+`MenuArrow` and both indicators.
+
+### Per accessible part
+
+- **`MenuTrigger<P>`** (`layers/menu_trigger.rs`): `Role::Button` (Base UI renders a
+  button; when the parent is a menubar, Base UI switches to `role="menuitem"` —
+  branch on `MenuParentKind::Menubar` and use `Role::MenuItem` there).
+  `.aria_expanded(state.open)` from `MenuTriggerStyleState::open`. `.aria_label(...)`
+  from a new trigger `.label(...)`/existing visible text (see Labels).
+- **`MenuPopup<P>`** (`layers/menu_popup.rs`): `Role::Menu` on the popup container
+  that already carries `.track_focus(&focus_handle).focusable()`.
+  `.aria_orientation(Orientation::Vertical)` from the root's `orientation` prop
+  (flip when horizontal lands).
+- **`MenuItem<P>`** (`layers/menu_item.rs`): `Role::MenuItem` on the div that has
+  `.track_focus(...)`/`.on_click(...)`. `.aria_label(...)` from
+  `self.label` (the same `Option<SharedString>` used for typeahead) when set.
+  Optionally `.aria_position_in_set(index + 1)` / `.aria_size_of_set(n)` from the
+  wired item index and the runtime's registered-item count.
+- **`MenuLinkItem<P>`** (`layers/menu_link_item.rs`): `Role::MenuItem` (gpui has no
+  link-menuitem distinction worth inventing; Base UI renders `role="menuitem"` on an
+  anchor). Same label/position treatment as `MenuItem`.
+- **`MenuCheckboxItem<P>`** (`layers/menu_checkbox_item.rs`): `Role::MenuItemCheckBox`,
+  `.aria_toggled(if state.checked { Toggled::True } else { Toggled::False })` from
+  `MenuCheckboxItemStyleState::checked` (maps Base UI's `aria-checked`).
+- **`MenuRadioItem<P, V>`** (`layers/menu_radio_item.rs`): `Role::MenuItemRadio`,
+  `.aria_toggled(...)` from `MenuRadioItemStyleState::checked`.
+- **`MenuSubmenuTrigger<P>`** (`layers/menu_submenu_trigger.rs`): `Role::MenuItem`
+  (it is an item of the parent menu) plus `.aria_expanded(state.open)` from
+  `MenuSubmenuTriggerStyleState::open`; its child `MenuPopup` gets `Role::Menu` as
+  above via the submenu's own runtime.
+- **`MenuGroup<P>`** (`layers/menu_group.rs`): `Role::Group`, `.aria_label(...)` from
+  the group label registered via `child_wiring`'s `register_group_label` (the
+  metadata the port already keeps in the runtime for exactly this purpose).
+- **`MenuRadioGroup<P, V>`** (`layers/menu_radio_group.rs`): `Role::Group`, same
+  label sourcing.
+- **`MenuSeparator`** (`layers/menu_separator.rs`): `Role::Separator` — implement in
+  the shared `base_gpui::separator::Separator` follow-up so Menu inherits it.
+- **Not in the a11y tree** (no `.role(...)`, so gpui filters them out — this mirrors
+  Base UI's `role="presentation"` / `aria-hidden`): `MenuBackdrop`, `MenuArrow`,
+  `MenuCheckboxItemIndicator`, `MenuRadioItemIndicator`, `MenuGroupLabel` (its text
+  is surfaced through the parent group's `.aria_label`), `MenuPortal`,
+  `MenuPositioner`, `MenuRoot`, `MenuSubmenuRoot` (structural wrappers).
+
+### Actions
+
+- **Click and Focus are already covered.** Every item variant, the trigger, and the
+  submenu trigger wire `.on_click(...)` and `.track_focus(...)`, which auto-register
+  `Action::Click` and `Action::Focus`. Do **not** add redundant
+  `.on_a11y_action(Action::Click, ...)` handlers — AT click must flow through the
+  same `activate_item` / `request_open` runtime transitions the pointer path uses.
+- **`MenuTrigger` / `MenuSubmenuTrigger`**: add
+  `.on_a11y_action(AccessibleAction::Expand, ...)` and
+  `.on_a11y_action(AccessibleAction::Collapse, ...)` routed to the same
+  `request_open` / `request_close` context commands the click/keyboard paths call,
+  with reason `ImperativeAction`.
+- No `Increment`/`Decrement`/`SetValue` handlers apply to Menu.
+
+### Labels
+
+- Item labels: when `.label(...)` is set it becomes `.aria_label`; when the item's
+  visible child is plain text, render it with `Text::new_inaccessible(...)` **only
+  if** an `.aria_label` was set on the item container, so the label is not announced
+  twice. When no explicit label exists, leave the child text accessible (it becomes
+  the node's content) and set no `.aria_label`.
+- `MenuGroupLabel`'s visible text should be `Text::new_inaccessible(...)` since the
+  same string is registered via `register_group_label` and surfaced as the group's
+  `.aria_label`.
+- Trigger label: from visible trigger text or an explicit `.aria_label` builder;
+  same double-announce rule.
+
+### Gaps (no gpui builder in this revision — do not invent)
+
+- **`aria-haspopup="menu"`** (trigger, submenu trigger): no builder. Fallback: omit;
+  `.aria_expanded` + the popup's `Role::Menu` convey the popup relationship
+  imperfectly. Blocked pending gpui upstream (`set_has_popup` exists in accesskit
+  0.24 but gpui exposes no builder).
+- **`aria-controls`** (trigger → popup id, submenu trigger → child popup id): no
+  relationship builders. Omit + document; blocked pending upstream id-reference
+  wiring.
+- **`aria-labelledby`** (popup ← active trigger element, group/radio-group ← label
+  id): no builder. Fallback: literal-string `.aria_label` sourced from the runtime's
+  group-label metadata / trigger label, as described above.
+- **`disabled` / `aria-disabled`** (root, items, checkbox/radio items, radio group):
+  no `.aria_disabled` builder and `write_a11y_info` sets no disabled flag. Fallback:
+  the port already withholds `tab_stop`/activation for disabled items
+  (`item_is_tab_stop` + activation no-ops), so AT actions are inert; document that
+  disabled state is not *announced*. Blocked pending gpui upstream.
+- **`aria-hidden`** (arrow, indicators): no builder needed — omitting `.role(...)`
+  keeps these nodes out of the tree entirely (documented fallback above).
+- **`aria-activedescendant`**: not needed — Base UI uses roving `tabIndex`, which the
+  port already mirrors with `tab_stop`/`tab_index` + real focus; `Action::Focus` is
+  auto-registered.
+- **Roving highlight announcements**: no live-region API; highlight changes are
+  announced only via real focus movement, which the roving tab-stop already drives.
+
+### Checklist
+
+- [ ] `MenuTrigger`: `Role::Button` (Role::MenuItem under `MenuParentKind::Menubar`), `.aria_expanded`, `Expand`/`Collapse` a11y actions routed through `request_open`/`request_close`.
+- [ ] `MenuPopup`: `Role::Menu` + `.aria_orientation(Orientation::Vertical)`.
+- [ ] `MenuItem` / `MenuLinkItem`: `Role::MenuItem`, `.aria_label` from `.label(...)`, optional position/size-of-set props.
+- [ ] `MenuCheckboxItem`: `Role::MenuItemCheckBox` + `.aria_toggled` from `checked`.
+- [ ] `MenuRadioItem`: `Role::MenuItemRadio` + `.aria_toggled` from `checked`.
+- [ ] `MenuSubmenuTrigger`: `Role::MenuItem` + `.aria_expanded` + `Expand`/`Collapse` actions.
+- [ ] `MenuGroup` / `MenuRadioGroup`: `Role::Group` + `.aria_label` from registered group-label metadata.
+- [ ] `MenuGroupLabel` visible text switched to `Text::new_inaccessible(...)`; item/trigger labels follow the double-announce rule.
+- [ ] `MenuSeparator`: `Role::Separator` via the shared separator.
+- [ ] Backdrop/arrow/indicators/portal/positioner confirmed role-less (excluded from the tree).
+- [ ] No redundant `Action::Click`/`Action::Focus` handlers added where `.on_click`/`.track_focus` already exist.
+- [ ] Gaps above (`aria-haspopup`, `aria-controls`, `aria-labelledby`, `aria-disabled`) documented in `menu/` doc comments as omitted/blocked-upstream.
+
 ## Uncertain items needing confirmation
 
 - **Generic parameter spread**: threading `P` through every part (and `V` on the

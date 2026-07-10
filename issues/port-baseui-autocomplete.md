@@ -494,6 +494,174 @@ The Combobox issue anticipated this port well; these three small deltas are need
 - [x] Cross-link: the Combobox issue's Autocomplete follow-up item should point at
       this file as written (it currently says "to be written").
 
+## AccessKit accessibility follow-up
+
+Autocomplete is almost entirely re-exported Combobox parts, so nearly all of the
+role/aria work belongs to the Combobox AccessKit follow-up
+(`issues/port-baseui-combobox.md`) and is **inherited** here — implement it once
+on the Combobox layers, then verify it through the Autocomplete configuration
+(`selection_mode = None`, `mode` matrix). This section records the full per-part
+mapping as it must behave *for Autocomplete*, plus the two autocomplete-only
+parts. Everything below uses only APIs from
+`docs/accesskit-gpui-reference.md` — no invented builders.
+
+Base UI ARIA source of truth: `combobox/root/AriaCombobox.tsx` (reference gets
+`role="combobox"`, `aria-expanded`, `aria-haspopup="listbox"`, `aria-controls`,
+`aria-autocomplete` = the `mode`), `combobox/input/ComboboxInput.tsx`
+(`aria-readonly`, `aria-required`, `aria-labelledby`),
+`combobox/list/ComboboxList.tsx` (`role="listbox"`),
+`combobox/item/ComboboxItem.tsx` (`role="option"`, `aria-selected` only when
+selectable — never for Autocomplete), `combobox/trigger/ComboboxTrigger.tsx`
+(`aria-expanded`, `aria-haspopup`, `aria-controls`, `aria-labelledby`),
+`combobox/popup/ComboboxPopup.tsx` (`role="presentation"` when the input is
+outside the popup — always, for us), `combobox/group/ComboboxGroup.tsx`
+(`role="group"`, `aria-labelledby`), and `combobox/status/ComboboxStatus.tsx` /
+`combobox/empty/ComboboxEmpty.tsx` (`aria-live="polite"`, `aria-atomic`). The
+autocomplete-specific parts (`AutocompleteRoot`, `AutocompleteValue`) emit no
+ARIA of their own in Base UI.
+
+### Per accessible part (all on the Combobox layers; verified through the Autocomplete re-exports)
+
+- **`AutocompleteInput` = `ComboboxInput<T>`**
+  (`crates/base_gpui/src/combobox/layers/combobox_input.rs`, wrapping
+  `primitives/input`): `.role(Role::TextInput)` on the id'd input element —
+  accesskit has no combined text-field-combobox role in this revision;
+  `Role::TextInput` plus `.aria_expanded(...)` is the closest honest encoding of
+  Base UI's `role="combobox"` input. Props:
+  `.aria_expanded(context.read(cx, |runtime, _| runtime.open_value()))`.
+  Focus is already wired through `input_focus_handle` / the input primitive's
+  focus handle, so `Action::Focus` is auto-registered — do not re-add.
+- **`AutocompleteTrigger` = `ComboboxTrigger<T>`**
+  (`combobox_trigger.rs`): `.role(Role::Button)`,
+  `.aria_expanded(runtime.open_value())`, `.aria_label(...)` from a new
+  builder prop (default e.g. `"Open popup"`). Its `.on_click` already toggles
+  open via `ComboboxContext::toggle_open`, so `Action::Click` is auto-registered.
+- **`AutocompleteClear` = `ComboboxClear`** (`combobox_clear.rs`):
+  `.role(Role::Button)`, `.aria_label(...)` builder prop (default `"Clear"`).
+  `.on_click` (→ `ComboboxContext::clear_all`) auto-registers `Action::Click`.
+- **`AutocompleteList` = `ComboboxList<T>`** (`combobox_list.rs`):
+  `.role(Role::ListBox)`. Base UI's `aria-multiselectable` never applies —
+  Autocomplete has no `.multiple`.
+- **`AutocompleteItem` = `ComboboxItem<T>`** (`combobox_item.rs`):
+  `.role(Role::ListBoxOption)`,
+  `.aria_position_in_set(...)` / `.aria_size_of_set(...)` from
+  `ComboboxItemMetadata::index()` mapped through
+  `ComboboxRuntime::filtered_indices()` (position among *visible* items, size =
+  `filtered_indices().len()`). Do **not** set `.aria_selected(...)` — in
+  `selection_mode = None` Base UI omits `aria-selected` entirely (`selectable ?
+  selected : undefined`); verify the Combobox layer's selected-mode
+  `.aria_selected` wiring is skipped under the Autocomplete configuration.
+  Express keyboard highlight as `.aria_selected(true)` **only if** the Combobox
+  follow-up chooses that encoding for virtual focus — otherwise leave highlight
+  unexpressed (see Gaps: `aria-activedescendant`). `.on_click` (→
+  `ComboboxContext::select_item`, i.e. fill-on-press here) auto-registers
+  `Action::Click`.
+- **`AutocompleteGroup` = `ComboboxGroup`** (`combobox_group.rs`):
+  `.role(Role::Group)` with `.aria_label(...)` resolved from
+  `ComboboxGroupMetadata::label()` (the literal-string stand-in for Base UI's
+  `aria-labelledby` → GroupLabel id wiring).
+- **`AutocompleteGroupLabel` = `ComboboxGroupLabel`**: visible text only; render
+  it with `Text::new_inaccessible(...)` since the group already carries the same
+  string as `.aria_label` — avoids double-announcing.
+- **No role (decorative / presentation — leave out of the a11y tree by giving
+  them no `.role(...)`)**: `AutocompletePopup` (Base UI `role="presentation"` in
+  the input-outside-popup topology, which is our only topology),
+  `AutocompletePositioner`, `AutocompletePortal`, `AutocompleteBackdrop`,
+  `AutocompleteArrow`, `AutocompleteIcon`, `AutocompleteInputGroup`,
+  `AutocompleteRow`, `AutocompleteCollection`, `AutocompleteSeparator` (the
+  shared `separator::Separator` follow-up owns `Role::Separator` if wanted).
+- **`AutocompleteRoot<T>`**
+  (`crates/base_gpui/src/autocomplete/layers/autocomplete_root.rs`): container
+  only — no role (and `Role::GenericContainer` is filtered/asserts, so simply
+  set none).
+- **`AutocompleteValue<T>`**
+  (`crates/base_gpui/src/autocomplete/layers/autocomplete_value.rs`): display
+  mirror of `ComboboxRuntime::display_value()`. No role. Render the resolved
+  string via `Text::new_inaccessible(...)` so the value is not announced twice
+  (the input itself is the accessible value surface). This is the only
+  autocomplete-module code change in this follow-up.
+
+### Actions
+
+- `Action::Click` and `Action::Focus` are auto-registered by the existing
+  `.on_click` / focus-handle wiring on trigger, clear, item, and input — do
+  **not** re-add handlers for them.
+- Add `.on_a11y_action(AccessibleAction::Expand, ...)` /
+  `(AccessibleAction::Collapse, ...)` on the input (or trigger) routed into the
+  **same** transition the pointer/keyboard path uses:
+  `ComboboxContext::set_open(true/false, ...)` — never a parallel open path.
+- Do not add `SetValue` on the input in this pass; programmatic text entry is
+  the input primitive's follow-up, not Autocomplete's.
+
+### Labels
+
+- Input accessible name: Base UI uses Field-label `aria-labelledby`; with no
+  id-reference wiring, take a literal `.aria_label(...)` builder prop on
+  `ComboboxInput` (Field integration may forward the Field label string later).
+- Trigger/Clear: `.aria_label(...)` builder props with sensible defaults (they
+  render icon-only in the demos).
+- Group label text and `AutocompleteValue` output: `Text::new_inaccessible(...)`
+  as above. Any other visible `text!(...)` inside a part that already sets
+  `.aria_label` on its id'd parent gets the same treatment.
+
+### Gaps (Base UI ARIA with no gpui builder in this revision)
+
+- **`aria-autocomplete`** (`'list' | 'both' | 'inline' | 'none'` — literally the
+  Autocomplete `mode`, the one ARIA attribute this component *adds* over
+  Combobox): no builder, and accesskit exposure isn't surfaced by gpui. Omit +
+  document; note in `AutocompleteRoot` docs that the `mode` is not conveyed to
+  AT. Blocked pending gpui upstream.
+- **`aria-activedescendant`** (virtual highlight while focus stays on the
+  input): no relationship builders. Fallback: omit; optionally encode highlight
+  as `.aria_selected(true)` on the highlighted `ComboboxItem` if the Combobox
+  follow-up adopts that convention — decide there, once, not per variant.
+- **`aria-controls`**, **`aria-labelledby`**, **`aria-describedby`**,
+  **`aria-owns`**: no id-reference wiring. Fallback: literal `.aria_label`
+  strings only; omit the relationships.
+- **`aria-haspopup="listbox"`**: no builder. Fallback: omit; `.aria_expanded`
+  plus `Role::ListBox` on the popup list carries the intent.
+- **`disabled` / `aria-disabled`, `aria-readonly`, `aria-required`**: no
+  builders (`write_a11y_info` sets no disabled flag). Fallback: while
+  `.disabled(true)` / `.read_only(true)` the runtime already ignores
+  interactions; additionally skip registering `Expand`/`Collapse` handlers on a
+  disabled root and document that the disabled state itself is not announced.
+  Blocked pending gpui upstream for the announced state.
+- **Live regions** — `AutocompleteStatus` / `AutocompleteEmpty`
+  (`aria-live="polite"`, `aria-atomic`): no announcement API in gpui. Omit +
+  document on both parts; blocked pending gpui upstream. The inline overlay
+  text swap (modes `Both`/`Inline`) is likewise silent to AT for now.
+
+### Checklist
+
+- [ ] `ComboboxInput`: `Role::TextInput` + `.aria_expanded(open)` +
+      `.aria_label(...)` prop; verify `Action::Focus` comes free from the input
+      focus handle. **(inherited — implement in Combobox follow-up)**
+- [ ] `ComboboxTrigger`: `Role::Button` + `.aria_expanded(open)` +
+      `.aria_label(...)`; Click auto-registered. **(inherited)**
+- [ ] `ComboboxClear`: `Role::Button` + `.aria_label(...)`; Click
+      auto-registered. **(inherited)**
+- [ ] `ComboboxList`: `Role::ListBox`. **(inherited)**
+- [ ] `ComboboxItem`: `Role::ListBoxOption` + position/size-of-set from
+      `filtered_indices()`; **no** `aria_selected` under
+      `selection_mode = None`. **(inherited — verify through Autocomplete)**
+- [ ] `ComboboxGroup`/`ComboboxGroupLabel`: `Role::Group` + `.aria_label` from
+      `ComboboxGroupMetadata::label()`; label text `Text::new_inaccessible`.
+      **(inherited)**
+- [ ] `Expand`/`Collapse` a11y actions route through
+      `ComboboxContext::set_open`; skipped while disabled/read-only.
+      **(inherited)**
+- [ ] `AutocompleteValue` renders its string via `Text::new_inaccessible(...)`
+      (this issue's only code change).
+- [ ] Popup/positioner/portal/backdrop/arrow/icon/input-group have no role and
+      stay out of the a11y tree.
+- [ ] Gaps documented in rustdoc where they bite: `aria-autocomplete` (mode) on
+      `AutocompleteRoot`, disabled/read-only announcement, live-region silence
+      on `AutocompleteStatus`/`AutocompleteEmpty`, no
+      activedescendant/controls/labelledby/haspopup wiring.
+- [ ] a11y verification pass with the Autocomplete demos in
+      `crates/base_gpui/src/main.rs` (ids stable across frames so nodes are not
+      remove+add churned while typing/filtering).
+
 ## Uncertain items needing confirmation
 
 - Child routing: reuse `ComboboxChild<T>` directly for `AutocompleteRoot` children

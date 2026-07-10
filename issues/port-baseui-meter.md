@@ -122,3 +122,45 @@ Base UI Progress has a near-identical part topology (Root/Track/Indicator/Value/
 - [x] Edge cases: `value == min`, `value == max`, `min == max` (percentage `0`, no panic/NaN leak), `NaN` value falls back to `min` / percentage `0`.
 - [x] `MeterValue` closure override receives `(formatted, value)` and its output is rendered.
 - [x] `style_with_state` on indicator/track observes the derived percentage.
+
+## AccessKit accessibility follow-up
+
+Base UI puts the entire accessible surface on the root: `role="meter"`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow` (the clamped value), `aria-valuetext` (the formatted string, optionally overridden by `getAriaValueText`), and `aria-labelledby` wired to `MeterLabel`. `MeterValue` is `aria-hidden` and the track/indicator/label carry no roles. Meter is read-only with no interaction, so no a11y actions beyond auto-registered ones are needed — and none are auto-registered here either, since `MeterRoot` has no `on_click`/`track_focus`.
+
+### Per accessible part
+
+- **`MeterRoot`** (`layers/meter_root.rs`) — the only node in the a11y tree. In `RenderOnce::render`, after `base.id(self.id)`, add:
+  - `.role(Role::Meter)`
+  - `.aria_numeric_value(clamped_value)` from `MeterRuntime::state().clamped_value` (Base UI's `aria-valuenow` is the clamped value)
+  - `.aria_min_numeric_value(min)` and `.aria_max_numeric_value(max)` from the same `MeterStyleState`
+  - `.aria_label(...)` — see Labels below.
+- **`MeterTrack` / `MeterIndicator`** — presentational in Base UI (no role, no ARIA). Give them no `.role(...)`; they stay out of the tree even though they have ids.
+- **`MeterValue`** — Base UI marks it `aria-hidden="true"`. No `.role(...)`; render its text via `Text::new_inaccessible(text)` instead of the bare `SharedString` child in `meter_value.rs` so it is not mirrored into the tree (the same string already reaches AT through the root, per the valuetext gap fallback below).
+- **`MeterLabel`** — no role of its own; its visible text feeds the root's `.aria_label` (see Labels). Its `children` should be `Text::new_inaccessible(...)` to avoid double-announcing.
+
+### Actions
+
+- None. Meter has no state machine, no focus, and no keyboard path; do not add `.on_a11y_action(...)`, `.focusable()`, or `.tab_stop(...)`. (Click/Focus auto-registration via `on_click`/`track_focus` does not apply — neither is wired in this component.)
+
+### Labels
+
+- Add a `MeterRoot::aria_label(impl Into<SharedString>)` builder prop; callers pass the same string they render inside `MeterLabel`. This is the literal-string replacement for Base UI's `aria-labelledby`/`setLabelId` plumbing (already dropped in "Out of scope").
+- Because `.aria_label` accepts one string, fold the value text into it as the valuetext fallback: set the root label to `"{label}, {formatted}"` (label prop + `MeterStyleState::formatted`) when a label is provided, or just `formatted` otherwise.
+- Swap visible label/value strings to `Text::new_inaccessible(...)` inside `MeterLabel` and `MeterValue` so the text is not announced twice.
+- Base UI's visually-hidden NVDA workaround span is a DOM/NVDA-specific hack; do not port it.
+
+### Gaps (no gpui builder in the pinned revision)
+
+- **`aria-valuetext` / `getAriaValueText`**: no `.aria_valuetext(...)` builder. Fallback: fold the formatted string into the root's `.aria_label` as above; AT still hears `aria_numeric_value` for the raw number. Document that a custom `getAriaValueText`-style override is deferred until gpui grows a valuetext setter.
+- **`aria-labelledby`** (root ↔ `MeterLabel` id wiring): no relationship builders. Fallback: the literal `.aria_label` string prop described above; already ratified as out of scope.
+- **`aria-hidden`** on `MeterValue`: no builder, but not needed — omitting `.role(...)` and using `Text::new_inaccessible` keeps it out of the tree, which is equivalent.
+- No `disabled`, live-region, or other relationship props are emitted by Base UI Meter, so the remaining known gpui gaps do not apply here.
+
+### Checklist
+
+- [ ] `MeterRoot`: add `.role(Role::Meter)`, `.aria_numeric_value(clamped_value)`, `.aria_min_numeric_value(min)`, `.aria_max_numeric_value(max)` from `MeterRuntime::state()`.
+- [ ] `MeterRoot`: add an `aria_label` builder prop; compose it with `MeterStyleState::formatted` as the valuetext fallback.
+- [ ] `MeterValue`: render text via `Text::new_inaccessible(...)`; no role.
+- [ ] `MeterLabel`: render text via `Text::new_inaccessible(...)`; no role.
+- [ ] `MeterTrack` / `MeterIndicator`: confirm no `.role(...)` is set (presentational).
+- [ ] Document the `aria-valuetext` and `aria-labelledby` gaps in the module docs as deferred pending gpui upstream.

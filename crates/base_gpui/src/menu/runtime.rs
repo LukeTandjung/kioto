@@ -1661,6 +1661,11 @@ impl<P: Clone + 'static> MenuRuntime<P> {
         MenuArrowStyleState::new(self.open, side, align, offset_x, offset_y, uncentered)
     }
 
+    /// Number of registered items, exposed for `aria_size_of_set`.
+    pub fn item_count(&self) -> usize {
+        self.items.len()
+    }
+
     pub fn item_state(&self, index: Option<usize>, disabled: bool) -> MenuItemStyleState {
         let highlighted = index.is_some() && self.highlighted_index == index;
         MenuItemStyleState::new(highlighted, disabled)

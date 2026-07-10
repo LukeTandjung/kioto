@@ -16,6 +16,7 @@ pub type OTPFieldValueInvalidHandler =
 #[derive(Clone)]
 pub struct OTPFieldProps {
     name: Option<SharedString>,
+    aria_label: Option<SharedString>,
     length: usize,
     validation_type: OTPFieldValidationType,
     normalize_value: Option<OTPFieldNormalizeValueHandler>,
@@ -46,6 +47,7 @@ impl OTPFieldProps {
     ) -> Self {
         Self {
             name,
+            aria_label: None,
             length,
             validation_type,
             normalize_value,
@@ -62,6 +64,18 @@ impl OTPFieldProps {
 
     pub fn name(&self) -> Option<&SharedString> {
         self.name.as_ref()
+    }
+
+    /// Literal accessible name for the OTP group. Stand-in for Base UI's
+    /// `aria-labelledby` id-wiring to `FieldLabel` (no relationship builders
+    /// exist in this gpui revision).
+    pub fn with_aria_label(mut self, aria_label: Option<SharedString>) -> Self {
+        self.aria_label = aria_label;
+        self
+    }
+
+    pub fn aria_label(&self) -> Option<&SharedString> {
+        self.aria_label.as_ref()
     }
 
     pub fn length(&self) -> usize {

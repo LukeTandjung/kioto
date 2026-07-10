@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    StyleRefinement, Styled, Window,
+    div, App, Div, ElementId, InteractiveElement as _, IntoElement, Orientation, ParentElement,
+    RenderOnce, Role, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::accordion::{
@@ -74,12 +74,19 @@ impl<T: Clone + Eq + 'static> RenderOnce for AccordionRoot<T> {
         });
 
         let style_state = context.read(cx, |runtime, props| runtime.root_state(props));
+        let orientation = match style_state.orientation {
+            AccordionOrientation::Horizontal => Orientation::Horizontal,
+            AccordionOrientation::Vertical => Orientation::Vertical,
+        };
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
-        base.id(self.id).children(children)
+        base.id(self.id)
+            .role(Role::Group)
+            .aria_orientation(orientation)
+            .children(children)
     }
 }
 

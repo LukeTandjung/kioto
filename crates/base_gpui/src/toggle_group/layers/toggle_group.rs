@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, ElementId, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled,
-    Window,
+    div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::toggle_group::{
@@ -11,10 +11,17 @@ use crate::toggle_group::{
     ToggleGroupValueChangeHandler,
 };
 
+/// Accessibility: the root renders with `Role::Group` (Base UI's `role="group"`);
+/// pass `.aria_label(...)` to name the group for assistive technology. Base UI
+/// deliberately renders no `aria-orientation` on the group, so none is set here.
+/// The pinned gpui revision has no `aria_disabled` builder, so a disabled group is
+/// not *announced* as disabled to AT; disabled toggles are still action-inert
+/// (activation guards and tab-stop removal already apply).
 #[derive(IntoElement)]
 pub struct ToggleGroup<T: Clone + Eq + 'static> {
     id: ElementId,
     base: Div,
+    aria_label: Option<SharedString>,
     children: Vec<ToggleGroupChild<T>>,
     default_value: Vec<T>,
     value: Option<Vec<T>>,
@@ -31,6 +38,7 @@ impl<T: Clone + Eq + 'static> Default for ToggleGroup<T> {
         Self {
             id: ElementId::from("toggle-group"),
             base: div(),
+            aria_label: None,
             children: Vec::new(),
             default_value: Vec::new(),
             value: None,
@@ -96,6 +104,11 @@ impl<T: Clone + Eq + 'static> RenderOnce for ToggleGroup<T> {
             None => self.base,
         };
 
+        let mut base = base.id(self.id.clone()).role(Role::Group);
+        if let Some(aria_label) = self.aria_label.clone() {
+            base = base.aria_label(aria_label);
+        }
+
         base.children(children)
     }
 }
@@ -120,6 +133,11 @@ impl<T: Clone + Eq + 'static> ToggleGroup<T> {
 
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = id.into();
+        self
+    }
+
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

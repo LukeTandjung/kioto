@@ -4,8 +4,9 @@ use std::{
 };
 
 use gpui::{
-    div, App, Div, FocusHandle, InteractiveElement as _, IntoElement, MouseButton, ParentElement,
-    RenderOnce, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    div, AccessibleAction, App, Div, FocusHandle, InteractiveElement as _, IntoElement,
+    MouseButton, ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -26,6 +27,15 @@ type NavigationMenuTriggerStyle = Rc<dyn Fn(NavigationMenuTriggerStyleState, Div
 /// hover suppression is documented as deferred (same audit result as
 /// Tooltip/Preview Card). A disabled trigger never opens but remains
 /// focusable (Base UI `focusableWhenDisabled`).
+///
+/// Accessibility: `Role::Button` with `aria_expanded` from the active-item
+/// fact; pass `.aria_label(...)` for the accessible name (no id-reference
+/// labelling exists). AT `Click` routes through the same toggle/retarget
+/// transition as the pointer path, bypassing the pointer-only patient-click
+/// window; while `disabled` the Click handler is withheld — gpui has no
+/// `aria-disabled` builder, so AT cannot perceive the disabled state (blocked
+/// pending gpui upstream). `aria-controls`/`aria-owns` relationship props
+/// have no gpui builders and are omitted.
 #[derive(IntoElement)]
 pub struct NavigationMenuTrigger<T: Clone + Eq + 'static> {
     base: Div,
@@ -36,6 +46,7 @@ pub struct NavigationMenuTrigger<T: Clone + Eq + 'static> {
     focus_handle: Option<FocusHandle>,
     entry_index: usize,
     order: usize,
+    aria_label: Option<SharedString>,
     style_with_state: Option<NavigationMenuTriggerStyle>,
 }
 
@@ -50,6 +61,7 @@ impl<T: Clone + Eq + 'static> Default for NavigationMenuTrigger<T> {
             focus_handle: None,
             entry_index: 0,
             order: 0,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -95,6 +107,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for NavigationMenuTrigger<T> {
         let measure_value = value.clone();
         let press_context = context.clone();
         let press_value = value.clone();
+        let a11y_context = context.clone();
+        let a11y_value = value.clone();
         let hover_context = context.clone();
         let hover_value = value.clone();
         let move_context = context.clone();
@@ -118,9 +132,46 @@ impl<T: Clone + Eq + 'static> RenderOnce for NavigationMenuTrigger<T> {
                     window.request_animation_frame();
                 }
             })
-            .child(
-                base.id(("navigation-menu-trigger", self.order))
-                    .track_focus(&focus_handle.tab_stop(true).tab_index(0))
+            .child({
+                let mut trigger = base
+                    .id(("navigation-menu-trigger", self.order))
+                    .role(Role::Button)
+                    .aria_expanded(state.open)
+                    .track_focus(&focus_handle.tab_stop(true).tab_index(0));
+                if let Some(aria_label) = self.aria_label.clone() {
+                    trigger = trigger.aria_label(aria_label);
+                }
+                if !disabled {
+                    // AT-dispatched Click: same toggle/retarget transition as
+                    // the pointer path, minus the pointer-only patient-click
+                    // stickiness window. Withheld while disabled (no
+                    // aria-disabled builder exists to expose the state).
+                    trigger = trigger.on_a11y_action(
+                        AccessibleAction::Click,
+                        move |_data, window, cx| {
+                            let active = a11y_context
+                                .read(cx, |runtime, _| runtime.is_active_value(&a11y_value));
+                            if active {
+                                a11y_context.close(
+                                    NavigationMenuValueChangeReason::TriggerPress,
+                                    NavigationMenuValueChangeSource::Unknown,
+                                    window,
+                                    cx,
+                                );
+                                return;
+                            }
+                            a11y_context.update(cx, |runtime| runtime.cancel_hover());
+                            a11y_context.set_value(
+                                Some(a11y_value.clone()),
+                                NavigationMenuValueChangeReason::TriggerPress,
+                                NavigationMenuValueChangeSource::Unknown,
+                                window,
+                                cx,
+                            );
+                        },
+                    );
+                }
+                trigger
                     .on_mouse_down(MouseButton::Left, move |_event, window, cx| {
                         if disabled {
                             return;
@@ -227,8 +278,8 @@ impl<T: Clone + Eq + 'static> RenderOnce for NavigationMenuTrigger<T> {
                             );
                         }
                     })
-                    .children(children),
-            )
+                    .children(children)
+            })
     }
 }
 
@@ -251,6 +302,15 @@ impl<T: Clone + Eq + 'static> NavigationMenuTrigger<T> {
 
     pub fn is_disabled(&self) -> bool {
         self.disabled
+    }
+
+    /// Accessible name for the trigger button; pass one when the visible
+    /// caption is not plain accessible text (no id-reference labelling
+    /// exists). Render the visible caption with `Text::new_inaccessible(...)`
+    /// when set, to avoid double announcement.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
+        self
     }
 
     pub fn child(mut self, child: impl Into<NavigationMenuTriggerChild<T>>) -> Self {

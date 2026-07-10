@@ -139,6 +139,10 @@ impl<T: Clone + Eq + 'static> TabsRuntime<T> {
         self.selected.clone()
     }
 
+    pub fn tab_count(&self) -> usize {
+        self.tabs.len()
+    }
+
     pub fn sync_children(
         &mut self,
         mut tabs: Vec<TabsTabMetadata<T>>,

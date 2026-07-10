@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    SharedString, StyleRefinement, Styled, Window,
+    SharedString, StyleRefinement, Styled, Text, Window,
 };
 
 use crate::slider::{SliderContext, SliderValueStyleState};
@@ -61,7 +61,12 @@ impl RenderOnce for SliderValue {
             None => self.base,
         };
 
-        base.id(id).child(text)
+        // No role, and the display string is rendered inaccessibly: the
+        // thumbs already announce the numeric values, so a mirrored text
+        // node would double-announce. Base UI's `aria-live` on this part
+        // has no gpui equivalent; value changes are conveyed by the focused
+        // thumb's `aria_numeric_value` updating instead.
+        base.id(id).child(Text::new_inaccessible(text))
     }
 }
 

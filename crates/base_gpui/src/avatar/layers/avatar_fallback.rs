@@ -8,6 +8,14 @@ use gpui::{
 
 use crate::avatar::{child_wiring::AvatarChildNode, AvatarContext, AvatarFallbackStyleState};
 
+/// Fallback content shown while the avatar image is not loaded.
+///
+/// Accessibility: this part carries no role or aria props — it is a visual
+/// substitute for the labeled root node. When `AvatarRoot` has an
+/// `.aria_label(...)`, build visible initials with
+/// `Text::new_inaccessible(...)` instead of `text!(...)`, so the initials are
+/// not announced alongside the root's label. Children arrive as
+/// `AnyElement`s, so this is a caller convention the layer cannot enforce.
 #[derive(IntoElement)]
 pub struct AvatarFallback {
     base: Div,

@@ -247,10 +247,50 @@ If details are added, use a Rust-native `InputChangeReason::None`; do not expose
 - [x] Map Base UI Input data attributes (`disabled`, `valid`, `invalid`, `dirty`, `touched`, `filled`, `focused`) into typed style-state fields, not DOM attributes.
 - [x] The docs hero styling pattern can be recreated with GPUI builder methods: label text plus a bordered input with placeholder/focus styling.
 
-### Accessibility follow-up
+## AccessKit accessibility follow-up
 
-- [ ] Once GPUI AccessKit input/label APIs are available, expose text input role/value/focused/disabled/required/invalid state through GPUI-native accessibility APIs.
-- [ ] Once available, connect `FieldLabel` / accessible name to public `Input` through GPUI-native mechanisms.
+Written against the AccessKit surface in the pinned gpui revision; see `docs/accesskit-gpui-reference.md`. Base UI's `Input` is a thin `Field.Control` wrapper whose accessibility contract is: the native `<input>` role, `aria-labelledby` from `FieldLabel`'s generated id (`FieldControl.tsx` line 114), `aria-invalid` when validation fails (`useFieldValidation.ts` line 324), plus native `disabled`/`readonly`/`required`/`placeholder`/value semantics. The GPUI mapping below targets the one real interactive element in the port.
+
+### Accessible parts
+
+- **Primitive input layer** (`crates/base_gpui/src/primitives/input/layers/input.rs`, the `Input` struct there): this is the element that already carries `.id(self.id)`, `.track_focus(&focus_handle …)`, and `.focusable()`, and it is what `FieldControl` and the public `input::layers::input::Input` ultimately render, so all a11y builders go here — the public `Input` wrapper stays a pass-through and only forwards a new `.aria_label(...)` builder down through `FieldControl`.
+  - `.role(Role::TextInput)`.
+  - `.aria_label(...)` from a new forwarded `aria_label: Option<SharedString>` prop (see Labels below).
+  - No `.aria_toggled` / `.aria_selected` / `.aria_expanded` / numeric-value props apply; do not set them.
+- `InputTextElement` (`primitives/input/layers/text_element.rs`) paints the value/placeholder directly and has no element id, so it does not enter the a11y tree; nothing to do there.
+- `FieldLabel` / `FieldDescription` / `FieldError` belong to the Field port's follow-up, not this issue.
+
+### Actions
+
+- `Action::Focus` is auto-registered by the existing `.track_focus(...)` / `.focusable()` on the primitive layer — do **not** re-add it.
+- There is no `.on_click(...)` on the input (mouse is handled via `on_mouse_down`/`on_mouse_up` listeners into `InputRuntime`), so no auto `Action::Click`; a Click handler is unnecessary for a text input and should not be added.
+- [optional] `.on_a11y_action(Action::SetValue, ...)` routing the supplied string through the same path the paste/IME edits use — `InputRuntime`'s `replace_text_in_range(None, &normalize_single_line(...), window, cx)` over a full-text selection — and gated on the same `!disabled && !read_only` condition the existing edit actions use. Skip if `ActionData` value plumbing proves awkward; note it as deferred instead.
+
+### Labels
+
+- Add `.aria_label(impl Into<SharedString>)` to the public `Input` (`crates/base_gpui/src/input/layers/input.rs`), forwarded through `FieldControl` to the primitive layer where `.aria_label(...)` is applied. This is the only accessible-name mechanism available; there is no id-reference wiring.
+- The visible value/placeholder is drawn by `InputTextElement` (a custom paint element, not `text!(...)`), so there is no double-announcement risk and no `Text::new_inaccessible` swap needed inside the input itself.
+- `FieldLabel` renders arbitrary `AnyElement` children, so an automatic `aria-labelledby`-style connection cannot be built in this revision (see Gaps); users must pass the label text to both `FieldLabel` and `Input::aria_label` for now. Document this in the input module docs.
+
+### Gaps (no gpui builder in this revision)
+
+- `disabled` / `aria-disabled`: no `.aria_disabled(...)` builder. Fallback: the primitive already sets `tab_index(-1)` and drops edit/mouse listeners while disabled; document the limitation that AT is not told the control is disabled. Blocked pending gpui upstream `set_disabled`.
+- `aria-labelledby` (Base UI's `FieldLabel` → control wiring): no relationship builders. Fallback: literal `.aria_label(...)` as above; the `- [x] Do not port DOM aria-labelledby…` decision below stands.
+- `aria-describedby` (`FieldDescription` / `FieldError` message association): no builder. Omit and document; blocked pending gpui upstream.
+- `aria-invalid` (set by `useFieldValidation` when `valid == Some(false)`): no builder and `write_a11y_info` never sets an invalid flag. Omit; `InputStyleState.invalid` remains the visual-only signal. Blocked pending gpui upstream.
+- `aria-required`, `aria-readonly`, `aria-placeholder`, `aria-multiline`: no builders. Omit and document; the `required`/`read_only`/`placeholder` props stay behavior/style-only.
+- Text value, caret, and selection reporting (AccessKit `set_value` / text runs on the `TextInput` node): not exposed through any gpui builder, so AT cannot read the input's contents or caret position yet. This is the largest gap; track as blocked pending gpui upstream text-node support.
+- Live-region announcements for `FieldError`: out of scope here; belongs to the Field/Form follow-up and is also blocked (no announcement API).
+
+### Checklist
+
+- [ ] Set `.role(Role::TextInput)` on the primitive input layer element in `crates/base_gpui/src/primitives/input/layers/input.rs`.
+- [ ] Add an `aria_label` prop to the primitive input layer, applied via `.aria_label(...)`.
+- [ ] Forward `.aria_label(...)` through `FieldControl` (`crates/base_gpui/src/field/layers/field_control.rs`) and the public `Input` (`crates/base_gpui/src/input/layers/input.rs`).
+- [ ] Confirm no `Action::Focus`/`Action::Click` handlers are added manually (Focus is auto-registered by `.track_focus`; Click does not apply).
+- [ ] Optionally add `.on_a11y_action(Action::SetValue, ...)` routed through `InputRuntime::replace_text_in_range`, gated on `!disabled && !read_only`; otherwise record it as deferred.
+- [ ] Document in the input module docs that `disabled`, `read_only`, `required`, `invalid`, placeholder, label/description association, and text value/caret reporting are not surfaced to AT in this gpui revision, with each item marked omit-and-document or blocked-pending-upstream as listed above.
+- [ ] Keep the a11y-bearing element's `.id(...)` stable across frames so the AccessKit `NodeId` does not churn.
 - [ ] Add accessibility tests if GPUI exposes AccessKit tree test helpers.
 - [x] Do not port DOM `aria-labelledby`, generated HTML ids, or browser label mechanics literally.
 

@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    div, App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::combobox::{
@@ -50,17 +51,29 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxGroup<T> {
                 context.read(cx, |runtime, _| runtime.group_state(self.index, item_count))
             })
             .unwrap_or_else(|| ComboboxGroupStyleState::new(item_count, self.index, None));
+        // AccessKit: the literal-string label substitutes for Base UI's
+        // `aria-labelledby` group-label wiring, which has no gpui builder.
+        let group_label = state.label.clone();
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
         };
 
-        base.children(
-            self.children
-                .into_iter()
-                .map(IntoElement::into_element)
-                .collect::<Vec<_>>(),
-        )
+        let mut group = base
+            .id(("combobox-group", self.index.unwrap_or(0)))
+            .role(Role::Group);
+        if let Some(group_label) = group_label {
+            group = group.aria_label(group_label);
+        }
+
+        group
+            .children(
+                self.children
+                    .into_iter()
+                    .map(IntoElement::into_element)
+                    .collect::<Vec<_>>(),
+            )
+            .into_any_element()
     }
 }
 

@@ -255,11 +255,7 @@ Follow-up: `base_gpui` does not currently have shared transition/presence infras
 
 ### Accessibility follow-up
 
-- [ ] Once the target GPUI revision supports needed AccessKit APIs, connect `FieldLabel` to the registered control accessible name.
-- [ ] Once available, connect `FieldDescription` and present `FieldError` to the registered control accessible description.
-- [ ] Once available, expose invalid/required/disabled state through GPUI-native accessibility APIs.
-- [ ] Add accessibility tests if GPUI exposes test helpers for AccessKit state.
-- [x] Do not port DOM `aria-labelledby`, `aria-describedby`, `htmlFor`, or generated HTML ids literally.
+See `## AccessKit accessibility follow-up` at the end of this issue for the concrete per-part plan against the pinned gpui revision.
 
 ### Form integration follow-up
 
@@ -308,3 +304,50 @@ Add one behavior per file under `crates/base_gpui/src/field/tests/` where practi
 - [x] `cargo check -p base_gpui` passes.
 - [x] `cargo test -p base_gpui field` passes.
 - [x] `cargo test -p base_gpui` passes.
+
+## AccessKit accessibility follow-up
+
+Grounded against `docs/accesskit-gpui-reference.md` (pinned gpui revision, accesskit 0.24). Base UI Field emits almost no roles of its own: `Field.Root`, `Field.Item`, `Field.Description`, `Field.Error`, and `Field.Validity` render generic `<div>`/`<p>` elements, `Field.Label` is a native `<label>`, and the only ARIA wiring is on `Field.Control`: `aria-labelledby={labelId}` (`field/control/FieldControl.tsx`), `aria-describedby` assembled from description/error `messageIds` (`internals/labelable-provider/LabelableProvider.tsx`), and `aria-invalid: true` when the field is invalid and touched/dirty (`field/root/useFieldValidation.ts`, `getValidationProps`). All of that wiring is id-reference based, which this gpui revision cannot express, so the plan below is mostly literal-label plumbing plus documented gaps.
+
+### Per accessible part
+
+- **`FieldControl`** (`field/layers/field_control.rs`, wraps the `input()` primitive from `primitives/input/layers/input.rs`): the wrapped `Input` element is the only Field part that should appear in the a11y tree. On the `Input`'s interactive element, set `.role(Role::TextInput)` and `.aria_label(...)` sourced from a new label string plumbed through `FieldRuntime` (see Labels below). The `Input` already calls `.track_focus(...)`/`.focusable()`, so the node gets `Action::Focus` for free. Its `.id(...)` is already stable (set in `FieldControl::default`/`FieldControl::id`), satisfying the id+role requirement.
+- **`FieldRoot`** (`field/layers/field_root.rs`): no role in Base UI; do NOT assign `Role::GenericContainer` (filtered/asserted). Leave out of the a11y tree.
+- **`FieldItem`** (`field/layers/field_item.rs`): generic wrapper in Base UI; leave out of the a11y tree.
+- **`FieldLabel`** (`field/layers/field_label.rs`): native `<label>` has no ARIA role of its own; its purpose is name association, which we replace with literal `.aria_label` on the control. Leave the label itself roleless.
+- **`FieldDescription`** (`field/layers/field_description.rs`): plain text in Base UI, referenced only via `aria-describedby`. No role; visible text remains readable by AT as plain text.
+- **`FieldError`** (`field/layers/field_error.rs`): plain text referenced via `aria-describedby`; announcing its appearance needs a live region (gap below). No role assigned in this revision.
+- **`FieldValidity`** (`field/layers/field_validity.rs`): render-callback only, no DOM/ARIA output in Base UI. Nothing to do.
+- **Field-aware controls** (Checkbox, Switch, Radio Group via `FieldControlRegistration` in `field/runtime.rs`): their roles/aria props belong to their own port issues; Field's contribution is supplying the accessible name and (eventually) description/invalid state to them.
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are needed. `FieldLabel` already wires `.on_click(...)` (click-to-focus via `FieldContext::focus_control`), which auto-registers `Action::Click`, and the `Input` primitive's `.track_focus(...)` auto-registers `Action::Focus`. Since the label carries no role it is not surfaced to AT anyway; AT users reach the control directly.
+
+### Labels
+
+- Add label-text plumbing: extend `FieldRuntime::register_label()` (and `FieldContext::register_label`) to also store the label's text as a `SharedString`, so `FieldControl` (and registered Checkbox/Switch/Radio Group controls) can read it and set `.aria_label(...)` on their interactive element. This replaces Base UI's `aria-labelledby={labelId}` id wiring, which has no gpui builder.
+- Also allow an explicit `.aria_label(...)` builder on `FieldControl` as an override when no `FieldLabel` is present.
+- Once the control's `.aria_label` is set from the label text, render `FieldLabel`'s visible text with `Text::new_inaccessible(...)` (instead of accessible `text!(...)`) so the name is not announced twice.
+- `FieldDescription`/`FieldError` text stays as ordinary visible text; do not fold it into `.aria_label` (it is a description, not a name).
+
+### Gaps (no gpui builder in this revision)
+
+- **`aria-labelledby`**: no relationship builders. Fallback: literal `.aria_label(...)` plumbed through `FieldRuntime` label registration, as above.
+- **`aria-describedby`** (description + error message ids): no builder and no `set_described_by` exposure. Fallback: omit + document; description/error remain visible text only. Revisit if gpui grows relationship props.
+- **`aria-invalid`** (from `useFieldValidation.getValidationProps`): no `.aria_invalid(...)` builder and `write_a11y_info` never sets an invalid flag. Fallback: omit + document; `FieldValidityData` already exposes the state for styling.
+- **`aria-required` / `required`**: no builder. Fallback: omit + document; `FieldControlRegistration::required(...)` metadata is preserved for a future upstream addition.
+- **`disabled` / `aria-disabled`**: no builder. Fallback: while `FieldRoot`/`FieldItem` disabled cascades, the control already suppresses pointer/keyboard interaction; document that AT is not told the control is disabled, and track a gpui upstream `set_disabled` addition.
+- **Live announcement of `FieldError` appearing** (Base UI relies on `aria-describedby` re-read; a GPUI equivalent needs an announcement/live-region API): no public API in this revision. Blocked pending gpui upstream.
+
+### Checklist
+
+- [ ] Store label text in `FieldRuntime` via `register_label` and expose it through `FieldContext` for registered controls.
+- [ ] Set `.role(Role::TextInput)` and `.aria_label(...)` (from field label text, with explicit builder override) on the `Input` element inside `FieldControl`.
+- [ ] Surface the field label text to registered Checkbox/Switch/Radio Group controls so their own a11y follow-ups can consume it as `.aria_label`.
+- [ ] Render `FieldLabel` visible text with `Text::new_inaccessible(...)` once the control carries the `.aria_label`, to avoid double-announcing.
+- [ ] Confirm no extra `on_a11y_action` handlers are needed (Click on label and Focus on control are auto-registered by the existing `.on_click`/`.track_focus`).
+- [ ] Do not assign roles to `FieldRoot`, `FieldItem`, `FieldLabel`, `FieldDescription`, `FieldError`, or `FieldValidity`; never use `Role::GenericContainer`.
+- [ ] Document the omitted `aria-labelledby`/`aria-describedby`/`aria-invalid`/`aria-required`/`aria-disabled` wiring in `field/mod.rs` module docs, referencing this section.
+- [ ] Track `FieldError` live announcement as blocked pending a gpui announcement/live-region API.
+- [ ] Add an a11y test (windowed) asserting the `FieldControl` input node exposes `Role::TextInput` and the label text, if gpui test helpers permit.

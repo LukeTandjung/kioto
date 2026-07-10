@@ -1,3 +1,17 @@
+//! Accessibility: the trigger is exposed as `Role::Button` (with an optional
+//! `TooltipTrigger::aria_label`) and the open popup as `Role::Tooltip`; all
+//! other layers stay out of the accessibility tree, matching Base UI's
+//! ARIA-light tooltip. Known gaps in the pinned gpui revision:
+//! - `disabled`: no `.aria_disabled(...)` builder exists, so AT cannot see a
+//!   disabled trigger state. Disabled triggers are removed from tab order and
+//!   omit the Click a11y action instead; blocked pending an upstream gpui
+//!   `set_disabled` addition.
+//! - `aria-describedby` trigger→popup relationship: no relationship builders
+//!   exist. Base UI does not emit this for Tooltip either; tooltip content is
+//!   not an accessible description or name for the trigger.
+//! - Live-region announcements of tooltip content on open: no announcement
+//!   API exists, so tooltips remain sighted-user visual hints.
+
 pub mod actions;
 pub mod child;
 mod child_wiring;

@@ -48,6 +48,14 @@ pub fn resolve_mode(mode: AutocompleteMode) -> (bool, bool) {
 /// component's value axis is the input text. Mirrors Base UI, where
 /// `AutocompleteRoot` renders `AriaCombobox` directly rather than
 /// `ComboboxRoot`. No selection props, no `.multiple`, no fill-on-press knob.
+///
+/// Accessibility gaps (no gpui builders in this revision, blocked upstream):
+/// Base UI's `aria-autocomplete` — literally the [`AutocompleteMode`] — has no
+/// accesskit exposure, so the `mode` is not conveyed to assistive technology.
+/// Likewise the disabled/read-only state is not announced (the runtime merely
+/// ignores interactions), and the status/empty live regions
+/// (`aria-live="polite"`) plus the `Both`/`Inline` inline overlay text swap
+/// are silent to AT for now.
 #[derive(IntoElement)]
 pub struct AutocompleteRoot<T: Clone + Eq + 'static> {
     id: ElementId,

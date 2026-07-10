@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, App, ClickEvent, Div, ElementId, Entity, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Toggled, Window,
 };
 
 use crate::{
@@ -36,6 +36,7 @@ pub struct CheckboxRoot {
     read_only: bool,
     required: bool,
     on_checked_change: Option<CheckboxCheckedChangeHandler>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(CheckboxRootStyleState, Div) -> Div + 'static>>,
 }
 
@@ -57,6 +58,7 @@ impl Default for CheckboxRoot {
             read_only: false,
             required: false,
             on_checked_change: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -177,7 +179,20 @@ impl RenderOnce for CheckboxRoot {
         let toggle_group_context = group_context;
         let toggle_value = value;
 
+        let aria_toggled = if style_state.indeterminate {
+            Toggled::Mixed
+        } else if style_state.checked {
+            Toggled::True
+        } else {
+            Toggled::False
+        };
+
         base.id(self.id)
+            .role(Role::CheckBox)
+            .aria_toggled(aria_toggled)
+            .when_some(self.aria_label, |this, aria_label| {
+                this.aria_label(aria_label)
+            })
             .track_focus(
                 &focus_handle
                     .tab_stop(!disabled)
@@ -325,6 +340,11 @@ impl CheckboxRoot {
             + 'static,
     ) -> Self {
         self.on_checked_change = Some(Rc::new(on_checked_change));
+        self
+    }
+
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

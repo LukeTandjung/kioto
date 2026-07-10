@@ -2,7 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement,
-    RenderOnce, StyleRefinement, Styled, Window,
+    RenderOnce, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window,
 };
 
 use crate::progress::{ProgressChild, ProgressContext, ProgressProps, ProgressStyleState};
@@ -16,6 +17,7 @@ pub struct ProgressRoot {
     min: f64,
     max: f64,
     format: Option<Rc<dyn Fn(f64) -> String + 'static>>,
+    label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(ProgressStyleState, Div) -> Div + 'static>>,
 }
 
@@ -29,6 +31,7 @@ impl Default for ProgressRoot {
             min: 0.0,
             max: 100.0,
             format: None,
+            label: None,
             style_with_state: None,
         }
     }
@@ -64,11 +67,29 @@ impl RenderOnce for ProgressRoot {
 
         let style_state = context.read(|runtime| runtime.state());
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(style_state, self.base),
+            Some(style_with_state) => style_with_state(style_state.clone(), self.base),
             None => self.base,
         };
 
-        base.id(self.id).children(children)
+        // Base UI's `role="progressbar"` + `aria-valuemin/max/now`. No
+        // `.aria_valuetext` builder exists in this gpui revision, so the
+        // formatted string / `"indeterminate progress"` default is omitted;
+        // indeterminate is conveyed by omitting the numeric value.
+        let base = base
+            .id(self.id)
+            .role(Role::ProgressIndicator)
+            .aria_min_numeric_value(style_state.min)
+            .aria_max_numeric_value(style_state.max);
+        let base = match style_state.clamped_value {
+            Some(value) => base.aria_numeric_value(value),
+            None => base,
+        };
+        let base = match self.label {
+            Some(label) => base.aria_label(label),
+            None => base,
+        };
+
+        base.children(children)
     }
 }
 
@@ -122,6 +143,14 @@ impl ProgressRoot {
     /// when indeterminate.
     pub fn format(mut self, format: impl Fn(f64) -> String + 'static) -> Self {
         self.format = Some(Rc::new(format));
+        self
+    }
+
+    /// Accessible label for the progress bar; the literal-string replacement
+    /// for Base UI's `aria-labelledby` wiring to `ProgressLabel`. Pass the
+    /// same string rendered inside `ProgressLabel`.
+    pub fn label(mut self, label: impl Into<SharedString>) -> Self {
+        self.label = Some(label.into());
         self
     }
 

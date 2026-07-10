@@ -2,8 +2,8 @@ use std::{rc::Rc, sync::Arc};
 
 use gpui::{
     div, prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, Entity,
-    FocusHandle, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    FocusHandle, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::button::{ButtonActivate, ButtonRootStyleState, BUTTON_ROOT_KEY_CONTEXT};
@@ -17,6 +17,7 @@ pub struct ButtonRoot {
     children: Vec<AnyElement>,
     disabled: bool,
     focusable_when_disabled: bool,
+    aria_label: Option<SharedString>,
     on_click: Option<ButtonClickHandler>,
     style_with_state: Option<Rc<dyn Fn(ButtonRootStyleState, Div) -> Div + 'static>>,
 }
@@ -29,6 +30,7 @@ impl Default for ButtonRoot {
             children: Vec::new(),
             disabled: false,
             focusable_when_disabled: false,
+            aria_label: None,
             on_click: None,
             style_with_state: None,
         }
@@ -64,6 +66,11 @@ impl RenderOnce for ButtonRoot {
         let pointer_handler = self.on_click;
 
         base.id(self.id)
+            .role(Role::Button)
+            // Note: gpui has no `.aria_disabled(...)` builder in this revision,
+            // so neither plain `disabled` nor `focusable_when_disabled` is
+            // announced to AT; activation stays inert via `activate(...)`.
+            .when_some(self.aria_label, |base, label| base.aria_label(label))
             .key_context(BUTTON_ROOT_KEY_CONTEXT)
             // A non-focusable disabled button must not track focus at all:
             // GPUI focuses any tracked element on click, which would paint
@@ -110,6 +117,14 @@ impl ButtonRoot {
 
     pub fn focusable_when_disabled(mut self, focusable_when_disabled: bool) -> Self {
         self.focusable_when_disabled = focusable_when_disabled;
+        self
+    }
+
+    /// Accessible name for the button. Required for icon-only buttons; when
+    /// set alongside a visible text child, render that child with
+    /// `Text::new_inaccessible(...)` to avoid double-announcing.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

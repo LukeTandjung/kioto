@@ -5,9 +5,9 @@ use std::{
 };
 
 use gpui::{
-    div, AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, MouseButton, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AccessibleAction, AnyElement, App, Div, ElementId, Entity,
+    FocusHandle, InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -44,6 +44,7 @@ pub struct PreviewCardTrigger<P: Clone + 'static = ()> {
     delay: Option<Duration>,
     close_delay: Option<Duration>,
     order: usize,
+    aria_label: Option<SharedString>,
     style_with_state: Option<PreviewCardTriggerStyle<P>>,
 }
 
@@ -61,6 +62,7 @@ impl<P: Clone + 'static> Default for PreviewCardTrigger<P> {
             delay: None,
             close_delay: None,
             order: 0,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -142,13 +144,16 @@ impl<P: Clone + 'static> RenderOnce for PreviewCardTrigger<P> {
         }
 
         let press_context = context.clone();
+        let a11y_press_context = context.clone();
         let close_context = context.clone();
         let hover_context = context.clone();
         let move_context = context.clone();
         let measure_context = context.clone();
         let press_id = scoped_id.clone();
+        let a11y_press_id = scoped_id.clone();
         let hover_id = scoped_id.clone();
         let press_focus_handle = focus_handle.clone();
+        let a11y_press_focus_handle = focus_handle.clone();
         let measure_id = scoped_id.clone();
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
@@ -173,6 +178,35 @@ impl<P: Clone + 'static> RenderOnce for PreviewCardTrigger<P> {
             .child(
                 base.occlude()
                     .id(scoped_id)
+                    // Base UI's trigger renders an `<a>`; Role::Link mirrors
+                    // that. gpui surfaces no href/URL property, so link
+                    // navigation remains the consumer's press concern. Base UI
+                    // emits no aria-expanded on this trigger, so we omit it
+                    // too (parity, not an omission).
+                    .role(Role::Link)
+                    .when_some(self.aria_label, |this, label| this.aria_label(label))
+                    // Mirrors on_mouse_down: pressing an open trigger
+                    // dismisses (TriggerPress), otherwise the press focuses
+                    // the trigger and focus-open takes over. `Action::Focus`
+                    // is auto-registered by `.track_focus(...)`; `on_click`
+                    // is not used here, so Click must be registered manually.
+                    .on_a11y_action(AccessibleAction::Click, move |_data, window, cx| {
+                        if let Some(context) = a11y_press_context.as_ref() {
+                            let close_active = context.update(cx, |runtime| {
+                                runtime.sync_trigger_press(a11y_press_id.clone())
+                            });
+                            if close_active {
+                                context.close(
+                                    PreviewCardOpenChangeReason::TriggerPress,
+                                    PreviewCardOpenChangeSource::Unknown,
+                                    window,
+                                    cx,
+                                );
+                                return;
+                            }
+                        }
+                        a11y_press_focus_handle.focus(window, cx);
+                    })
                     .track_focus(&focus_handle.tab_stop(true).tab_index(0))
                     .focusable()
                     .key_context(PREVIEW_CARD_KEY_CONTEXT)
@@ -352,6 +386,14 @@ impl<P: Clone + 'static> PreviewCardTrigger<P> {
 
     pub fn close_delay(mut self, close_delay: Duration) -> Self {
         self.close_delay = Some(close_delay);
+        self
+    }
+
+    /// Accessible name for the link trigger. When set, construct the visible
+    /// label children with `Text::new_inaccessible(...)` instead of `text!`
+    /// so the label is not announced twice.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

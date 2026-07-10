@@ -152,9 +152,17 @@ impl FieldContext {
         }
     }
 
-    pub fn register_label(&self, cx: &mut App) {
+    pub fn register_label(&self, text: Option<gpui::SharedString>, cx: &mut App) {
         self.runtime
-            .update(cx, |runtime, _cx| runtime.register_label());
+            .update(cx, |runtime, _cx| runtime.register_label(text));
+    }
+
+    /// Returns the registered label text so field-aware controls can expose
+    /// it as their accessible name via `.aria_label(...)`. Replaces Base UI's
+    /// `aria-labelledby` id wiring, which has no builder in this gpui
+    /// revision.
+    pub fn label_text(&self, cx: &App) -> Option<gpui::SharedString> {
+        self.read(cx, |runtime, _| runtime.label_text())
     }
 
     pub fn register_description(&self, cx: &mut App) {

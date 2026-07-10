@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, SharedString,
-    StyleRefinement, Styled, Window,
+    StyleRefinement, Styled, Text, Window,
 };
 
 type SelectValueStyle<T> = Rc<dyn Fn(SelectValueStyleState<T>, Div) -> Div + 'static>;
@@ -72,10 +72,14 @@ impl<T: Clone + Eq + 'static> RenderOnce for SelectValue<T> {
             None => self.base,
         };
 
+        // The trigger carries the accessible name and expanded state, so the
+        // visible value text stays out of the a11y tree to avoid
+        // double-announcing. Value announcement on change has no live-region
+        // API in this gpui revision.
         let value = if has_custom_children {
             base.children(self.children)
         } else {
-            base.child(display_text)
+            base.child(Text::new_inaccessible(display_text))
         };
 
         div()

@@ -726,14 +726,106 @@ Measurement / style state:
 
 ## AccessKit accessibility follow-up
 
-Consistent with the Dialog/AlertDialog follow-ups — no DOM ARIA now. When the
-project updates to a GPUI revision with AccessKit support:
+Written against the pinned gpui revision's AccessKit surface
+(`docs/accesskit-gpui-reference.md`). An element enters the a11y tree only when it
+has both `.id(...)` and `.role(...)`; parts that Base UI marks
+`role="presentation"` / `aria-hidden` simply get **no** `.role(...)` call and stay
+out of the tree. Drawer reuses the Dialog parts, so Trigger/Title/Description/
+Close semantics land in the Dialog follow-up (`issues/port-baseui-dialog.md`) and
+are only verified here through the re-exports.
 
-- [ ] Drawer popup keeps `Role::Dialog` (Base UI drawers use `role="dialog"`).
-- [ ] SwipeArea and Backdrop are presentation-only / hidden in the accessibility
-      tree.
-- [ ] Title/Description labelling relationships inherit from the Dialog AccessKit
-      work.
+### Per accessible part
+
+- **`DrawerPopup<P>`** (`drawer/layers/drawer_popup.rs`) — the only new node.
+  Base UI renders the drawer popup with the Dialog store's `role`
+  (`DrawerPopup.tsx:149,366`), which is `dialog` for a plain drawer. Add
+  `.role(Role::Dialog)` on the `base.id(self.id)` element inside `render`. The
+  element already carries `.track_focus(&focus_handle.tab_stop(true).tab_index(0))`
+  and `.focusable()`, so the `Focus` a11y action is auto-registered. Guard the role
+  the same way rendering is guarded: the early `if !state.mounted { return div(); }`
+  path already keeps unmounted popups out of the tree; a kept-mounted closed popup
+  is covered by the inherited Dialog hidden/inert item below.
+- **`DrawerBackdrop<P>`** (`drawer/layers/drawer_backdrop.rs`) — Base UI sets
+  `role="presentation"` (`DrawerBackdrop.tsx:48`). Give it no `.role(...)`; the
+  existing `base.id("drawer-backdrop")` alone keeps it out of the a11y tree. No
+  further work.
+- **`DrawerSwipeArea<P>`** (`drawer/layers/drawer_swipe_area.rs`) — Base UI sets
+  `aria-hidden: true` (`DrawerSwipeArea.tsx:411`). Give it no `.role(...)` so it is
+  not reported. It has `.track_focus(&focus_handle)` for gesture bookkeeping; since
+  a role-less node is not in the tree, no `Focus` action is exposed to AT, matching
+  Base UI's pointer-only intent.
+- **`DrawerViewport<P>`, `DrawerContent<P>`, `DrawerRoot<P>`, `DrawerProvider`,
+  `DrawerIndent`, `DrawerIndentBackground`, `DrawerPortal<P>`** — pure structural /
+  gesture containers with no ARIA in Base UI. No `.role(...)` on any of them; do
+  not use `Role::GenericContainer` (gpui filters/asserts on it).
+- **Reused Dialog parts** (`DrawerTrigger`, `DrawerTitle`, `DrawerDescription`,
+  `DrawerClose`) — inherit their roles/props from the Dialog follow-up
+  (`Role::Button` + `.aria_expanded(open)` on the trigger, etc.). Nothing
+  drawer-specific to add; just verify they still carry their a11y wiring when
+  routed through the drawer child enums.
+
+### Actions
+
+- `Action::Click` and `Action::Focus` are auto-registered by the existing
+  `.on_click(...)` / `.track_focus(...)` wiring on the reused Dialog trigger/close
+  parts and the popup's `track_focus` — do **not** re-add them.
+- [ ] Add `.on_a11y_action(AccessibleAction::Collapse, ...)` (exposed as
+      `gpui::AccessibleAction` = `accesskit::Action`) on `DrawerPopup<P>` routing
+      into the same close path the Escape action already uses:
+      `context.dialog().close(DialogOpenChangeReason::EscapeKey /* or a dedicated
+      reason */, DialogOpenChangeSource::Keyboard, window, cx)`. Do not duplicate
+      close logic; reuse the `DialogCloseAction` handler's body/context clone.
+- No a11y action is exposed for swipe gestures or snap-point changes: Base UI has
+  no ARIA surface for them either (snap points are pointer-only). Keyboard/AT
+  users open/close via Trigger/Close/Escape, which the Dialog path covers.
+
+### Labels
+
+- The drawer popup's accessible name comes from `DrawerTitle` (= `DialogTitle`).
+  Base UI wires this with `aria-labelledby`/`aria-describedby` id references
+  (`DrawerPopup.tsx:364-365`), which have no gpui builder — see Gaps. Fallback:
+  add a `DrawerPopup::aria_label(impl Into<SharedString>)` pass-through (mirroring
+  whatever `DialogPopup` grows in the Dialog follow-up) that sets
+  `.aria_label(...)` on the popup element, and document that users should pass the
+  title text explicitly.
+- When an `aria_label` is set on the popup, any visible title rendered with
+  `text!(...)` inside `DrawerTitle` should use `Text::new_inaccessible(...)` so the
+  title text is not announced twice. This lives in the Dialog title layer; track it
+  there, verify through Drawer.
+
+### Gaps (no gpui builder in this revision — do not invent)
+
+- **`aria-labelledby` / `aria-describedby`** (`DrawerPopup.tsx:364-365`): no
+  relationship builders exist. Fallback: literal `.aria_label(...)` on the popup
+  as above; describedby is omitted and documented.
+- **`aria-hidden`** on `DrawerSwipeArea` and kept-mounted closed content: no
+  builder. Fallback: omit the role (node never enters the tree); hidden/inert
+  kept-mounted popup content is blocked on the inherited Dialog item.
+- **`aria-modal`**: no builder; `Role::Dialog` plus the focus trap is the closest
+  expressible state. Omit and document.
+- **`aria-haspopup` on the trigger**: no builder — Dialog-follow-up gap, noted
+  there; Drawer adds nothing.
+- **`disabled` on `DrawerSwipeArea`**: irrelevant here since the swipe area is not
+  in the a11y tree at all; no `.aria_disabled` exists regardless.
+- No live-region needs: Drawer announces nothing (`aria-live` unused in the Base
+  UI source).
+
+### Checklist
+
+- [ ] `DrawerPopup<P>` sets `.role(Role::Dialog)` on its `id`-ed element; verify
+      the node appears only while `state.mounted`.
+- [ ] `DrawerBackdrop`, `DrawerSwipeArea`, `DrawerViewport`, `DrawerContent`,
+      `DrawerIndent`, `DrawerIndentBackground`, `DrawerProvider` set no role and
+      are absent from the a11y tree.
+- [ ] Popup exposes an `aria_label` pass-through and documents the labelledby gap;
+      visible title text switched to `Text::new_inaccessible(...)` when a label is
+      set (via the Dialog title work).
+- [ ] `AccessibleAction::Collapse` on the popup routes into the existing
+      `DialogContext::close` path; Click/Focus not re-registered.
+- [ ] Re-exported Dialog trigger/close parts keep their Dialog a11y wiring when
+      rendered through drawer child routing (compile/behavior smoke test).
+- [ ] Gaps above re-checked whenever the pinned gpui revision is bumped
+      (labelledby/describedby, aria-modal, aria-hidden, haspopup).
 
 ## Uncertain items needing confirmation
 

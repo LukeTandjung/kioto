@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    Role, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::number_field::{
@@ -11,6 +12,7 @@ use crate::number_field::{
 
 #[derive(IntoElement)]
 pub struct NumberFieldGroup {
+    id: Option<ElementId>,
     base: Div,
     children: Vec<NumberFieldGroupChild>,
     context: Option<NumberFieldContext>,
@@ -20,6 +22,7 @@ pub struct NumberFieldGroup {
 impl Default for NumberFieldGroup {
     fn default() -> Self {
         Self {
+            id: None,
             base: div(),
             children: Vec::new(),
             context: None,
@@ -39,13 +42,17 @@ impl RenderOnce for NumberFieldGroup {
         let context = self
             .context
             .expect("NumberFieldGroup must be rendered inside NumberFieldRoot");
+        let id = self.id.unwrap_or_else(|| context.child_id("group"));
         let style_state = context.read(cx, |runtime, props| runtime.group_state(props));
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
 
-        base.children(wire_group_children(self.children, context))
+        // Matches Base UI's `role="group"` on the group part.
+        base.id(id)
+            .role(Role::Group)
+            .children(wire_group_children(self.children, context))
     }
 }
 
@@ -56,6 +63,11 @@ impl NumberFieldGroup {
 
     pub fn with_number_field_context(mut self, context: NumberFieldContext) -> Self {
         self.context = Some(context);
+        self
+    }
+
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = Some(id.into());
         self
     }
 

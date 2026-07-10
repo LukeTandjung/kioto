@@ -9,9 +9,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use gpui::{
-    div, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _, IntoElement,
-    ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _, StyleRefinement,
-    Styled, Window,
+    div, point, AccessibleAction, App, Div, ElementId, Entity, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, Pixels, Point, RenderOnce, Role,
+    ScrollHandle, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::scroll_area::{
@@ -26,6 +26,7 @@ pub struct ScrollAreaViewport {
     children: Vec<ScrollAreaViewportChild>,
     style_with_state: Option<Rc<dyn Fn(ScrollAreaRootStyleState, Div) -> Div + 'static>>,
     context: Option<ScrollAreaContext>,
+    aria_label: Option<SharedString>,
 }
 
 impl Default for ScrollAreaViewport {
@@ -36,6 +37,7 @@ impl Default for ScrollAreaViewport {
             children: Vec::new(),
             style_with_state: None,
             context: None,
+            aria_label: None,
         }
     }
 }
@@ -87,25 +89,66 @@ impl RenderOnce for ScrollAreaViewport {
         } else {
             base
         };
-        base.on_children_prepainted(move |_bounds, _window, cx| {
-            // Post-layout observation: picks up scrolling from any
-            // source (wheel, primitive drag/track-click) and layout
-            // changes that alter max_offset, notifying only on change.
-            let now = Instant::now();
-            observe_context.refresh(cx, |runtime, props| {
-                let mut changed = runtime.observe_scroll(observe_handle.offset(), now);
-                changed |= runtime.refresh_overflow(
-                    observe_handle.offset(),
-                    observe_handle.max_offset(),
-                    props.overflow_edge_threshold(),
-                );
-                changed
-            });
-        })
-        .id(self.id)
-        .overflow_scroll()
-        .track_scroll(&handle)
-        .children(children)
+        let base = base
+            .on_children_prepainted(move |_bounds, _window, cx| {
+                // Post-layout observation: picks up scrolling from any
+                // source (wheel, primitive drag/track-click) and layout
+                // changes that alter max_offset, notifying only on change.
+                let now = Instant::now();
+                observe_context.refresh(cx, |runtime, props| {
+                    let mut changed = runtime.observe_scroll(observe_handle.offset(), now);
+                    changed |= runtime.refresh_overflow(
+                        observe_handle.offset(),
+                        observe_handle.max_offset(),
+                        props.overflow_edge_threshold(),
+                    );
+                    changed
+                });
+            })
+            .id(self.id)
+            .overflow_scroll()
+            .track_scroll(&handle);
+
+        let base = if focusable {
+            // Only a focusable (scrollable) viewport joins the a11y tree;
+            // otherwise no role, matching Base UI's `role="presentation"` +
+            // `tabIndex: -1` for a non-scrollable viewport. `track_focus`
+            // above already auto-registers the Focus a11y action.
+            let mut base = base.role(Role::ScrollView);
+            if let Some(label) = self.aria_label.clone() {
+                base = base.aria_label(label);
+            }
+            let scroll_up = handle.clone();
+            let scroll_down = handle.clone();
+            let scroll_left = handle.clone();
+            let scroll_right = handle.clone();
+            // AT-driven scrolling mutates the shared ScrollHandle; the
+            // repaint's `on_children_prepainted` observer then feeds the new
+            // offset through the same `observe_scroll`/`refresh_overflow`
+            // path as wheel and primitive-drag scrolling.
+            base.on_a11y_action(AccessibleAction::ScrollUp, move |_data, window, _cx| {
+                scroll_by_page(&scroll_up, point(0.0, 1.0));
+                window.refresh();
+            })
+            .on_a11y_action(AccessibleAction::ScrollDown, move |_data, window, _cx| {
+                scroll_by_page(&scroll_down, point(0.0, -1.0));
+                window.refresh();
+            })
+            .on_a11y_action(AccessibleAction::ScrollLeft, move |_data, window, _cx| {
+                scroll_by_page(&scroll_left, point(1.0, 0.0));
+                window.refresh();
+            })
+            .on_a11y_action(
+                AccessibleAction::ScrollRight,
+                move |_data, window, _cx| {
+                    scroll_by_page(&scroll_right, point(-1.0, 0.0));
+                    window.refresh();
+                },
+            )
+        } else {
+            base
+        };
+        base.children(children)
     }
 }
 
@@ -140,6 +183,15 @@ impl ScrollAreaViewport {
         self
     }
 
+    /// Accessible name for the scroll region, exposed via `.aria_label(...)`
+    /// while the viewport is focusable. Base UI supplies no default label;
+    /// an unlabeled scroll region announces poorly, so consumers should set
+    /// one.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
+        self
+    }
+
     pub fn style_with_state(
         mut self,
         style: impl Fn(ScrollAreaRootStyleState, Div) -> Div + 'static,
@@ -147,6 +199,21 @@ impl ScrollAreaViewport {
         self.style_with_state = Some(Rc::new(style));
         self
     }
+}
+
+/// Scroll one viewport-page fraction in the given direction (offset grows
+/// more negative as content scrolls down/right), clamped to the scrollable
+/// range.
+fn scroll_by_page(handle: &ScrollHandle, direction: Point<f32>) {
+    let page = handle.bounds().size;
+    let max_offset = handle.max_offset();
+    let offset = handle.offset();
+    let step_fraction = 0.85;
+    let next = point(
+        (offset.x + page.width * direction.x * step_fraction).clamp(-max_offset.x, Pixels::ZERO),
+        (offset.y + page.height * direction.y * step_fraction).clamp(-max_offset.y, Pixels::ZERO),
+    );
+    handle.set_offset(next);
 }
 
 fn viewport_focus_handle(id: &ElementId, window: &mut Window, cx: &mut App) -> FocusHandle {

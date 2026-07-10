@@ -1,3 +1,12 @@
+//! Checkbox Group.
+//!
+//! Accessibility: the group div carries `Role::Group` plus an optional literal
+//! `.aria_label(...)`. Known AccessKit gaps in the pinned gpui revision (see
+//! `docs/accesskit-gpui-reference.md`): no `aria-labelledby` id-reference
+//! wiring (automatic Field label association is not mirrored into the a11y
+//! tree), and no `aria-disabled` builder — disabling remains behavior-level
+//! only (blocked pending an upstream gpui `set_disabled` addition).
+
 pub mod actions;
 pub mod child;
 mod child_wiring;

@@ -243,9 +243,8 @@ Expected GPUI implementation files:
 
 ### Accessibility follow-up
 
-- [ ] Once the target GPUI revision supports the needed AccessKit APIs, map Checkbox Group semantics to a GPUI-native group role/accessible name plan.
-- [ ] Once available, map CheckboxRoot semantics to AccessKit checkbox checked/mixed/disabled states in grouped and standalone modes.
-- [ ] Add accessibility tests once GPUI exposes test helpers for AccessKit state.
+See the `## AccessKit accessibility follow-up` section below for the concrete per-part plan.
+
 - [x] Do not write DOM ARIA attributes while AccessKit support is unavailable.
 
 ### Tests / verification
@@ -282,3 +281,49 @@ Add behavior tests under `crates/base_gpui/src/checkbox_group/tests/`.
 - [x] `style_with_state(...)` receives correct Checkbox Group style state.
 - [x] Existing `cargo test -p base_gpui checkbox` coverage remains green.
 - [x] Existing `cargo test -p base_gpui field form` coverage remains green.
+
+## AccessKit accessibility follow-up
+
+The pinned gpui revision (`1d029c5ff5654fb1b1e8caf4462993c8ee13a133`, accesskit `0.24.0`) exposes the AccessKit surface documented in `docs/accesskit-gpui-reference.md`. Map Checkbox Group onto it as follows. Base UI reference: `CheckboxGroup.tsx` emits `role="group"` + `aria-labelledby={labelId}`; `checkbox/root/CheckboxRoot.tsx` emits `role="checkbox"`, `aria-checked` (`'mixed'` when indeterminate), `aria-readonly`, `aria-required`, and `aria-labelledby`.
+
+### Per accessible part
+
+- `CheckboxGroup` (`checkbox_group/layers/checkbox_group.rs`): give the styled `base` div a stable `.id(self.id.clone())` and `.role(Role::Group)` so the group appears in the a11y tree (an element needs both a non-`None` id and a role to be reported). Add an `.aria_label(...)` builder on `CheckboxGroup` that forwards to the div; Base UI's `aria-labelledby={labelId}` id-reference wiring has no gpui equivalent (see Gaps). No toggled/selected state belongs on the group itself; `CheckboxGroupStyleState` fields (`disabled`, `invalid`, etc.) stay style-only for now.
+- `CheckboxRoot` (`checkbox/layers/checkbox_root.rs`): the layer already calls `base.id(self.id)`, so only the role and props are missing. Set `.role(Role::CheckBox)` in both standalone and grouped modes. Map state from the computed `CheckboxRootStyleState`:
+  - `style_state.indeterminate` → `.aria_toggled(Toggled::Mixed)` (covers Base UI `aria-checked="mixed"`, including the grouped parent's `parent_indeterminate` case),
+  - otherwise `style_state.checked` → `.aria_toggled(Toggled::True)` / `Toggled::False`.
+  - `.aria_label(...)`: add a builder prop on `CheckboxRoot` (see Labels).
+- `CheckboxIndicator` (`checkbox/layers/checkbox_indicator.rs`): purely visual; give it no role so it stays out of the a11y tree. Do not port the Base UI hidden `<input aria-hidden>`; it has no GPUI analogue and is already out of scope.
+
+### Actions
+
+- `Action::Click` and `Action::Focus` are auto-registered: `CheckboxRoot` already wires `.on_click(...)` (which routes through `request_checkbox_toggle`) and `.track_focus(...)`, so AT click/focus dispatch flows into the exact same `CheckboxContext::request_toggle` → `CheckboxGroupContext::toggle_child` / `toggle_parent` path as pointer and `CheckboxToggle` keyboard activation. Do **not** re-add these handlers.
+- No additional `.on_a11y_action(...)` handlers are needed for the group or its children; there is no expand/increment semantics in this component.
+- The group container itself is non-interactive; it needs no action handlers.
+
+### Labels
+
+- `CheckboxRoot` gains an `.aria_label(impl Into<SharedString>)` builder that the app sets per checkbox (Base UI relies on `aria-labelledby` pointing at an external `<label>`; gpui has no id-reference wiring, so the literal label string is the substitute).
+- `CheckboxGroup` gains the same builder for the group's accessible name (Base UI's `labelId` from `Field.Label`).
+- Where a demo or app places visible label text next to a checkbox whose `.aria_label(...)` already carries the same string, render the visible text with `Text::new_inaccessible(...)` instead of `text!(...)` so the label is not announced twice. Labels rendered via `FieldLabel` for a *different* string (e.g. group heading) can stay accessible.
+
+### Gaps (no gpui builder in this revision)
+
+- `aria-labelledby` (group ← `Field.Label` id; checkbox ← label id): no relationship-prop builders exist. Fallback: literal `.aria_label(...)` builders as above; document that automatic Field label association is not mirrored into the a11y tree.
+- `disabled` / `aria-disabled`: no `.aria_disabled(...)` builder and `write_a11y_info` never sets a disabled flag. Fallback: keep behavior-level disabling (the toggle path already no-ops via `request_toggle` when `CheckboxRootStyleState::disabled` is true, and Click/Focus stay registered), and document that AT will not see a disabled state; track a `set_disabled` upstream addition to gpui as blocked-pending-upstream. Applies to root `disabled`, group `disabled`, field/fieldset-derived disabled.
+- `aria-readonly`: no builder. Fallback: omit; read-only already blocks toggling at the runtime level. Document the limitation.
+- `aria-required`: no builder. Fallback: omit and rely on field validation messaging; blocked pending upstream.
+- `aria-invalid` (field validity on grouped checkboxes): no builder. Fallback: omit; validity remains visual via `style_with_state`.
+- Live-region announcements for validation errors: no public API; out of scope here (tracked with Field/Form a11y follow-ups).
+
+### Checklist
+
+- [ ] Give the `CheckboxGroup` base div a stable `.id(...)` and `.role(Role::Group)`.
+- [ ] Add `CheckboxGroup::aria_label(...)` and forward it to the group div.
+- [ ] Set `.role(Role::CheckBox)` on `CheckboxRoot` in standalone and grouped modes.
+- [ ] Map `CheckboxRootStyleState::{indeterminate, checked}` to `.aria_toggled(Toggled::Mixed / True / False)`, covering grouped parent indeterminate state.
+- [ ] Add `CheckboxRoot::aria_label(...)`; do not attempt `aria-labelledby`-style id wiring.
+- [ ] Verify `CheckboxIndicator` carries no role and stays out of the a11y tree.
+- [ ] Confirm `Action::Click`/`Action::Focus` arrive via the existing `on_click`/`track_focus` registration and drive `request_checkbox_toggle` for child and parent checkboxes; add no duplicate handlers.
+- [ ] Swap duplicated visible label text for `Text::new_inaccessible(...)` where `.aria_label` already carries the same string (demo included).
+- [ ] Document the `disabled`/`read_only`/`required`/`invalid`/`aria-labelledby` gaps in `checkbox/AGENTS.md` or module docs, and note the upstream gpui `set_disabled` follow-up as blocked.

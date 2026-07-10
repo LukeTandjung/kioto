@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    StyleRefinement, Styled, Window,
+    div, App, Div, InteractiveElement as _, IntoElement, Orientation, ParentElement, RenderOnce,
+    Role, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::{
     navigation_menu::{
-        child_wiring::{NavigationMenuChildNode, NavigationMenuChildWiring},
+        child_wiring::{scoped_part_id, NavigationMenuChildNode, NavigationMenuChildWiring},
         NavigationMenuBoundsKind, NavigationMenuCloseAction, NavigationMenuContext,
         NavigationMenuFocusDown, NavigationMenuFocusFirst, NavigationMenuFocusLast,
         NavigationMenuFocusLeft, NavigationMenuFocusRight, NavigationMenuFocusUp,
@@ -107,7 +107,13 @@ impl<T: Clone + Eq + 'static> RenderOnce for NavigationMenuList<T> {
                 }
             })
             .child(
-                base.key_context(NAVIGATION_MENU_KEY_CONTEXT)
+                base.id(scoped_part_id(&context.root_id(), "navigation-menu-list"))
+                    .role(Role::List)
+                    .aria_orientation(match orientation {
+                        NavigationMenuOrientation::Horizontal => Orientation::Horizontal,
+                        NavigationMenuOrientation::Vertical => Orientation::Vertical,
+                    })
+                    .key_context(NAVIGATION_MENU_KEY_CONTEXT)
                     .on_action(
                         move |_: &NavigationMenuFocusLeft, window, cx| match orientation {
                             NavigationMenuOrientation::Horizontal => {

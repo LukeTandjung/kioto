@@ -171,12 +171,45 @@ Use `crates/base_gpui/src/checkbox/` as the closest implementation precedent, bu
 - [x] Do not expose CSS variable names as the styling API.
 - [x] The docs hero styling pattern can be recreated with GPUI builder methods: root background changes when checked, thumb position/color changes when checked, and focus styling can use the focused style state.
 
-### Accessibility follow-up
+### AccessKit accessibility follow-up
 
-- [ ] Once the target GPUI revision supports the needed AccessKit APIs, map root semantics to the GPUI/AccessKit switch role.
-- [ ] Once available, expose checked/unchecked state through GPUI-native accessibility APIs.
-- [ ] Once available, expose disabled/read-only/required state through GPUI-native accessibility APIs.
-- [ ] Decide how GPUI Switch gets an accessible name through future label/field APIs; do not port DOM `aria-labelledby`/`id` linking literally.
+The pinned gpui revision exposes AccessKit through `.role(...)`, `.aria_*(...)`, and `.on_a11y_action(...)` builders on `.id(...)`-carrying elements (see `docs/accesskit-gpui-reference.md`). Base UI's `SwitchRoot.tsx` emits `role="switch"`, `aria-checked`, `aria-readonly`, `aria-required`, and `aria-labelledby`; `SwitchThumb` emits no ARIA of its own.
+
+Per accessible part:
+
+- `SwitchRoot` (`layers/switch_root.rs`) is the only node that should appear in the a11y tree. In `render`, on the `base.id(self.id)` chain that already carries `.track_focus(...)` and `.on_click(...)`:
+  - `.role(Role::Switch)`.
+  - `.aria_toggled(if style_state.checked { Toggled::True } else { Toggled::False })`, sourced from the `SwitchRootStyleState` produced by `SwitchRuntime::root_state(props)` so the a11y state always matches the styled state, controlled or uncontrolled.
+  - `.aria_label(...)` from a new `SwitchRoot::aria_label(impl Into<SharedString>)` builder prop (see Labels below).
+- `SwitchThumb` (`layers/switch_thumb.rs`) is purely decorative: give it no `.role(...)` so it stays out of the a11y tree, matching Base UI where the thumb carries only style data attributes.
+
+Actions:
+
+- No new `.on_a11y_action(...)` handlers are needed. `Action::Click` is auto-registered by the existing `.on_click(...)` and `Action::Focus` by the existing `.track_focus(...)`; both already route into `SwitchContext::toggle(...)` / focus, the same runtime path as pointer and the `SwitchToggle` key binding.
+- However, the `on_click` handler currently early-returns unless `matches!(event, ClickEvent::Mouse(_))`. Verify how an AT-dispatched `Action::Click` surfaces as a `ClickEvent`; if it is not a `Mouse` variant, the toggle must accept it (routed as `SwitchCheckedChangeSource::Keyboard` or a dedicated source) instead of being silently dropped.
+
+Labels:
+
+- Base UI wires the name via `aria-labelledby` id references; gpui has no relationship builders, so the accessible name must come from a literal `.aria_label(...)` string on `SwitchRoot`. A future GPUI `Field`/`Label` primitive can feed this prop rather than porting DOM id linking.
+- Switch has no built-in visible text child, but if a demo places a visible label next to the switch while also setting `.aria_label(...)`, render that visible text with `Text::new_inaccessible(...)` (not `text!(...)`) so it is not announced twice.
+
+Gaps (Base UI ARIA with no gpui builder in this revision):
+
+- `aria-readonly` (`props.read_only()`): no builder; omit and document. Behavior is still correct — read-only activation is rejected in `SwitchRuntime::request_toggle` — but AT will not announce the read-only state.
+- `aria-required` (`props.required()`): no builder; omit and document until a field/validation a11y story exists.
+- `disabled` / `aria-disabled`: no builder and `write_a11y_info` never sets a disabled flag. Fallback: keep the existing behavior where a disabled root sets `tab_index(-1)`/`tab_stop(false)` and `request_toggle` rejects activation, and document that AT cannot perceive the disabled state; track a gpui upstream `set_disabled` addition.
+- `aria-labelledby`: no relationship builders; replaced by the literal `.aria_label(...)` above.
+
+Checklist:
+
+- [ ] Add `.role(Role::Switch)` and a keyed-stable a11y node on the `SwitchRoot` element (its `.id(...)` already exists and is keyed).
+- [ ] Set `.aria_toggled(...)` on `SwitchRoot` from `SwitchRootStyleState::checked` each render.
+- [ ] Add an `aria_label` builder prop to `SwitchRoot` and pass it through to `.aria_label(...)`.
+- [ ] Do not add a role to `SwitchThumb`; assert it stays out of the a11y tree.
+- [ ] Verify AT-dispatched `Action::Click` reaches `SwitchContext::toggle(...)` despite the `ClickEvent::Mouse` filter in `on_click`; fix the filter if it drops a11y clicks.
+- [ ] Do not re-register `Action::Click`/`Action::Focus` via `on_a11y_action`; they come from `on_click`/`track_focus`.
+- [ ] Use `Text::new_inaccessible(...)` for any visible label text in demos/examples that duplicate `.aria_label(...)`.
+- [ ] Document the `aria-readonly`, `aria-required`, and disabled-state gaps (no gpui builders in this revision) in the module docs; do not invent builders.
 - [ ] Add accessibility tests if GPUI exposes test helpers for AccessKit state.
 
 ### Field/form integration follow-up

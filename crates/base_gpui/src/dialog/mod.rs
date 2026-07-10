@@ -1,3 +1,25 @@
+//! Dialog component ported from Base UI.
+//!
+//! # Accessibility gaps (blocked pending gpui upstream)
+//!
+//! The pinned gpui revision exposes no builders for the following Base UI ARIA
+//! attributes, so they are intentionally omitted:
+//!
+//! - `aria-haspopup="dialog"` on the trigger; `Role::Dialog` on the popup conveys
+//!   the destination once open.
+//! - `aria-controls` (trigger → popup) — no id-reference/relationship builders.
+//! - `aria-labelledby` / `aria-describedby` (popup → title/description) — fallback
+//!   is the literal [`layers::DialogPopup::aria_label`] string; the runtime's
+//!   title/description id metadata is retained for a future relationship API.
+//! - `disabled` / `aria-disabled` on trigger and close — the existing `disabled`
+//!   guards suppress the runtime transition (AT clicks are no-ops), but the
+//!   disabled state itself is not conveyed to assistive technology.
+//! - `aria-modal` / outside-content inertness — `DialogModalMode::Modal` blocks
+//!   pointer input and traps Tab focus, but does not hide outside content from
+//!   the AccessKit tree.
+//! - Kept-mounted closed popup content is left role-less so it stays out of the
+//!   accessibility tree without a hidden/inert API.
+
 pub mod actions;
 pub mod child;
 pub mod child_wiring;

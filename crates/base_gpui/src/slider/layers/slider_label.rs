@@ -76,6 +76,11 @@ impl SliderLabel {
         self
     }
 
+    /// Base UI links this label to the root via `aria-labelledby`; gpui has
+    /// no id-reference builder, so the label text is instead supplied to
+    /// `SliderRoot::aria_label(...)`. Once that is set, pass the visible
+    /// label text here as `Text::new_inaccessible(...)` so it is not
+    /// announced twice.
     pub fn child(mut self, child: impl IntoElement) -> Self {
         self.children.push(child.into_any_element());
         self

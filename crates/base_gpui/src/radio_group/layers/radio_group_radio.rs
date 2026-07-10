@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, App, ClickEvent, Div, ElementId, Entity, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Toggled, Window,
 };
 
 use crate::{
@@ -30,6 +30,7 @@ pub struct RadioGroupRadio<T: Clone + Eq + 'static> {
     required: bool,
     index: Option<usize>,
     focus_handle: Option<FocusHandle>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(RadioGroupRadioStyleState, Div) -> Div + 'static>>,
 }
 
@@ -46,6 +47,7 @@ impl<T: Clone + Eq + 'static> Default for RadioGroupRadio<T> {
             required: false,
             index: None,
             focus_handle: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -70,6 +72,7 @@ impl<T: Clone + Eq + 'static> RenderOnce for RadioGroupRadio<T> {
             required,
             index,
             focus_handle,
+            aria_label,
             style_with_state,
         } = self;
 
@@ -106,6 +109,10 @@ impl<T: Clone + Eq + 'static> RenderOnce for RadioGroupRadio<T> {
         let down_context = context.clone();
         let activate_context = context.clone();
         let activate_value = value.clone();
+        let size_of_set = context
+            .as_ref()
+            .map(|context| context.read(cx, |runtime, _| runtime.radio_count()))
+            .filter(|count| *count > 0);
         let children = children
             .into_iter()
             .map(|child| child.with_radio_state(state).into_element())
@@ -124,6 +131,14 @@ impl<T: Clone + Eq + 'static> RenderOnce for RadioGroupRadio<T> {
             )
             .key_context(RADIO_GROUP_KEY_CONTEXT)
             .focusable()
+            .role(Role::RadioButton)
+            .aria_toggled(match state.checked {
+                true => Toggled::True,
+                false => Toggled::False,
+            })
+            .when_some(aria_label, |this, aria_label| this.aria_label(aria_label))
+            .when_some(index, |this, index| this.aria_position_in_set(index + 1))
+            .when_some(size_of_set, |this, count| this.aria_size_of_set(count))
             .on_action(move |_: &RadioGroupSelectLeft, window, cx| {
                 let Some(context) = left_context.as_ref() else {
                     return;
@@ -272,6 +287,16 @@ impl<T: Clone + Eq + 'static> RadioGroupRadio<T> {
 
     pub fn required(mut self, required: bool) -> Self {
         self.required = required;
+        self
+    }
+
+    /// Sets the accessible label announced by screen readers. This is the
+    /// literal-string substitute for Base UI's `aria-labelledby` id wiring,
+    /// which has no gpui builder. When set, render the radio's visible label
+    /// text with `Text::new_inaccessible(...)` instead of `text!(...)` so the
+    /// label is not announced twice.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

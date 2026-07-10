@@ -228,19 +228,108 @@ they should not be reimplemented.
 
 ## AccessKit accessibility follow-up
 
-Base UI Alert Dialog differs from Dialog in the accessibility tree by using
-`role="alertdialog"` (`handle.ts` `alertDialogState.role`). GPUI does not currently
-emit DOM ARIA, so this is deferred, consistent with the Dialog/Tabs AccessKit
-follow-ups.
+Written against the AccessKit surface in the pinned gpui revision
+(`1d029c5ff5654fb1b1e8caf4462993c8ee13a133`, accesskit 0.24); see
+`docs/accesskit-gpui-reference.md`. In Base UI the only a11y fork from Dialog is
+`role="alertdialog"` on the popup (`alert-dialog/handle.ts` `alertDialogState.role`,
+threaded through `dialog/popup/DialogPopup.tsx` via `store.useState('role')`); the
+trigger emits `aria-haspopup="dialog"` / `aria-expanded` / `aria-controls`
+(`dialog/trigger/DialogTrigger.tsx:91-93`) and the popup emits
+`aria-labelledby`/`aria-describedby` pointing at Title/Description
+(`dialog/popup/DialogPopup.tsx:90-91`).
 
-When this project updates to a GPUI revision containing AccessKit support (commit
-`1d029c5ff5654fb1b1e8caf4462993c8ee13a133` or newer):
+Because `AlertDialogPopup` is a plain re-export of `DialogPopup`
+(`alert_dialog/mod.rs`), the role fork needs a small hook in the shared part: give
+`DialogPopup` an internal `role: accesskit::Role` field defaulting to
+`Role::Dialog`, and have the alert-dialog composition (or a crate-private setter)
+pin it to `Role::AlertDialog` — mirroring Base UI's store-driven `role`.
 
-- [ ] Set `accesskit::Role::AlertDialog` on the Alert Dialog popup (vs
-      `Role::Dialog` for plain Dialog).
-- [ ] Confirm the exact AccessKit role name in the checked-out GPUI version.
-- [ ] Ensure Title/Description labelling relationships (inherited from the Dialog
-      AccessKit work) apply to the Alert Dialog popup.
+### Per accessible part
+
+- **`AlertDialogTrigger<P>`** (wraps `DialogTrigger<P>`,
+  `dialog/layers/dialog_trigger.rs`): `.role(Role::Button)` on the interactive div;
+  `.aria_expanded(state.active_trigger && state.open)` from the same
+  `DialogTriggerStyleState` fields (`open`, `active_trigger`) already computed for
+  `style_with_state` — this maps Base UI's `aria-expanded: isOpenedByThisTrigger`.
+  `.aria_label(...)` from a new builder prop (see Labels).
+- **`AlertDialogPopup` (= `DialogPopup<P>`, `dialog/layers/dialog_popup.rs`)**:
+  `.role(Role::AlertDialog)` (vs `Role::Dialog` for the plain Dialog), on the same
+  element that already carries `.track_focus(&focus_handle.tab_stop(true)...)` and
+  `.focusable()`. `.aria_label(...)` from the Title text (see Labels), standing in
+  for `aria-labelledby`.
+- **`AlertDialogTitle` (= `DialogTitle<P>`)**: `.role(Role::Heading)` +
+  `.aria_level(2)` so the title is still discoverable by heading navigation even
+  though there is no `aria-labelledby` wiring.
+- **`AlertDialogClose` (= `DialogClose<P>`, `dialog/layers/dialog_close.rs`)**:
+  `.role(Role::Button)`; `.aria_label(...)` per instance (e.g. "Confirm" /
+  "Cancel") when the visible child is not plain text.
+- **`AlertDialogDescription`, `AlertDialogBackdrop`, `AlertDialogPortal`,
+  `AlertDialogViewport`, `AlertDialogRoot`**: no role — they stay out of the a11y
+  tree (Base UI gives them none either; the description is reached by reading
+  inside the alertdialog). Do not use `Role::GenericContainer` (filtered/asserts).
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are needed. `Action::Click` is
+  auto-registered by the existing `.on_click` on `DialogTrigger` (opens via the
+  runtime transition) and `DialogClose` (closes via
+  `DialogOpenChangeReason`-carrying close path); `Action::Focus` is auto-registered
+  by the existing `.track_focus`/`.focusable()` on trigger, popup, and close.
+  Escape dismissal already flows through the popup key handler
+  (`DialogOpenChangeReason::EscapeKey`); AccessKit has no dismiss action to add in
+  this revision.
+
+### Labels
+
+- Add an `aria_label` builder prop to `DialogTrigger`/`DialogClose` (forwarded by
+  `AlertDialogTrigger`), used when the visible child is an icon or non-text.
+- When a trigger/close label is visible text rendered by the component itself, emit
+  it with `Text::new_inaccessible(...)` instead of `text!(...)` so the string is
+  not announced twice (once as child text node, once as `.aria_label`).
+- Popup label: since `aria-labelledby` cannot be expressed (see Gaps), pass the
+  title string to the popup as `.aria_label(...)`; the `DialogTitle` text itself
+  then remains a normal accessible heading (do **not** make the title
+  inaccessible — it is a separate heading node, not a duplicate of the popup
+  label announcement style used for buttons).
+
+### Gaps (no gpui builder in this revision)
+
+- **`aria-haspopup="dialog"`** on the trigger: no builder. Fallback: omit;
+  `Role::Button` + `.aria_expanded` is the best available signal. Document.
+- **`aria-controls` (trigger → popup id)**: no relationship builders. Fallback:
+  omit + document; blocked pending gpui upstream id-reference support.
+- **`aria-labelledby` / `aria-describedby` (popup → Title/Description ids)**: no
+  builders. Fallback: literal `.aria_label(title_text)` on the popup for the
+  label; the description has no equivalent (`set_description` is not exposed) —
+  omit + document; blocked pending gpui upstream.
+- **`disabled` / `aria-disabled` on trigger/close**: no `.aria_disabled(...)`
+  builder and `write_a11y_info` never sets a disabled flag. Fallback: the existing
+  `disabled` field already suppresses `on_click` and `tab_stop`, so the node has no
+  Click action while disabled; document that AT will not see an explicit disabled
+  state.
+- **`aria-hidden` on outside elements while modal** (`useDialogRoot.ts` scroll/hide
+  handling): no per-element hidden builder; the focus trap is the only modality
+  signal. Omit + document.
+- No live-region needs: Alert Dialog relies on the `AlertDialog` role itself, not
+  `aria-live`.
+
+### Checklist
+
+- [ ] Add a crate-private `role` knob to `DialogPopup` (default `Role::Dialog`) and
+      pin `Role::AlertDialog` for the alert-dialog composition.
+- [ ] `DialogPopup`: `.role(...)` + `.aria_label(title_text)` on the focus-trapped
+      element.
+- [ ] `DialogTrigger`: `.role(Role::Button)` +
+      `.aria_expanded(open && active_trigger)` + optional `.aria_label` prop,
+      forwarded by `AlertDialogTrigger`.
+- [ ] `DialogClose`: `.role(Role::Button)` + optional `.aria_label` prop.
+- [ ] `DialogTitle`: `.role(Role::Heading)` + `.aria_level(2)`.
+- [ ] Swap component-rendered visible button label text to
+      `Text::new_inaccessible(...)` where `.aria_label` is set on the parent.
+- [ ] Confirm no `Action::Click`/`Action::Focus` re-registration (rely on existing
+      `on_click`/`track_focus`).
+- [ ] Document the omitted `aria-haspopup`/`aria-controls`/`aria-labelledby`/
+      `aria-describedby`/`aria-disabled` attributes as gpui gaps in the module docs.
 
 ## Uncertain items needing confirmation
 

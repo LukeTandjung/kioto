@@ -2,7 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Bounds, Div, Element, ElementId, GlobalElementId, InspectorElementId,
-    IntoElement, LayoutId, ParentElement, Pixels, RenderOnce, StyleRefinement, Styled, Window,
+    InteractiveElement, IntoElement, LayoutId, ParentElement, Pixels, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement, StyleRefinement, Styled, Window,
 };
 
 use crate::fieldset::{
@@ -16,6 +17,7 @@ pub struct FieldsetRoot {
     base: Div,
     children: Vec<FieldsetChild>,
     disabled: bool,
+    label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(FieldsetRootStyleState, Div) -> Div + 'static>>,
 }
 
@@ -26,6 +28,7 @@ impl Default for FieldsetRoot {
             base: div(),
             children: Vec::new(),
             disabled: false,
+            label: None,
             style_with_state: None,
         }
     }
@@ -48,6 +51,17 @@ impl RenderOnce for FieldsetRoot {
             Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
+        // AccessKit: a node needs both a stable id and a role to appear in the
+        // a11y tree. Base UI's `aria-labelledby` (root -> legend id) has no gpui
+        // relationship builder, so the literal `.aria_label(...)` substitutes for
+        // it; callers must keep it in sync with the legend text manually. The
+        // `disabled` / `aria-disabled` cascade is also not exposed to AT (no
+        // `.aria_disabled(...)` builder in this gpui revision) — descendant
+        // controls suppress interaction instead.
+        let mut base = base.id(self.id.clone()).role(Role::Group);
+        if let Some(label) = self.label {
+            base = base.aria_label(label);
+        }
 
         FieldsetScopeElement {
             context,
@@ -82,6 +96,17 @@ impl FieldsetRoot {
 
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = id.into();
+        self
+    }
+
+    /// Accessible label for the group, announced by screen readers.
+    ///
+    /// Substitutes for Base UI's `aria-labelledby` -> legend-id wiring, which
+    /// gpui cannot express: pass the legend's text here and keep it in sync
+    /// manually. When set, build the visible `FieldsetLegend` text with
+    /// `Text::new_inaccessible(...)` so it is not announced twice.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.label = Some(label.into());
         self
     }
 

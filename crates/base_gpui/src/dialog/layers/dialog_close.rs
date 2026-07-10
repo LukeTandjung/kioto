@@ -2,7 +2,7 @@ use std::{rc::Rc, sync::Arc};
 
 use gpui::{
     div, AnyElement, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
+    IntoElement, ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
     StyleRefinement, Styled, Window,
 };
 
@@ -21,6 +21,7 @@ pub struct DialogClose<P: Clone + 'static = ()> {
     focus_handle: Option<FocusHandle>,
     scoped: bool,
     disabled: bool,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(DialogCloseStyleState, Div) -> Div + 'static>>,
 }
 
@@ -34,6 +35,7 @@ impl<P: Clone + 'static> Default for DialogClose<P> {
             focus_handle: None,
             scoped: false,
             disabled: false,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -76,51 +78,56 @@ impl<P: Clone + 'static> RenderOnce for DialogClose<P> {
             None => self.base,
         };
 
-        base.id(self.id)
-            .track_focus(
-                &focus_handle
-                    .tab_stop(!disabled)
-                    .tab_index(if disabled { -1 } else { 0 }),
-            )
-            .focusable()
-            .key_context(DIALOG_POPUP_KEY_CONTEXT)
-            .on_click(move |event, window, cx| {
-                if disabled || !matches!(event, ClickEvent::Mouse(_)) {
-                    return;
-                }
-                if let Some(context) = click_context.as_ref() {
-                    context.close(
-                        DialogOpenChangeReason::ClosePress,
-                        DialogOpenChangeSource::Pointer,
-                        window,
-                        cx,
-                    );
-                }
-            })
-            .on_action(move |_: &DialogOpenAction, window, cx| {
-                if disabled {
-                    return;
-                }
-                if let Some(context) = press_context.as_ref() {
-                    context.close(
-                        DialogOpenChangeReason::ClosePress,
-                        DialogOpenChangeSource::Keyboard,
-                        window,
-                        cx,
-                    );
-                }
-            })
-            .on_action(move |_: &DialogCloseAction, window, cx| {
-                if let Some(context) = escape_context.as_ref() {
-                    context.close(
-                        DialogOpenChangeReason::EscapeKey,
-                        DialogOpenChangeSource::Keyboard,
-                        window,
-                        cx,
-                    );
-                }
-            })
-            .children(self.children)
+        let mut base = base.id(self.id).role(Role::Button);
+        if let Some(aria_label) = self.aria_label {
+            base = base.aria_label(aria_label);
+        }
+
+        base.track_focus(
+            &focus_handle
+                .tab_stop(!disabled)
+                .tab_index(if disabled { -1 } else { 0 }),
+        )
+        .focusable()
+        .key_context(DIALOG_POPUP_KEY_CONTEXT)
+        .on_click(move |event, window, cx| {
+            if disabled {
+                return;
+            }
+            // Non-mouse clicks come from AT-dispatched a11y `Click` actions;
+            // keyboard activation flows through `DialogOpenAction` below.
+            let source = match event {
+                ClickEvent::Mouse(_) => DialogOpenChangeSource::Pointer,
+                _ => DialogOpenChangeSource::Unknown,
+            };
+            if let Some(context) = click_context.as_ref() {
+                context.close(DialogOpenChangeReason::ClosePress, source, window, cx);
+            }
+        })
+        .on_action(move |_: &DialogOpenAction, window, cx| {
+            if disabled {
+                return;
+            }
+            if let Some(context) = press_context.as_ref() {
+                context.close(
+                    DialogOpenChangeReason::ClosePress,
+                    DialogOpenChangeSource::Keyboard,
+                    window,
+                    cx,
+                );
+            }
+        })
+        .on_action(move |_: &DialogCloseAction, window, cx| {
+            if let Some(context) = escape_context.as_ref() {
+                context.close(
+                    DialogOpenChangeReason::EscapeKey,
+                    DialogOpenChangeSource::Keyboard,
+                    window,
+                    cx,
+                );
+            }
+        })
+        .children(self.children)
     }
 }
 
@@ -160,6 +167,12 @@ impl<P: Clone + 'static> DialogClose<P> {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Accessible name for the close button (typically icon-only, e.g. "Close").
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

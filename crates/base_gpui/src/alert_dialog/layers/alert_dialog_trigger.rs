@@ -1,6 +1,6 @@
 use gpui::{
-    AnyElement, App, Div, ElementId, IntoElement, ParentElement, RenderOnce, StyleRefinement,
-    Styled, Window,
+    AnyElement, App, Div, ElementId, IntoElement, ParentElement, RenderOnce, SharedString,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::alert_dialog::AlertDialogHandle;
@@ -59,6 +59,14 @@ impl<P: Clone + 'static> AlertDialogTrigger<P> {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.inner = self.inner.disabled(disabled);
+        self
+    }
+
+    /// Accessible name for the trigger, used when the visible child is an icon
+    /// or other non-text content. Forwarded to the underlying Dialog trigger's
+    /// `aria_label`.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.inner = self.inner.aria_label(label);
         self
     }
 

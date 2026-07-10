@@ -2,7 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement,
-    RenderOnce, StyleRefinement, Styled, Window,
+    RenderOnce, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window,
 };
 
 use crate::meter::{MeterChild, MeterContext, MeterProps, MeterStyleState};
@@ -16,6 +17,7 @@ pub struct MeterRoot {
     min: f64,
     max: f64,
     format: Option<Rc<dyn Fn(f64) -> String + 'static>>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(MeterStyleState, Div) -> Div + 'static>>,
 }
 
@@ -29,6 +31,7 @@ impl Default for MeterRoot {
             min: 0.0,
             max: 100.0,
             format: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -64,11 +67,24 @@ impl RenderOnce for MeterRoot {
 
         let style_state = context.read(|runtime| runtime.state());
         let base = match self.style_with_state {
-            Some(style_with_state) => style_with_state(style_state, self.base),
+            Some(style_with_state) => style_with_state(style_state.clone(), self.base),
             None => self.base,
         };
 
-        base.id(self.id).children(children)
+        // No `.aria_valuetext` builder exists in this gpui revision, so the
+        // formatted string is folded into the label as the valuetext fallback.
+        let label = match self.aria_label {
+            Some(label) => SharedString::from(format!("{label}, {}", style_state.formatted)),
+            None => SharedString::from(style_state.formatted.clone()),
+        };
+
+        base.id(self.id)
+            .role(Role::Meter)
+            .aria_label(label)
+            .aria_numeric_value(style_state.clamped_value)
+            .aria_min_numeric_value(style_state.min)
+            .aria_max_numeric_value(style_state.max)
+            .children(children)
     }
 }
 
@@ -117,6 +133,15 @@ impl MeterRoot {
     /// Custom formatter receiving the raw (unclamped) value.
     pub fn format(mut self, format: impl Fn(f64) -> String + 'static) -> Self {
         self.format = Some(Rc::new(format));
+        self
+    }
+
+    /// Accessible label for the meter; the literal-string replacement for
+    /// Base UI's `aria-labelledby` wiring to `MeterLabel`. Pass the same
+    /// string rendered inside `MeterLabel`. The formatted value text is
+    /// appended automatically as the `aria-valuetext` fallback.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

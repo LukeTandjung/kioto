@@ -461,6 +461,46 @@ Conclusion for the cursor/pointer uncertainty:
 - Cursor coordinates are available enough for `track_cursor_axis(...)`: store the latest `MouseMoveEvent.position` / `Window::mouse_position()` in the runtime and derive a virtual anchor for `None`, `X`, `Y`, or `Both` tracking modes.
 - Mouse-only hover parity is only partially confirmable: GPUI's public hover/move events are mouse-oriented, but no public pointer-type API was found to distinguish mouse from touch/stylus hover. An external crate cannot solve that unless GPUI/platform exposes the raw pointer-source data.
 
+## AccessKit accessibility follow-up
+
+Written against the pinned gpui AccessKit surface documented in `/home/luke/Projects/kioto/docs/accesskit-gpui-reference.md`. Base UI's Tooltip is deliberately ARIA-light: the trigger renders a native `<button>` (implicit button role, native `disabled`), the popup is a plain `div` with no `role="tooltip"` and no `aria-describedby` wiring, and only the (unported) `TooltipArrow` emits `aria-hidden`. The GPUI follow-up therefore has a small surface: expose the trigger as a button, expose the popup as a tooltip node, and keep everything else out of the accessibility tree.
+
+### Per accessible part
+
+- `TooltipTrigger<P>` (`crates/base_gpui/src/tooltip/layers/tooltip_trigger.rs`): the trigger `div` already has a stable `.id(scoped_id)` plus `.track_focus(...)`/`.focusable()`. Add `.role(Role::Button)` (matching Base UI's `useRenderElement('button', ...)`) and a builder-provided `.aria_label(...)` (new `TooltipTrigger<P>::aria_label(impl Into<SharedString>)` prop). Do not set `.aria_expanded(...)`: Base UI emits no `aria-expanded` on tooltip triggers, and tooltips are not disclosure widgets.
+- `TooltipPopup<P>` (`crates/base_gpui/src/tooltip/layers/tooltip_popup.rs`): the popup `div` already has `.id(self.id)`. Add `.role(Role::Tooltip)`. No `aria_*` state props apply; open/closed is expressed by the node's presence (closed non-`keep_mounted` popups are unmounted, and closed `keep_mounted(true)` subtrees are `invisible()` and should skip the role so they do not appear in the tree while hidden).
+- `TooltipProvider`, `TooltipRoot<P>`, `TooltipPortal<P>`, `TooltipPositioner<P>`, `TooltipViewport<P>`: no role. These are wiring/positioning layers with no Base UI ARIA counterpart; leave them without `.role(...)` so they stay out of the accessibility tree.
+
+### Actions
+
+- `Action::Focus` on the trigger is auto-registered by the existing `.track_focus(&focus_handle...)` / `.focusable()`; do not re-add it. Focus-driven open already routes through `TooltipRuntime<P>::focus_trigger` via the tracked focus handle.
+- The trigger uses `.on_mouse_down(MouseButton::Left, ...)` rather than `.on_click(...)`, so `Action::Click` is **not** auto-registered. Add `.on_a11y_action(AccessibleAction::Click, ...)` on the trigger routing into the same runtime path the pointer handler uses (the `press_trigger` transition with `close_on_click`), so AT-invoked clicks match pointer click-to-close/cancel semantics.
+- No a11y action is needed on the popup: it is non-interactive, non-modal, and never focus-trapped. Escape close remains keyboard-dispatch only.
+
+### Labels
+
+- `.aria_label(...)` on the trigger comes from the new builder prop; there is no derived default because trigger children are arbitrary `AnyElement`s. Document that callers of icon-only triggers must set it.
+- When a trigger's visible text child duplicates the provided `aria_label`, render it with `Text::new_inaccessible(...)` instead of `text!(...)` to avoid double-announcing. Popup/viewport content should keep ordinary accessible text so the `Role::Tooltip` node has readable content.
+
+### Gaps (no gpui builder in this revision)
+
+- Trigger `disabled` (native `<button disabled>` in Base UI): no `.aria_disabled(...)`/disabled builder exists and `write_a11y_info` never sets a disabled flag. Fallback: the existing behavior already omits the disabled trigger from tab order (`tab_stop(!disabled)`, `tab_index(-1)`) and the runtime rejects hover/focus/press while disabled; additionally skip the `Action::Click` a11y handler while disabled, and document that AT cannot see a "disabled" state — blocked pending a gpui `set_disabled` upstream addition.
+- `aria-describedby` trigger→popup relationship: no relationship builders exist (`aria-controls`/`aria-labelledby`/`aria-describedby` are all unavailable). Base UI itself does not emit this for Tooltip, so omit + document: tooltip content is not an accessible description of the trigger, and callers must not rely on the tooltip for the trigger's accessible name.
+- `aria-hidden` (Base UI `TooltipArrow` only): not applicable — `TooltipArrow<P>` is intentionally not ported, and no `aria-hidden` builder exists anyway.
+- Live-region announcement of tooltip content on open: no window/element announcement API exists in this revision. Omit + document; tooltips remain sighted-user visual hints, consistent with the existing accessibility stance above.
+
+### Checklist
+
+- [ ] Add `.role(Role::Button)` to the `TooltipTrigger<P>` interactive element (which already carries `.id(scoped_id)` and focus tracking).
+- [ ] Add `TooltipTrigger<P>::aria_label(...)` and forward it to `.aria_label(...)` on the trigger element.
+- [ ] Add `.on_a11y_action(AccessibleAction::Click, ...)` on enabled triggers, routed through the same runtime press transition as the pointer `on_mouse_down` path with the trigger's `close_on_click` setting.
+- [ ] Do not re-register `Action::Focus`; verify `.track_focus`/`.focusable()` already provide it.
+- [ ] Add `.role(Role::Tooltip)` to the open `TooltipPopup<P>` element; skip the role while closed-but-kept-mounted (`keep_mounted(true)` + `invisible()`).
+- [ ] Leave provider/root/portal/positioner/viewport without roles so they stay out of the accessibility tree.
+- [ ] Use `Text::new_inaccessible(...)` for visible trigger text that duplicates a provided `aria_label`.
+- [ ] Document the `disabled`, relationship-prop (`aria-describedby`), and live-region gaps in the tooltip module docs, with the fallbacks chosen above.
+- [ ] Add a rendered test asserting the trigger and open popup appear in the accessibility tree with the expected roles, and that an AT-dispatched Click on an open trigger closes it when `close_on_click(true)`.
+
 ## Uncertain items to confirm during implementation
 
 - Whether GPUI exposes enough pointer-type information to distinguish mouse from touch/stylus for strict mouse-only hover parity.

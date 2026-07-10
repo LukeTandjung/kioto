@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    div, App, Div, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role,
     StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
@@ -54,8 +54,12 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxList<T> {
             None => self.base,
         };
 
+        // AccessKit: `aria-multiselectable` has no gpui builder (documented
+        // gap in `combobox/mod.rs`); multiple-mode state is conveyed
+        // per-option via `.aria_selected`.
         let list = base
             .id("combobox-list")
+            .role(Role::ListBox)
             .on_mouse_move(|_event, _window, _cx| {})
             .on_hover(move |hovered, window, cx| {
                 if !hovered {

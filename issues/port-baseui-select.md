@@ -489,3 +489,49 @@ Add behavior tests under `crates/base_gpui/src/select/tests/` where practical.
 - [x] AccessKit semantics for combobox/listbox/option/group once the target GPUI revision supports the needed APIs. Audited pinned GPUI revision: no GPUI-native role/label/listbox/option APIs are exposed on the element surface yet, so this is explicitly deferred rather than ported through DOM/ARIA literals.
 - [x] Extract `SelectSeparator` into a shared `separator` module if future component ports need it.
 - [x] Optional custom comparator support if `T: Eq` is not enough for real callers.
+
+## AccessKit accessibility follow-up
+
+The pinned GPUI revision now exposes an AccessKit surface (see `docs/accesskit-gpui-reference.md`). A node appears in the a11y tree only when the element has both a stable `.id(...)` and a `.role(...)`; keep the existing keyed `ElementId`s stable across frames. This section maps Base UI Select's ARIA output (from `SelectTrigger.tsx`, `SelectList.tsx`, `SelectPopup.tsx`, `SelectItem.tsx`, `SelectGroup.tsx`, `SelectBackdrop.tsx`) onto the real builders.
+
+### Per accessible part
+
+- `SelectTrigger<T>` (`layers/select_trigger.rs`): Base UI emits `role="combobox"` with `aria-expanded` and `aria-haspopup="listbox"`. Set `.role(Role::ComboBox)` and `.aria_expanded(state.root.open)` from `SelectTriggerStyleState<T>.root.open`. Set `.aria_label(...)` from a new trigger/root label prop (see Labels below).
+- `SelectList<T>` (`layers/select_list.rs`, the `.id("select-list")` element): Base UI emits `role="listbox"` (on `SelectPopup` when no `SelectList` is composed — in the GPUI port `SelectList` is always the listbox surface). Set `.role(Role::ListBox)`. `aria-multiselectable` has no builder (see Gaps).
+- `SelectItem<T>` (`layers/select_item.rs`): Base UI emits `role="option"` with `aria-selected`. Set `.role(Role::ListBoxOption)` and `.aria_selected(state.selected)` from `SelectItemStyleState<T>.selected`. Set `.aria_position_in_set(state.index + 1)` from `SelectItemStyleState<T>.index` and `.aria_size_of_set(...)` from the runtime's registered selectable-item count (expose a query on `SelectContext<T>` if one does not exist). Set `.aria_label(...)` from the item's registered label metadata.
+- `SelectGroup<T>` (`layers/select_group.rs`): Base UI emits `role="group"` + `aria-labelledby` pointing at the group label. Set `.role(Role::Group)` and, since id-reference wiring does not exist, `.aria_label(...)` from the `SelectGroupLabel` text registered in child wiring.
+- No role (stay out of the tree — do not assign `Role::GenericContainer`): `SelectValue<T>`, `SelectIcon<T>` (`aria-hidden` in Base UI), `SelectPortal<T>`, `SelectBackdrop<T>` and `SelectPopup<T>` wrapper (`role="presentation"` in Base UI), `SelectPositioner<T>`, `SelectArrow<T>`, `SelectScrollUpArrow<T>` / `SelectScrollDownArrow<T>` (`aria-hidden` in Base UI), `SelectLabel<T>` (its text feeds the trigger's `.aria_label` instead), `SelectItemText<T>`, `SelectGroupLabel<T>`. `SelectSeparator` may take `.role(Role::Separator)` via the shared `separator` module if that module adopts it.
+
+### Actions
+
+- `.on_click(...)` already exists on `SelectTrigger`, `SelectItem`, `SelectLabel`, and `SelectBackdrop`, and `.track_focus(...)` exists on `SelectTrigger` and `SelectItem`, so `Action::Click` and `Action::Focus` are auto-registered — do NOT re-add them.
+- `SelectTrigger<T>`: add `.on_a11y_action(AccessibleAction::Expand, ...)` and `.on_a11y_action(AccessibleAction::Collapse, ...)` routed through the same `SelectContext<T>::set_open(...)` / `toggle_open(...)` commands the pointer/keyboard path uses (respecting disabled/read-only and the cancelable `on_open_change` details, with an appropriate open-change source).
+- No other a11y actions are needed: item selection rides the auto-registered `Action::Click` into the existing `select_value(...)` path.
+
+### Labels
+
+- Add a `.aria_label(...)`-feeding prop (or reuse the registered `SelectLabel` text via child wiring) so the trigger has an accessible name; Base UI relies on `aria-labelledby`, which has no GPUI equivalent, so the literal string is the substitute.
+- `SelectValue` renders `display_text` as a plain `SharedString` child (`base.child(display_text)` in `select_value.rs`). Since the trigger carries the accessible name and expanded state, render that value text with `Text::new_inaccessible(...)` to avoid double-announcing; same for `SelectItemText` content once the parent `SelectItem` sets `.aria_label` from the registered label.
+- `SelectGroupLabel` text should also become `Text::new_inaccessible(...)` once it is mirrored into the group's `.aria_label`.
+
+### Gaps (no builder in this GPUI revision — do not invent APIs)
+
+- `aria-haspopup="listbox"` (trigger): no builder. Omit; `Role::ComboBox` + `aria_expanded` is the closest available. Document.
+- `aria-controls` (trigger → listbox id): no relationship builders. Omit + document; blocked pending gpui upstream id-reference support.
+- `aria-labelledby` (trigger and group): no builder. Fallback: literal `.aria_label(...)` strings as described above.
+- `aria-activedescendant` (highlighted item): no builder. Fallback: rely on real focus (`track_focus` on items already moves focus with highlight) so AT tracks the focused option instead. Document.
+- `aria-multiselectable` (list/popup in multiple mode): no builder. Omit + document; `SelectRootStyleState::selection_mode` remains style-only.
+- `aria-readonly` / `aria-required` / `aria-disabled` (trigger, items): no builders and `write_a11y_info` never sets a disabled flag. Fallback: keep interactions no-ops while disabled/read-only (already enforced in the runtime) and document the limitation; upstreaming `set_disabled` to gpui is the long-term fix.
+- Value announcement on change (`SelectValue` live text): no live-region/announcement API. Omit + document; blocked pending gpui upstream.
+
+### Checklist
+
+- [ ] `SelectTrigger<T>` sets `Role::ComboBox`, `.aria_expanded(...)` from `SelectTriggerStyleState.root.open`, and `.aria_label(...)`.
+- [ ] `SelectTrigger<T>` adds `on_a11y_action` handlers for `Expand`/`Collapse` routed through `SelectContext::set_open`/`toggle_open`; Click/Focus left to existing auto-registration.
+- [ ] `SelectList<T>` sets `Role::ListBox`.
+- [ ] `SelectItem<T>` sets `Role::ListBoxOption`, `.aria_selected(...)`, `.aria_position_in_set(...)`, `.aria_size_of_set(...)`, and `.aria_label(...)` from registered label metadata.
+- [ ] `SelectGroup<T>` sets `Role::Group` with `.aria_label(...)` from the registered group label text.
+- [ ] Presentational parts (value, icon, portal, backdrop, popup wrapper, positioner, arrow, scroll arrows, label, item text, group label) remain role-less.
+- [ ] Visible value/item/group-label text switched to `Text::new_inaccessible(...)` where the parent already carries `.aria_label`.
+- [ ] Gaps above documented in `select/mod.rs` module docs (haspopup, controls, labelledby, activedescendant, multiselectable, readonly/required/disabled, live announcements).
+- [ ] A11y wiring verified against `crates/gpui/examples/a11y.rs` patterns; `cargo check -p base_gpui` and `cargo test -p base_gpui select` pass.

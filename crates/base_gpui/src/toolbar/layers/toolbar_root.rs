@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    div, prelude::FluentBuilder as _, App, Div, ElementId, InteractiveElement as _, IntoElement,
+    Orientation, ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
     StyleRefinement, Styled, Window,
 };
 
@@ -23,6 +24,7 @@ pub struct ToolbarRoot {
     orientation: ToolbarOrientation,
     loop_focus: bool,
     disabled: bool,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(ToolbarRootStyleState, Div) -> Div + 'static>>,
 }
 
@@ -35,6 +37,7 @@ impl Default for ToolbarRoot {
             orientation: ToolbarOrientation::Horizontal,
             loop_focus: true,
             disabled: false,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -82,6 +85,14 @@ impl RenderOnce for ToolbarRoot {
         let down_context = context;
 
         base.id(self.id)
+            .role(Role::Toolbar)
+            .aria_orientation(match orientation {
+                ToolbarOrientation::Horizontal => Orientation::Horizontal,
+                ToolbarOrientation::Vertical => Orientation::Vertical,
+            })
+            .when_some(self.aria_label, |this, aria_label| {
+                this.aria_label(aria_label)
+            })
             .key_context(TOOLBAR_KEY_CONTEXT)
             .on_action(move |_: &ToolbarFocusLeft, window, cx| {
                 if orientation != ToolbarOrientation::Horizontal {
@@ -157,6 +168,14 @@ impl ToolbarRoot {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Accessible name for the toolbar, announced by screen readers. There is
+    /// no `aria-labelledby` id-reference builder in this gpui revision, so
+    /// the name is a literal string.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

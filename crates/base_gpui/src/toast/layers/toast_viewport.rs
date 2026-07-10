@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use gpui::{
     div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::toast::child_wiring::{ToastContextNode, ToastPartNode};
@@ -25,6 +25,7 @@ pub struct ToastViewport<P: Clone + 'static = ()> {
     base: Div,
     context: Option<ToastContext<P>>,
     content_builder: Option<ToastContentBuilder<P>>,
+    aria_label: SharedString,
     style_with_state: Option<ToastViewportStyle>,
 }
 
@@ -35,6 +36,7 @@ impl<P: Clone + 'static> Default for ToastViewport<P> {
             base: div(),
             context: None,
             content_builder: None,
+            aria_label: SharedString::from("Notifications"),
             style_with_state: None,
         }
     }
@@ -83,6 +85,12 @@ impl<P: Clone + 'static> RenderOnce for ToastViewport<P> {
         };
 
         base.id(self.id)
+            // AccessKit gap in this gpui revision: no live-region API
+            // (`aria-live`/`aria-atomic`/`aria-relevant` and Base UI's hidden
+            // duplicated `role="alert"` tree), so added toasts are not
+            // auto-announced; AT users rely on discovering the region.
+            .role(Role::Region)
+            .aria_label(self.aria_label)
             .on_hover(move |hovered, _window, cx| {
                 // Hover pauses every dismiss timer; leave resumes with the
                 // recorded remaining durations. NOTE: with immediate removal
@@ -118,6 +126,13 @@ impl<P: Clone + 'static> ToastViewport<P> {
 
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = id.into();
+        self
+    }
+
+    /// Accessible label for the notifications region; defaults to
+    /// "Notifications" (Base UI viewport `aria-label` parity).
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = label.into();
         self
     }
 

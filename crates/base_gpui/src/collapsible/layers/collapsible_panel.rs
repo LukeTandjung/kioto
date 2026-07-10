@@ -65,7 +65,12 @@ impl RenderOnce for CollapsiblePanel {
         };
 
         if should_render {
-            base.children(children)
+            // A kept-mounted closed panel is hidden with `invisible()`, but gpui
+            // registers accessibility nodes during prepaint (before the hidden
+            // visibility check in paint), so accessible child text would still
+            // leak to assistive technology. Gate the children on the closed
+            // state as well so closed content is not announced.
+            base.when(!hidden, |this| this.children(children))
                 .when(hidden, |this| this.invisible())
                 .into_any_element()
         } else {

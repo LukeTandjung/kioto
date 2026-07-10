@@ -52,7 +52,18 @@ impl<P: Clone + 'static> RenderOnce for MenuGroupLabel<P> {
             None => self.base,
         };
 
-        base.children(self.children)
+        // The label string is surfaced through the parent group's
+        // `.aria_label(...)`, so the visible text stays out of the a11y tree
+        // (Base UI marks the label element `role="presentation"`). When no
+        // explicit children are provided the label renders itself
+        // inaccessibly; callers providing their own text child should pass it
+        // as `Text::new_inaccessible(...)`.
+        match (self.children.is_empty(), self.label) {
+            (true, Some(label)) => {
+                base.child(gpui::Text::new_inaccessible(label).into_any_element())
+            }
+            _ => base.children(self.children),
+        }
     }
 }
 
@@ -80,6 +91,12 @@ impl<P: Clone + 'static> MenuGroupLabel<P> {
     pub fn label(mut self, label: impl Into<SharedString>) -> Self {
         self.label = Some(label.into());
         self
+    }
+
+    /// Registered label string, read by the parent group's wiring to source
+    /// its `.aria_label(...)`.
+    pub fn label_value(&self) -> Option<SharedString> {
+        self.label.clone()
     }
 
     pub fn style_with_state(

@@ -309,6 +309,94 @@ Rendered tests under `crates/base_gpui/src/menubar/tests/`:
 - [ ] Disabled menubar prevents opening any menu; menubar with a disabled first trigger stays keyboard-reachable.
 - [x] Demo renders in `crates/base_gpui/src/main.rs` without panics.
 
+## AccessKit accessibility follow-up
+
+Concrete mapping against the pinned gpui revision's AccessKit surface (see
+`docs/accesskit-gpui-reference.md`). A node is reported only when it has both an
+`.id(...)` and a `.role(...)`; keep the existing keyed ids stable across frames.
+Menu-family parts (popup, items, submenus) are owned by the Menu port's follow-up —
+this section covers the menubar container plus the menubar-parent branches of
+`MenuTrigger`.
+
+### Per accessible part
+
+- **`Menubar` (`layers/menubar.rs`)** — the inner `base.id(self.id)` div already has
+  an id; add `.role(Role::MenuBar)` and
+  `.aria_orientation(...)` mapped from the layer's `orientation: MenubarOrientation`
+  field (`Horizontal` → `Orientation::Horizontal`, `Vertical` →
+  `Orientation::Vertical`). Base UI emits exactly `role="menubar"` +
+  `aria-orientation` on this element (`Menubar.tsx` line 85), nothing else.
+- **`MenuTrigger` under a menubar (`menu/layers/menu_trigger.rs`, the
+  `MenuMenubarLink` branch)** — Base UI switches the trigger's role from `button`
+  to `menuitem` when `isInMenubar` (`MenuTrigger.tsx` line 253). In the menubar
+  branch set `.role(Role::MenuItem)` (non-menubar triggers keep the Menu port's
+  `Role::Button`), and:
+  - `.aria_expanded(open)` from the runtime's open fact (the `was_open` /
+    `runtime.open_value()` read already in the layer) — Base UI's trigger emits
+    `aria-expanded` via the popup-trigger props.
+  - `.aria_position_in_set(index + 1)` / `.aria_size_of_set(trigger_count)` from
+    the trigger index and count already assigned by `child_wiring.rs` /
+    `MenubarRuntime::sync_triggers` (optional but cheap: the roving row is a set).
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are required for the menubar row itself:
+  the row is a container; its roving navigation is AT-keyboard driven and already
+  flows through the `MenubarFocus*` key-dispatch actions.
+- Menubar-parent triggers: `Action::Click` is auto-registered by the existing
+  `.on_click`/mouse handlers and `Action::Focus` by the existing `.track_focus(...)`
+  in `menu_trigger.rs` — do **not** re-add them. Verify the AT-dispatched Click
+  routes through the same `context.set_open(...)` toggle path as the pointer branch
+  (it does, since it replays `.on_click`); if the menubar mixed press-down/click
+  split makes an AT Click a no-op on a closed trigger, add an explicit
+  `.on_a11y_action(AccessibleAction::Click, ...)` that calls the same
+  `set_open(true, ...)` transition the mouse-down path uses.
+
+### Labels
+
+- `Menubar` gains an `.aria_label(impl Into<SharedString>)` builder prop stored on
+  the layer and forwarded to the a11y node; Base UI leaves labeling to the consumer,
+  so it stays optional.
+- Trigger labels come from the Menu port's trigger label handling: set
+  `.aria_label(...)` on the trigger node from its visible text, and render that
+  visible text with `Text::new_inaccessible(...)` instead of `text!(...)` so the
+  label is not announced twice.
+
+### Gaps (no gpui builder in this revision)
+
+- **`aria-haspopup="menu"`** (`MenuTrigger.tsx` line 236): no builder. Fallback:
+  omit; `Role::MenuItem` + `aria_expanded` conveys the popup affordance to most AT.
+  Document; revisit if gpui exposes `set_has_popup`.
+- **`aria-controls={popupId}`** (`MenuTrigger.tsx` line 237): no relationship
+  builders (`aria-controls`/`aria-owns`/`aria-activedescendant`). Fallback: omit +
+  document; blocked pending gpui upstream id-reference wiring.
+- **`disabled` / `aria-disabled`** (menubar `disabled` cascading into every trigger,
+  seam 12): no `.aria_disabled(...)` builder and `write_a11y_info` sets no disabled
+  flag. Fallback: the disabled gating already suppresses `on_click`/open transitions,
+  so the AT Click is inert; document that disabled state is not *announced* and track
+  as blocked pending a gpui `set_disabled` addition.
+- **DOM id linking** (`useBaseUiId` root id → trigger `aria-controls`): subsumed by
+  the relationship gap above; the runtime keeps trigger/menu identity metadata so the
+  wiring is mechanical once gpui grows the API.
+
+### Checklist
+
+- [ ] `Menubar` layer: `.role(Role::MenuBar)` + `.aria_orientation(...)` from
+      `MenubarOrientation` on the existing `base.id(self.id)` element.
+- [ ] `Menubar` builder: optional `.aria_label(...)` prop forwarded to the node.
+- [ ] `menu_trigger.rs` menubar branch: `.role(Role::MenuItem)` (non-menubar
+      triggers unchanged) + `.aria_expanded(open)` from the runtime open fact.
+- [ ] Trigger set geometry: `.aria_position_in_set` / `.aria_size_of_set` from the
+      `child_wiring.rs` trigger indices.
+- [ ] Confirm AT `Action::Click` (auto-registered via `.on_click`) toggles a menubar
+      trigger open/closed through the same `set_open` transition; add an explicit
+      `on_a11y_action` only if the press-down/click split leaves it inert.
+- [ ] Visible trigger text rendered via `Text::new_inaccessible(...)` where
+      `.aria_label` is set on the trigger node.
+- [ ] Gaps documented in code comments at the branch sites: `aria-haspopup`,
+      `aria-controls`, `aria-disabled` (blocked pending gpui upstream).
+- [ ] `cargo check -p base_gpui` / `cargo test -p base_gpui menubar` stay green.
+
 ## Uncertain items needing confirmation
 
 - **Ordering**: this issue cannot start until `issues/port-baseui-menu.md` lands

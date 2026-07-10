@@ -85,6 +85,21 @@ impl Input {
         self
     }
 
+    /// Sets the accessible name announced by assistive technology. There is
+    /// no `aria-labelledby`-style id wiring in this gpui revision, so pass
+    /// the visible label text here as well when using `FieldLabel`.
+    ///
+    /// NOTE: not yet wired into the accessibility tree. `FieldControl` (in
+    /// the `field` module) exposes no accessible-label API in this revision,
+    /// and the `Div` handed to `style_with_state` is not stateful, so gpui's
+    /// `StatefulInteractiveElement::aria_label` cannot be applied here.
+    /// Tracked as a gap: `FieldControl` needs an `aria_label` builder that
+    /// forwards to its stateful root element.
+    pub fn aria_label(self, aria_label: impl Into<SharedString>) -> Self {
+        let _ = aria_label.into();
+        self
+    }
+
     pub fn placeholder(mut self, placeholder: impl Into<SharedString>) -> Self {
         self.control = self.control.placeholder(placeholder);
         self

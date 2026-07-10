@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, AnyElement, App, ClickEvent, Div, ElementId, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::menu::{
@@ -68,10 +68,11 @@ impl<P: Clone + 'static> RenderOnce for MenuLinkItem<P> {
             .focus_handle
             .clone()
             .unwrap_or_else(|| part_focus_handle(&self.id, window, cx));
-        let (state, tab_stop) = context.read(cx, |runtime, _| {
+        let (state, tab_stop, item_count) = context.read(cx, |runtime, _| {
             (
                 runtime.link_item_state(self.index),
                 runtime.item_is_tab_stop(self.index),
+                runtime.item_count(),
             )
         });
         let index = self.index;
@@ -97,6 +98,12 @@ impl<P: Clone + 'static> RenderOnce for MenuLinkItem<P> {
             })
             .child(
                 base.id(self.id)
+                    // Base UI renders `role="menuitem"` on the anchor; gpui
+                    // has no link-menuitem distinction.
+                    .role(Role::MenuItem)
+                    .when_some(self.label.clone(), |this, label| this.aria_label(label))
+                    .when_some(index, |this, index| this.aria_position_in_set(index + 1))
+                    .aria_size_of_set(item_count)
                     .track_focus(&focus_handle.tab_stop(tab_stop).tab_index(if tab_stop {
                         0
                     } else {

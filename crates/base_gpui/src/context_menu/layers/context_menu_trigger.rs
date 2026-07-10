@@ -17,6 +17,18 @@ type ContextMenuTriggerStyle = Rc<dyn Fn(ContextMenuTriggerStyleState, Div) -> D
 /// `.disabled(bool)`. Touch long-press open is deferred until GPUI exposes
 /// touch pointer metadata; the open command is gesture-source-agnostic so a
 /// long-press source can be added later.
+///
+/// # Accessibility
+///
+/// The trigger area is intentionally **inaccessible**, mirroring Base UI's
+/// role-less `<div>`: it carries no `Role`, no `aria_*` props, no focus
+/// tracking, and no `on_a11y_action` handlers, so despite having an element
+/// id it never appears in the AccessKit tree or the tab order. The menu
+/// popup itself carries the tree semantics (`Role::Menu` etc.) once open,
+/// via the re-exported Menu parts. Relationship props (`aria-haspopup`,
+/// `aria-controls`) are both un-emitted by Base UI for this part and
+/// unavailable as builders in the pinned gpui revision, so nothing is lost.
+/// The `ContextMenuTriggerStyleState` `open`/`pressed` facts are visual only.
 pub struct ContextMenuTrigger<P: Clone + 'static = ()> {
     id: ElementId,
     base: Div,

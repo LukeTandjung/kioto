@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Bounds, Div, Element, ElementId, GlobalElementId, InspectorElementId,
-    IntoElement, LayoutId, ParentElement, Pixels, RenderOnce, SharedString, StyleRefinement,
-    Styled, Window,
+    InteractiveElement, IntoElement, LayoutId, ParentElement, Pixels, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement, StyleRefinement, Styled, Window,
 };
 
 use crate::{
@@ -27,6 +27,7 @@ pub struct CheckboxGroup {
     value: Option<Vec<SharedString>>,
     all_values: Vec<SharedString>,
     disabled: bool,
+    aria_label: Option<SharedString>,
     on_value_change: Option<CheckboxGroupValueChangeHandler>,
     style_with_state: Option<Rc<dyn Fn(CheckboxGroupStyleState, Div) -> Div + 'static>>,
 }
@@ -41,6 +42,7 @@ impl Default for CheckboxGroup {
             value: None,
             all_values: Vec::new(),
             disabled: false,
+            aria_label: None,
             on_value_change: None,
             style_with_state: None,
         }
@@ -85,6 +87,11 @@ impl RenderOnce for CheckboxGroup {
             Some(style_with_state) => style_with_state(style_state, self.base),
             None => self.base,
         };
+        let mut base = base.id(self.id.clone()).role(Role::Group);
+
+        if let Some(aria_label) = self.aria_label {
+            base = base.aria_label(aria_label);
+        }
 
         CheckboxGroupScopeElement {
             group_key: self.id.to_string().into(),
@@ -143,6 +150,11 @@ impl CheckboxGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

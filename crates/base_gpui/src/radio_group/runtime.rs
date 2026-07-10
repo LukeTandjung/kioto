@@ -318,6 +318,11 @@ impl<T: Clone + Eq + 'static> RadioGroupRuntime<T> {
         changed
     }
 
+    /// Returns the number of registered radios, for `aria_size_of_set`.
+    pub fn radio_count(&self) -> usize {
+        self.radios.len()
+    }
+
     /// Returns the style state for `RadioGroupRoot`.
     pub fn root_state(&self, props: &RadioGroupProps<T>) -> RadioGroupRootStyleState {
         RadioGroupRootStyleState::new(

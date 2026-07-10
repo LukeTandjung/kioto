@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, FocusHandle,
-    InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::menu::{
@@ -68,10 +68,14 @@ impl<P: Clone + 'static> RenderOnce for MenuItem<P> {
             .focus_handle
             .clone()
             .unwrap_or_else(|| part_focus_handle(&self.id, window, cx));
-        let (state, tab_stop) = context.read(cx, |runtime, props| {
+        let (state, tab_stop, item_count) = context.read(cx, |runtime, props| {
             let mut state = runtime.item_state(self.index, self.disabled);
             state.disabled = state.disabled || props.disabled();
-            (state, runtime.item_is_tab_stop(self.index))
+            (
+                state,
+                runtime.item_is_tab_stop(self.index),
+                runtime.item_count(),
+            )
         });
         let disabled = state.disabled;
         let index = self.index;
@@ -104,6 +108,13 @@ impl<P: Clone + 'static> RenderOnce for MenuItem<P> {
             })
             .child(
                 base.id(self.id)
+                    // `aria-disabled` has no gpui builder (documented gap):
+                    // disabled items stay inert via withheld tab stops and
+                    // activation no-ops but are not announced as disabled.
+                    .role(Role::MenuItem)
+                    .when_some(self.label.clone(), |this, label| this.aria_label(label))
+                    .when_some(index, |this, index| this.aria_position_in_set(index + 1))
+                    .aria_size_of_set(item_count)
                     .track_focus(
                         &focus_handle
                             .tab_stop(tab_stop && !disabled)

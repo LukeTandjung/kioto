@@ -67,6 +67,8 @@ impl RenderOnce for NumberFieldScrubArea {
             None => self.base,
         };
 
+        // No a11y role on purpose: Base UI renders the scrub area as `role="presentation"`.
+        // Without a role this element stays out of the AccessKit tree, the gpui equivalent.
         base.id(id)
             .on_mouse_down(MouseButton::Left, move |event, window, cx| {
                 *down_position.as_mut(cx) = Some(event.position);

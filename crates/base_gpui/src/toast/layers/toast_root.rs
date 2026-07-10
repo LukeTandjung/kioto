@@ -1,13 +1,14 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, px, App, Div, ElementId, InteractiveElement as _, IntoElement, MouseButton, ParentElement,
-    RenderOnce, SharedString, StyleRefinement, Styled, Window,
+    div, px, AccessibleAction, App, Div, ElementId, InteractiveElement as _, IntoElement,
+    MouseButton, ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::toast::child_wiring::ToastPartNode;
 use crate::toast::{
-    ToastCloseAction, ToastContext, ToastId, ToastRootChild, ToastRootStyleState,
+    ToastCloseAction, ToastContext, ToastId, ToastPriority, ToastRootChild, ToastRootStyleState,
     ToastSwipeDirection, TOAST_ROOT_KEY_CONTEXT,
 };
 
@@ -65,7 +66,13 @@ impl<P: Clone + 'static> RenderOnce for ToastRoot<P> {
         let (Some(context), Some(toast_id)) = (self.context, self.toast_id) else {
             return div().into_any_element();
         };
-        let state = context.read(cx, |runtime, _| runtime.root_state(&toast_id));
+        let (state, title, description) = context.read(cx, |runtime, _| {
+            (
+                runtime.root_state(&toast_id),
+                runtime.title_state(&toast_id).title,
+                runtime.description_state(&toast_id).description,
+            )
+        });
         let element_id = ElementId::Name(SharedString::from(format!(
             "toast-root-{}",
             toast_id.as_str()
@@ -101,10 +108,41 @@ impl<P: Clone + 'static> RenderOnce for ToastRoot<P> {
                     .collect::<Vec<_>>(),
             );
 
-        // Limited toasts stay mounted but inert: no swipe, no keyboard close.
+        // AccessKit gap in this gpui revision: no `aria-hidden` builder, so
+        // unfocused high-priority roots drop their role instead (the node
+        // leaves the a11y tree, approximating Base UI's `aria-hidden`). No
+        // `aria-labelledby`/`aria-describedby` builders either, so the root
+        // carries a flattened literal label built from title + description.
+        let role = match state.priority {
+            ToastPriority::High if !state.expanded => None,
+            ToastPriority::High => Some(Role::AlertDialog),
+            ToastPriority::Low => Some(Role::Dialog),
+        };
+        let label = match (&title, &description) {
+            (Some(title), Some(description)) => Some(format!("{title}. {description}")),
+            (Some(title), None) => Some(title.to_string()),
+            (None, Some(description)) => Some(description.to_string()),
+            (None, None) => None,
+        };
+        let mut base = base;
+        if let Some(role) = role {
+            base = base.role(role);
+        }
+        if let Some(label) = label {
+            base = base.aria_label(label);
+        }
+
+        // Limited toasts stay mounted but inert: no swipe, no keyboard close,
+        // no a11y dismiss action (perceivable but non-actionable).
         if state.limited {
             return base.into_any_element();
         }
+
+        let a11y_close_context = context.clone();
+        let a11y_close_id = toast_id.clone();
+        let base = base.on_a11y_action(AccessibleAction::Click, move |_data, _window, cx| {
+            a11y_close_context.close(Some(&a11y_close_id), cx);
+        });
 
         let swipe_directions = self.swipe_directions;
         let down_context = context.clone();

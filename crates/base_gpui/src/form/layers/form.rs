@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, AnyElement, App, Bounds, Div, Element, ElementId, GlobalElementId, InspectorElementId,
-    InteractiveElement, IntoElement, LayoutId, ParentElement, Pixels, RenderOnce, StyleRefinement,
+    div, prelude::FluentBuilder as _, AnyElement, App, Bounds, Div, Element, ElementId,
+    GlobalElementId, InspectorElementId, InteractiveElement, IntoElement, LayoutId, ParentElement,
+    Pixels, RenderOnce, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement,
     Styled, Window,
 };
 
@@ -23,6 +24,7 @@ pub struct Form {
     children: Vec<AnyElement>,
     validation_mode: FieldValidationMode,
     errors: FormErrors,
+    aria_label: Option<SharedString>,
     on_form_submit: Option<FormSubmitHandler>,
     style_with_state: Option<Rc<dyn Fn(FormStyleState, Div) -> Div + 'static>>,
 }
@@ -35,6 +37,7 @@ impl Default for Form {
             children: Vec::new(),
             validation_mode: FieldValidationMode::OnSubmit,
             errors: FormErrors::new(),
+            aria_label: None,
             on_form_submit: None,
             style_with_state: None,
         }
@@ -66,6 +69,11 @@ impl RenderOnce for Form {
         FormScopeElement {
             context,
             inner: base
+                .id(self.id.clone())
+                .role(Role::Form)
+                .when_some(self.aria_label, |this, aria_label| {
+                    this.aria_label(aria_label)
+                })
                 .key_context(FORM_KEY_CONTEXT)
                 .on_action(move |_: &FormSubmitAction, window, cx| {
                     submit_context.submit(FormSubmitReason::Action, window, cx);
@@ -112,6 +120,11 @@ impl Form {
 
     pub fn errors(mut self, errors: FormErrors) -> Self {
         self.errors = errors;
+        self
+    }
+
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

@@ -132,6 +132,7 @@ pub struct FieldRuntime {
     was_focused: bool,
     validity_data: FieldValidityData,
     label_registered: bool,
+    label_text: Option<SharedString>,
     description_count: usize,
     error_count: usize,
     needs_validation: bool,
@@ -148,6 +149,7 @@ impl Default for FieldRuntime {
             was_focused: false,
             validity_data: FieldValidityData::default(),
             label_registered: false,
+            label_text: None,
             description_count: 0,
             error_count: 0,
             needs_validation: false,
@@ -166,6 +168,7 @@ impl FieldRuntime {
     pub fn begin_registration_pass(&mut self) {
         self.generation = self.generation.wrapping_add(1);
         self.label_registered = false;
+        self.label_text = None;
         self.description_count = 0;
         self.error_count = 0;
     }
@@ -239,9 +242,20 @@ impl FieldRuntime {
         needs_refresh
     }
 
-    /// Records that a label part rendered in this field.
-    pub fn register_label(&mut self) {
+    /// Records that a label part rendered in this field, optionally storing
+    /// its text so registered controls can expose it as their accessible
+    /// name via `.aria_label(...)` (this gpui revision has no
+    /// `aria-labelledby` relationship builder).
+    pub fn register_label(&mut self, text: Option<SharedString>) {
         self.label_registered = true;
+        if text.is_some() {
+            self.label_text = text;
+        }
+    }
+
+    /// Returns the registered label text, if a label part provided one.
+    pub fn label_text(&self) -> Option<SharedString> {
+        self.label_text.clone()
     }
 
     /// Records that a description part rendered in this field.

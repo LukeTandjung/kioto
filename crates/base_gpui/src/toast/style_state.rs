@@ -61,6 +61,9 @@ pub struct ToastViewportStyleState {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ToastRootStyleState {
     pub transition_status: Option<ToastTransitionStatus>,
+    /// Announce priority: `High` roots take `Role::AlertDialog`, others
+    /// `Role::Dialog`.
+    pub priority: ToastPriority,
     pub expanded: bool,
     pub limited: bool,
     pub toast_type: Option<ToastType>,
@@ -105,6 +108,9 @@ pub struct ToastDescriptionStyleState {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ToastCloseStyleState {
     pub toast_type: Option<ToastType>,
+    /// Whether the stack is expanded (hovering || focused). Collapsed close
+    /// buttons drop their a11y role, approximating Base UI's `aria-hidden`.
+    pub expanded: bool,
 }
 
 /// Style state for `ToastAction`, carrying the record's action definition.

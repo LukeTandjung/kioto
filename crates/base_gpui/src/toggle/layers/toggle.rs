@@ -1,9 +1,10 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, AnyElement, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AccessibleAction, AnyElement, App, ClickEvent, Div,
+    ElementId, Entity, FocusHandle, InteractiveElement as _, IntoElement, ParentElement,
+    RenderOnce, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Toggled, Window,
 };
 
 use crate::{
@@ -29,6 +30,7 @@ pub struct Toggle<T: Clone + Eq + 'static = SharedString> {
     pressed: Option<bool>,
     value: Option<T>,
     disabled: bool,
+    aria_label: Option<SharedString>,
     on_pressed_change: Option<TogglePressedChangeHandler>,
     style_with_state: Option<Rc<dyn Fn(ToggleStyleState, Div) -> Div + 'static>>,
     group_context: Option<ToggleGroupContext<T>>,
@@ -46,6 +48,7 @@ impl<T: Clone + Eq + 'static> Default for Toggle<T> {
             pressed: None,
             value: None,
             disabled: false,
+            aria_label: None,
             on_pressed_change: None,
             style_with_state: None,
             group_context: None,
@@ -101,8 +104,17 @@ impl<T: Clone + Eq + 'static> RenderOnce for Toggle<T> {
 
         let keyboard_context = context.clone();
         let pointer_context = context.clone();
+        let a11y_context = context.clone();
 
         base.id(self.id)
+            .role(Role::Button)
+            .aria_toggled(match style_state.pressed {
+                true => Toggled::True,
+                false => Toggled::False,
+            })
+            .when_some(self.aria_label, |this, aria_label| {
+                this.aria_label(aria_label)
+            })
             .track_focus(
                 &focus_handle
                     .tab_stop(!disabled)
@@ -119,6 +131,13 @@ impl<T: Clone + Eq + 'static> RenderOnce for Toggle<T> {
                 }
 
                 pointer_context.toggle(TogglePressedChangeSource::Pointer, window, cx);
+            })
+            // The `on_click` guard above only accepts `ClickEvent::Mouse`, so an
+            // AT-dispatched `Action::Click` (which gpui synthesizes as a
+            // keyboard-style click) would be dropped there; route it explicitly
+            // into the same runtime transition instead.
+            .on_a11y_action(AccessibleAction::Click, move |_data, window, cx| {
+                a11y_context.toggle(TogglePressedChangeSource::Keyboard, window, cx);
             })
             .children(self.children)
             .into_any_element()
@@ -184,6 +203,15 @@ impl<T: Clone + Eq + 'static> Toggle<T> {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// The accessible label announced by assistive technology. Icon-only
+    /// toggles must set this; there is no `aria-labelledby` id-reference
+    /// wiring in this gpui revision, so the literal string is the only
+    /// labelling mechanism.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 
@@ -259,13 +287,24 @@ fn render_grouped<T: Clone + Eq + 'static>(
     let home_group = group.clone();
     let end_group = group.clone();
     let keyboard_group = group.clone();
+    let a11y_group = group.clone();
     let pointer_group = group;
     let keyboard_value = value.clone();
+    let a11y_value = value.clone();
     let pointer_value = value;
     let keyboard_change = on_pressed_change.clone();
+    let a11y_change = on_pressed_change.clone();
     let pointer_change = on_pressed_change;
 
     base.id(toggle.id)
+        .role(Role::Button)
+        .aria_toggled(match pressed {
+            true => Toggled::True,
+            false => Toggled::False,
+        })
+        .when_some(toggle.aria_label, |this, aria_label| {
+            this.aria_label(aria_label)
+        })
         .track_focus(
             &focus_handle
                 .tab_stop(tab_stop)
@@ -341,6 +380,20 @@ fn render_grouped<T: Clone + Eq + 'static>(
                 own_disabled,
                 pointer_change.as_ref(),
                 TogglePressedChangeSource::Pointer,
+                window,
+                cx,
+            );
+        })
+        // See the standalone path: the `on_click` guard drops the synthesized
+        // (non-mouse) click gpui produces for an AT-dispatched `Action::Click`,
+        // so route it explicitly into the same grouped activation.
+        .on_a11y_action(AccessibleAction::Click, move |_data, window, cx| {
+            grouped_activate(
+                &a11y_group,
+                a11y_value.as_ref(),
+                own_disabled,
+                a11y_change.as_ref(),
+                TogglePressedChangeSource::Keyboard,
                 window,
                 cx,
             );

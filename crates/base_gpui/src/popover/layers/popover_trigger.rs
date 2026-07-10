@@ -5,9 +5,9 @@ use std::{
 };
 
 use gpui::{
-    div, AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, MouseButton, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AccessibleAction, AnyElement, App, Div, ElementId, Entity,
+    FocusHandle, InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::popover::{
@@ -35,6 +35,7 @@ pub struct PopoverTrigger<P: Clone + 'static = ()> {
     delay: Duration,
     close_delay: Duration,
     order: usize,
+    aria_label: Option<SharedString>,
     style_with_state: Option<PopoverTriggerStyle<P>>,
 }
 
@@ -54,6 +55,7 @@ impl<P: Clone + 'static> Default for PopoverTrigger<P> {
             delay: Duration::ZERO,
             close_delay: Duration::ZERO,
             order: 0,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -141,6 +143,9 @@ impl<P: Clone + 'static> RenderOnce for PopoverTrigger<P> {
         let hover_open_delay = self.delay;
         let hover_close_delay = self.close_delay;
         let click_focus_handle = focus_handle.clone();
+        let expand_context = context.clone();
+        let collapse_context = context.clone();
+        let expand_id = scoped_id.clone();
 
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
@@ -163,6 +168,41 @@ impl<P: Clone + 'static> RenderOnce for PopoverTrigger<P> {
             })
             .child(
                 base.id(scoped_id)
+                    // AccessKit gaps in this gpui revision: no builders for
+                    // `aria-haspopup="dialog"`, `aria-controls` (trigger →
+                    // popup id reference), or `aria-disabled`, so
+                    // Role::Button + aria_expanded is the best available
+                    // signal and AT cannot perceive the disabled state.
+                    .role(Role::Button)
+                    .aria_expanded(was_open && was_active)
+                    .when_some(self.aria_label, |this, label| this.aria_label(label))
+                    .on_a11y_action(AccessibleAction::Expand, move |_data, window, cx| {
+                        if disabled {
+                            return;
+                        }
+                        if let Some(context) = expand_context.as_ref() {
+                            context.open_trigger(
+                                expand_id.clone(),
+                                PopoverOpenChangeReason::TriggerPress,
+                                PopoverOpenChangeSource::Unknown,
+                                window,
+                                cx,
+                            );
+                        }
+                    })
+                    .on_a11y_action(AccessibleAction::Collapse, move |_data, window, cx| {
+                        if disabled {
+                            return;
+                        }
+                        if let Some(context) = collapse_context.as_ref() {
+                            context.close(
+                                PopoverOpenChangeReason::TriggerPress,
+                                PopoverOpenChangeSource::Unknown,
+                                window,
+                                cx,
+                            );
+                        }
+                    })
                     .track_focus(&focus_handle.tab_stop(!disabled).tab_index(if disabled {
                         -1
                     } else {
@@ -366,6 +406,14 @@ impl<P: Clone + 'static> PopoverTrigger<P> {
 
     pub fn close_delay(mut self, close_delay: Duration) -> Self {
         self.close_delay = close_delay;
+        self
+    }
+
+    /// Accessible label for the trigger; set this when the visible child is
+    /// not plain text. Any visible text that duplicates this label should be
+    /// rendered with `Text::new_inaccessible(...)` to avoid double-announcing.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

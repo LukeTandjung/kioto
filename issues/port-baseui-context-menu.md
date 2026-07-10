@@ -297,6 +297,92 @@ Rendered tests under `crates/base_gpui/src/context_menu/tests/`:
 - [ ] AccessKit semantics — nothing beyond the Menu issue's follow-up; confirm the context menu popup inherits the Menu role mapping when that lands.
 - [x] If the Menu port deferred any ContextMenu seam (grace state slot, cursor-anchor positioner defaults, arrow-key-open suppression), land those in `menu/` as part of this issue and update `issues/port-baseui-menu.md`'s checklist.
 
+## AccessKit accessibility follow-up
+
+Base UI emits almost no context-menu-specific ARIA: `ContextMenuTrigger.tsx`
+renders a plain `<div>` with **no role and no `aria-*` attributes** (it is not
+a button — there is no `aria-haspopup`/`aria-expanded`/`aria-controls` on it,
+unlike `MenuTrigger`), and `ContextMenuRoot.tsx` renders no element at all.
+Every menu-tree role (`menu`, `menuitem`, `menuitemcheckbox`, `menuitemradio`,
+`group`, `separator`) comes from the re-exported Menu parts, so the substantive
+AccessKit work lands in `issues/port-baseui-menu.md`'s follow-up and flows
+through the `pub use` renames here for free. This section only covers the two
+context-menu-owned layers and verification of the inherited mapping.
+
+### Per accessible part
+
+- **`ContextMenuRoot<P>`** (`layers/context_menu_root.rs`) — renders no element
+  of its own (delegates to `MenuRoot<P>` via `self.inner`); it must **not**
+  appear in the accessibility tree. No `.role(...)` / `.aria_*(...)` calls.
+  Any container div the wrapped `MenuRoot` renders stays role-less (role-less
+  nodes are not reported; do not use `Role::GenericContainer`, which is
+  filtered/asserts in debug).
+- **`ContextMenuTrigger<P>`** (`layers/context_menu_trigger.rs`) — parity with
+  Base UI's role-less `<div>`: assign **no `Role`** and no `aria_*` props, so
+  the trigger area stays out of the a11y tree even though `build()` gives it
+  `.id(self.id)`. In particular do **not** give it `Role::Button` or
+  `.aria_expanded(...)` — Base UI deliberately does not expose the area as an
+  interactive control to AT (the menu popup itself carries the semantics once
+  open). The `ContextMenuTriggerStyleState` `open`/`pressed` facts are visual
+  only and map to nothing.
+- **All re-exported parts** (`ContextMenuPopup` = `MenuPopup` with
+  `Role::Menu`, `ContextMenuItem` = `MenuItem` with `Role::MenuItem`,
+  `ContextMenuCheckboxItem` → `Role::MenuItemCheckBox` +
+  `.aria_toggled(...)`, `ContextMenuRadioItem` → `Role::MenuItemRadio` +
+  `.aria_toggled(...)`, `ContextMenuRadioGroup` → `Role::RadioGroup`,
+  `ContextMenuGroup` → `Role::Group`, `ContextMenuSeparator` →
+  `Role::Separator`, positioner/portal/backdrop role-less) — inherited from
+  the Menu follow-up; verify through the Context Menu names, do not duplicate
+  the role wiring in `context_menu/`.
+
+### Actions
+
+- **No new `.on_a11y_action(...)` handlers in `context_menu/`.** The trigger's
+  open path is `on_mouse_down(MouseButton::Right, ...)` → 
+  `runtime.open_context_menu_at(...)` + `open_context.open(...)`; since the
+  trigger is intentionally invisible to AT (no role), there is no AT-dispatched
+  action to route. If a discoverable AT open affordance is later wanted, it
+  would need a role first — track with the Menu follow-up, not here.
+- Item/checkbox/radio `Action::Click` is auto-registered by the Menu parts'
+  existing `.on_click(...)`, and `Action::Focus` by their
+  `.track_focus(...)`/`.focusable()` — neither needs re-adding, and the
+  context-menu trigger correctly has neither (it is non-focusable by design,
+  matching the "Trigger focusability" note below).
+
+### Labels
+
+- `ContextMenuTrigger` and `ContextMenuRoot` need no `.aria_label(...)` (no
+  role, no node). Trigger children remain ordinary visible content; no
+  `Text::new_inaccessible(...)` swap is needed at this layer because no parent
+  label would double-announce them.
+- Item labels (`.aria_label` on `MenuItem`/checkbox/radio items, with visible
+  `text!(...)` swapped to `Text::new_inaccessible(...)`) are the Menu
+  follow-up's responsibility and apply unchanged through the re-exports.
+
+### Gaps (no gpui builder in the pinned revision)
+
+- **`aria-haspopup` / `aria-controls` / `aria-labelledby` /
+  `aria-activedescendant`**: no relationship builders exist in this revision.
+  Base UI's context-menu trigger emits none of these anyway (only the button
+  `MenuTrigger` does), so for this component the fallback is **omit — nothing
+  is lost vs. Base UI**; the Menu-side `aria-activedescendant`/`aria-labelledby`
+  gaps are documented in `issues/port-baseui-menu.md`.
+- **`disabled` / `aria-disabled`**: no `.aria_disabled(...)` builder. Root
+  `.disabled(true)` already makes right-click a no-op (checked in
+  `ContextMenuTrigger::build`'s mouse-down handler via `props.disabled()`);
+  since the trigger has no a11y node there is nothing to mark — **omit +
+  document**. Disabled *items* are the Menu follow-up's gap.
+- **Live regions / announcements**: not applicable — the context menu makes no
+  `aria-live` announcements in Base UI; no gap to record.
+
+### Checklist
+
+- [ ] `ContextMenuRoot<P>` and `ContextMenuTrigger<P>` render **no** a11y node: no `.role(...)`, no `.aria_*(...)` — verified against Base UI's role-less trigger `<div>`.
+- [ ] No `.on_a11y_action(...)`, `.track_focus(...)`, or `.focusable()` added to `ContextMenuTrigger` (stays out of tab order and a11y tree; Click/Focus auto-registration is irrelevant here since neither `on_click` nor focus tracking is wired).
+- [ ] Once the Menu AccessKit follow-up lands, verify through the `ContextMenu*` re-exports: popup is `Role::Menu`, items `Role::MenuItem`, checkbox items `Role::MenuItemCheckBox` with `.aria_toggled(Toggled::from(checked))`, radio items `Role::MenuItemRadio` with `.aria_toggled(...)`, radio group `Role::RadioGroup`, group `Role::Group`, separator `Role::Separator` — no re-wiring in `context_menu/`.
+- [ ] Document in `context_menu/layers/context_menu_trigger.rs` (doc comment) that the trigger is intentionally inaccessible, mirroring Base UI, and that relationship props (`aria-haspopup`/`aria-controls`) are both un-emitted by Base UI and unavailable in this gpui revision.
+- [ ] Cross-check `issues/port-baseui-menu.md`'s AccessKit checklist items for disabled-item and `aria-activedescendant` gaps; do not duplicate them here.
+
 ## Uncertain items needing confirmation
 
 - **Where grace/cursor facts live**: proposed in the Menu runtime behind

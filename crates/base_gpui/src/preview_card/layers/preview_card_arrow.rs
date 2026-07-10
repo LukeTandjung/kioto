@@ -10,6 +10,9 @@ use crate::preview_card::{
     PreviewCardBoundsKind, PreviewCardContext, PreviewCardSide,
 };
 
+/// Base UI marks the arrow `aria-hidden="true"`. This gpui revision has no
+/// `.aria_hidden(...)` builder, so the equivalent is achieved by assigning no
+/// role: an element without a role never enters the AccessKit tree.
 #[derive(IntoElement)]
 pub struct PreviewCardArrow<P: Clone + 'static = ()> {
     base: Div,

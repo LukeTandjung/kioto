@@ -101,12 +101,38 @@ Because Separator is stateless and non-compound, it should not need `runtime.rs`
 - [x] Do not expose `data-orientation`; callers use `style_with_state(...)` instead.
 - [x] Documentation/example shows state-aware styling for horizontal vs vertical orientation if useful.
 
-### Accessibility follow-up
+## AccessKit accessibility follow-up
 
-The pinned workspace `gpui` dependency is `https://github.com/zed-industries/zed#f7ca86e6`. This revision does not expose the newer AccessKit role/orientation helpers on `Div`, so Separator intentionally remains a visual GPUI component for now. GPUI-native separator accessibility should be wired after this repo updates to a GPUI revision with the needed AccessKit APIs.
+The pinned gpui revision (`1d029c5ff5654fb1b1e8caf4462993c8ee13a133`, accesskit `0.24.0`) exposes the AccessKit builders needed for Separator. Base UI's `Separator.tsx` emits exactly two things: `role="separator"` and `aria-orientation` mirroring the `orientation` prop. Both map cleanly onto existing gpui builders.
 
-- [x] Check whether the pinned GPUI dependency exposes AccessKit role/orientation APIs.
-- [x] Document AccessKit separator semantics as a follow-up rather than adding DOM-like attributes.
+### Per accessible part
+
+- **`Separator` layer** (`crates/base_gpui/src/separator/layers/separator.rs`): the internal `base: Div` must gain a stable `.id(...)` (an element appears in the a11y tree only with both a non-`None` id and role) plus:
+  - `.role(Role::Separator)` — direct equivalent of Base UI's `role="separator"`.
+  - `.aria_orientation(...)` mapped from the layer's `orientation: SeparatorOrientation` field: `SeparatorOrientation::Horizontal` → `gpui::Orientation::Horizontal`, `SeparatorOrientation::Vertical` → `gpui::Orientation::Vertical`. This replaces Base UI's `aria-orientation` attribute.
+- Adding `.id(...)` makes the base `Div` stateful; either switch the layer's `base` to the stateful div type or apply id/role/orientation in `RenderOnce::render` before handing the div to `style_with_state`. Keep the id stable across frames.
+- Because `.id(...)` on the wrapped div requires an `ElementId`, `Separator::new()` may need to accept or derive one (mirroring the keyed-`ElementId` pattern used elsewhere in base_gpui); decide and document the chosen signature.
+
+### Actions
+
+- None. Separator is inert (no `on_click`, no `track_focus`, no runtime), so no `.on_a11y_action(...)` handlers are needed, and there is no auto-registered Click/Focus action to worry about. Do not add `.focusable()` — a separator must not take focus.
+
+### Labels
+
+- No `.aria_label(...)` is needed; Base UI's Separator has no accessible name and the base_gpui port is childless, so there is no visible `text!(...)` to convert to `Text::new_inaccessible(...)`.
+
+### Gaps
+
+- None. Both attributes Base UI emits (`role="separator"`, `aria-orientation`) have direct gpui builders (`Role::Separator`, `.aria_orientation(Orientation)`). Separator does not use `disabled`, relationship props (`aria-controls`/`aria-labelledby`/`aria-describedby`/`aria-activedescendant`/`aria-haspopup`), or live regions, so none of the known gaps in this gpui revision apply.
+
+### Checklist
+
+- [ ] Give the `Separator` layer's rendered div a stable `.id(...)` so it enters the a11y tree.
+- [ ] Set `.role(Role::Separator)` on the rendered div.
+- [ ] Map `SeparatorOrientation` to `.aria_orientation(gpui::Orientation::{Horizontal, Vertical})` from the layer's `orientation` field.
+- [ ] Confirm Separator stays non-focusable and registers no a11y actions.
+- [ ] Verify id/role/orientation survive `style_with_state(...)` (styling closure must not drop them).
+- [ ] Extend the separator tests to cover horizontal and vertical `aria_orientation` on the rendered node.
 
 ### Tests / verification
 

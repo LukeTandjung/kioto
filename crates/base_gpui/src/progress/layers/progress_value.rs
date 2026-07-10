@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    SharedString, StyleRefinement, Styled, Window,
+    SharedString, StyleRefinement, Styled, Text, Window,
 };
 
 use crate::progress::{ProgressContext, ProgressStyleState};
@@ -59,8 +59,10 @@ impl RenderOnce for ProgressValue {
         };
 
         let base = base.id(id);
+        // Inaccessible text is the translation of Base UI's `aria-hidden` on
+        // the Value part; the value reaches AT via the root's numeric value.
         match text {
-            Some(text) => base.child(text),
+            Some(text) => base.child(Text::new_inaccessible(text)),
             None => base,
         }
     }

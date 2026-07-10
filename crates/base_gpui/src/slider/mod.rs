@@ -15,6 +15,20 @@
 //! `tabIndex` (replaced by per-thumb `FocusHandle`s, GPUI actions, and Field
 //! registration), and CSS class/style/data-attribute/CSS-variable APIs
 //! (replaced by `style_with_state` and typed style-state structs).
+//!
+//! AccessKit: `SliderRoot` is `Role::Group` with `.aria_label(...)` and
+//! `.aria_orientation(...)`; each `SliderThumb` is `Role::Slider` carrying
+//! `aria_numeric_value`/min/max, orientation, position-in-set/size-of-set,
+//! an optional per-thumb `.aria_label(...)`, and `Increment`/`Decrement`/
+//! `SetValue` a11y actions routed through the neighbor-clamped keyboard
+//! path. Blocked pending gpui upstream (no builders in this revision):
+//! `aria-labelledby`/`aria-describedby` id references (fallback: literal
+//! `.aria_label` strings), `aria-valuetext`/`getAriaValueText` (fallback:
+//! raw numeric value plus set position), `disabled`/`aria-disabled` on the
+//! thumb (fallback: a11y actions are not registered while disabled, so AT
+//! sees an inert but not announced-as-disabled slider), and `aria-live` on
+//! `SliderValue` (fallback: omitted; the focused thumb's numeric value
+//! updates instead).
 
 pub mod actions;
 pub mod child;

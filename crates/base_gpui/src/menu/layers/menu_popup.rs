@@ -5,7 +5,8 @@ use std::{
 
 use gpui::{
     div, App, Div, ElementId, FocusHandle, InteractiveElement as _, IntoElement, KeyDownEvent,
-    ParentElement, RenderOnce, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    Orientation, ParentElement, RenderOnce, Role, StatefulInteractiveElement as _, StyleRefinement,
+    Styled, Window,
 };
 
 use crate::{
@@ -96,6 +97,10 @@ impl<P: Clone + 'static> RenderOnce for MenuPopup<P> {
             None => self.base,
         }
         .id(self.id)
+        // Base UI emits `role="menu"` with a vertical orientation; flip the
+        // orientation when a horizontal menu variant lands.
+        .role(Role::Menu)
+        .aria_orientation(Orientation::Vertical)
         .track_focus(&focus_handle)
         .focusable()
         .key_context(MENU_KEY_CONTEXT)

@@ -1,7 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, App, Div, ElementId, InteractiveElement as _, IntoElement,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::toolbar::{
@@ -15,9 +17,11 @@ use crate::toolbar::{
 /// (never links).
 #[derive(IntoElement)]
 pub struct ToolbarGroup {
+    id: ElementId,
     base: Div,
     children: Vec<ToolbarGroupChild>,
     disabled: bool,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(ToolbarGroupStyleState, Div) -> Div + 'static>>,
     toolbar: Option<(ToolbarContext, bool)>,
 }
@@ -25,9 +29,11 @@ pub struct ToolbarGroup {
 impl Default for ToolbarGroup {
     fn default() -> Self {
         Self {
+            id: ElementId::from("toolbar-group"),
             base: div(),
             children: Vec::new(),
             disabled: false,
+            aria_label: None,
             style_with_state: None,
             toolbar: None,
         }
@@ -56,13 +62,29 @@ impl RenderOnce for ToolbarGroup {
             None => self.base,
         };
 
-        base.children(self.children)
+        // The stable id plus `Role::Group` mirror Base UI's `role="group"`.
+        // Merged `disabled` stays style-state-only: this gpui revision has no
+        // disabled a11y builder.
+        base.id(self.id)
+            .role(Role::Group)
+            .when_some(self.aria_label, |this, aria_label| {
+                this.aria_label(aria_label)
+            })
+            .children(self.children)
     }
 }
 
 impl ToolbarGroup {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Overrides the default `"toolbar-group"` element id. Give each group in
+    /// a window a distinct, stable id so assistive technology sees stable
+    /// accessibility nodes across frames.
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn child(mut self, child: impl Into<ToolbarGroupChild>) -> Self {
@@ -80,6 +102,14 @@ impl ToolbarGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Accessible name for the group, announced by screen readers. There is
+    /// no `aria-labelledby` id-reference builder in this gpui revision, so
+    /// the name is a literal string.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

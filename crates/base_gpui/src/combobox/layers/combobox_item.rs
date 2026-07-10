@@ -2,7 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, App, ClickEvent, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement,
-    RenderOnce, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    RenderOnce, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window,
 };
 
 type ComboboxItemStyle<T> = Rc<dyn Fn(ComboboxItemStyleState<T>, Div) -> Div + 'static>;
@@ -11,6 +12,7 @@ use crate::{
     combobox::{
         child_wiring::{ComboboxChildNode, ComboboxChildWiring},
         ComboboxChangeSource, ComboboxContext, ComboboxItemChild, ComboboxItemStyleState,
+        ComboboxSelectionMode,
     },
     field::current_field_item_disabled,
 };
@@ -86,6 +88,37 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxItem<T> {
         }
 
         let item_disabled = state.disabled || state.root_disabled;
+        // AccessKit facts, gathered before `state` moves into the style
+        // closure. `aria-selected` is gated off in `None` selection mode,
+        // matching Base UI's `selectable`-gated emission; position/size are
+        // computed over the filtered (visible) set only.
+        let aria_selected =
+            self.context
+                .as_ref()
+                .and_then(|context| match context.props().selection_mode {
+                    ComboboxSelectionMode::None => None,
+                    _ => Some(state.selected),
+                });
+        let aria_label =
+            self.label
+                .clone()
+                .or_else(|| match (self.context.as_ref(), self.value.as_ref()) {
+                    (Some(context), Some(value)) => {
+                        context.read(cx, |runtime, _| runtime.label_for_value(value))
+                    }
+                    _ => None,
+                });
+        let set_position = self
+            .context
+            .as_ref()
+            .zip(self.index)
+            .and_then(|(context, index)| {
+                context.read(cx, |runtime, _| {
+                    let filtered = runtime.filtered_indices();
+                    let position = filtered.iter().position(|&candidate| candidate == index)?;
+                    Some((position + 1, filtered.len()))
+                })
+            });
         let click_context = self.context.clone();
         let hover_context = self.context.clone();
         let value = self.value.clone();
@@ -105,33 +138,46 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxItem<T> {
             None => self.base,
         };
 
-        base.id(self.id)
-            .on_mouse_move(move |_event, window, cx| {
-                if let Some(context) = hover_context.as_ref() {
-                    context.highlight_item_from_pointer(index, item_disabled, window, cx);
-                }
-            })
-            .on_click(move |event, window, cx| {
-                if !matches!(event, ClickEvent::Mouse(_)) {
-                    return;
-                }
-                let Some(context) = click_context.as_ref() else {
-                    return;
-                };
-                let Some(value) = value.clone() else {
-                    return;
-                };
+        // `.on_click` below auto-registers `Action::Click`; highlight-following
+        // announcement (`aria-activedescendant`) is blocked pending gpui
+        // upstream (documented in `combobox/mod.rs`).
+        let mut item = base.id(self.id).role(Role::ListBoxOption);
+        if let Some(selected) = aria_selected {
+            item = item.aria_selected(selected);
+        }
+        if let Some(label) = aria_label {
+            item = item.aria_label(label);
+        }
+        if let Some((position, size)) = set_position {
+            item = item.aria_position_in_set(position).aria_size_of_set(size);
+        }
 
-                context.select_item(
-                    value,
-                    item_disabled,
-                    ComboboxChangeSource::Pointer,
-                    window,
-                    cx,
-                );
-            })
-            .children(children)
-            .into_any_element()
+        item.on_mouse_move(move |_event, window, cx| {
+            if let Some(context) = hover_context.as_ref() {
+                context.highlight_item_from_pointer(index, item_disabled, window, cx);
+            }
+        })
+        .on_click(move |event, window, cx| {
+            if !matches!(event, ClickEvent::Mouse(_)) {
+                return;
+            }
+            let Some(context) = click_context.as_ref() else {
+                return;
+            };
+            let Some(value) = value.clone() else {
+                return;
+            };
+
+            context.select_item(
+                value,
+                item_disabled,
+                ComboboxChangeSource::Pointer,
+                window,
+                cx,
+            );
+        })
+        .children(children)
+        .into_any_element()
     }
 }
 

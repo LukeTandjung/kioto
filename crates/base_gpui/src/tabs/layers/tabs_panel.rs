@@ -1,14 +1,16 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, prelude::FluentBuilder as _, AnyElement, App, Div, Empty, IntoElement, ParentElement,
-    RenderOnce, StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AnyElement, App, Div, ElementId, Empty,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::tabs::{child_wiring::TabsChildNode, TabsContext, TabsOrientation, TabsPanelStyleState};
 
 #[derive(IntoElement)]
 pub struct TabsPanel<T: Clone + Eq + 'static> {
+    id: Option<ElementId>,
     base: Div,
     children: Vec<AnyElement>,
     context: Option<TabsContext<T>>,
@@ -20,6 +22,7 @@ pub struct TabsPanel<T: Clone + Eq + 'static> {
 impl<T: Clone + Eq + 'static> Default for TabsPanel<T> {
     fn default() -> Self {
         Self {
+            id: None,
             base: div(),
             children: Vec::from([]),
             context: None,
@@ -45,6 +48,7 @@ impl<T: Clone + Eq + 'static> Styled for TabsPanel<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let Self {
+            id,
             base,
             children,
             context,
@@ -71,9 +75,17 @@ impl<T: Clone + Eq + 'static> RenderOnce for TabsPanel<T> {
         };
 
         if active || keep_mounted {
-            base.children(children)
-                .when(hidden, |this| this.invisible())
-                .into_any_element()
+            let base = base
+                .children(children)
+                .when(hidden, |this| this.invisible());
+
+            // Only the active panel enters the a11y tree; withholding the
+            // id/role from `keep_mounted` inactive panels is this revision's
+            // fallback for `hidden`/`inert` (no aria_hidden builder exists).
+            match (active, id) {
+                (true, Some(id)) => base.id(id).role(Role::TabPanel).into_any_element(),
+                _ => base.into_any_element(),
+            }
         } else {
             Empty.into_any_element()
         }
@@ -94,6 +106,13 @@ impl<T: Clone + Eq + 'static> TabsPanel<T> {
 
     pub fn value(mut self, value: T) -> Self {
         self.value = Some(value);
+        self
+    }
+
+    /// Stable element id for the panel. Required for the active panel to
+    /// appear in the accessibility tree with `Role::TabPanel`.
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = Some(id.into());
         self
     }
 

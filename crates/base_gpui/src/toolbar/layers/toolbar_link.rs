@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, AnyElement, App, ClickEvent, Div, ElementId, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, StatefulInteractiveElement as _, StyleRefinement,
-    Styled, Window,
+    div, prelude::FluentBuilder as _, AnyElement, App, ClickEvent, Div, ElementId, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::toolbar::{
@@ -21,6 +21,7 @@ pub struct ToolbarLink {
     id: ElementId,
     base: Div,
     children: Vec<AnyElement>,
+    aria_label: Option<SharedString>,
     on_click: Option<ToolbarClickHandler>,
     style_with_state: Option<Rc<dyn Fn(ToolbarLinkStyleState, Div) -> Div + 'static>>,
     toolbar: Option<(ToolbarContext, usize, FocusHandle)>,
@@ -32,6 +33,7 @@ impl Default for ToolbarLink {
             id: ElementId::from("toolbar-link"),
             base: div(),
             children: Vec::new(),
+            aria_label: None,
             on_click: None,
             style_with_state: None,
             toolbar: None,
@@ -80,7 +82,14 @@ impl RenderOnce for ToolbarLink {
         let pointer_handler = self.on_click;
         let pointer_focus_handle = focus_handle.clone();
 
+        // `Role::Link` puts the item in the a11y tree; `Action::Click` and
+        // `Action::Focus` are auto-registered by `.on_click` / `.track_focus`
+        // below.
         base.id(self.id)
+            .role(Role::Link)
+            .when_some(self.aria_label, |this, aria_label| {
+                this.aria_label(aria_label)
+            })
             .track_focus(
                 &focus_handle
                     .tab_stop(tab_stop)
@@ -123,6 +132,16 @@ impl ToolbarLink {
         on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_click = Some(Rc::new(on_click));
+        self
+    }
+
+    /// Accessible name for icon-only links. When set alongside a visible text
+    /// child, render that text with `Text::new_inaccessible(...)` instead of
+    /// `text!(...)` so screen readers do not announce the name twice; without
+    /// an `aria_label`, keep `text!(...)` so the child text remains the
+    /// accessible name source.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

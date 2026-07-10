@@ -8,7 +8,11 @@ use gpui::{
 use crate::progress::{ProgressContext, ProgressStyleState};
 
 /// Plain styled text part; Base UI's `aria-labelledby` id plumbing is out of
-/// scope for the GPUI port.
+/// scope for the GPUI port. Not in the a11y tree (no role), matching Base
+/// UI's `role="presentation"`. Pass label text as
+/// `Text::new_inaccessible(...)` (not `text!(...)`) and mirror the same
+/// string via `ProgressRoot::label(...)` so screen readers announce it once,
+/// through the root's `aria_label`.
 #[derive(IntoElement)]
 pub struct ProgressLabel {
     id: Option<ElementId>,

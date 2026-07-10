@@ -2,7 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, ClickEvent, Div, ElementId, InteractiveElement as _, IntoElement,
-    ParentElement, RenderOnce, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::number_field::{
@@ -16,6 +17,7 @@ pub struct NumberFieldDecrement {
     base: Div,
     children: Vec<AnyElement>,
     context: Option<NumberFieldContext>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<Rc<dyn Fn(NumberFieldDecrementStyleState, Div) -> Div + 'static>>,
 }
 
@@ -26,6 +28,7 @@ impl Default for NumberFieldDecrement {
             base: div(),
             children: Vec::new(),
             context: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -51,6 +54,14 @@ impl RenderOnce for NumberFieldDecrement {
         };
 
         base.id(id)
+            .role(Role::Button)
+            .aria_label(
+                self.aria_label
+                    .unwrap_or_else(|| SharedString::from("Decrease")),
+            )
+            // `Action::Click` is auto-registered by `on_click`; AT-dispatched clicks are
+            // synthesized as real mouse events, so the `ClickEvent::Mouse(_)` guard below
+            // does not filter them out.
             .on_click(move |event, window, cx| {
                 if !matches!(event, ClickEvent::Mouse(_)) {
                     return;
@@ -81,6 +92,14 @@ impl NumberFieldDecrement {
 
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = Some(id.into());
+        self
+    }
+
+    /// Override the default `"Decrease"` accessible label. Visible glyph children
+    /// (e.g. `"-"`) should use `Text::new_inaccessible(...)` to avoid being announced
+    /// in addition to this label.
+    pub fn aria_label(mut self, aria_label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(aria_label.into());
         self
     }
 

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::tooltip::{
@@ -95,6 +95,13 @@ impl<P: Clone + 'static> RenderOnce for TooltipPopup<P> {
         .id(self.id);
         if state.open {
             base = base
+                // Base UI's popup is a plain `div`; Role::Tooltip is the
+                // closest AccessKit node for the popup content. The role is
+                // only set while open so closed-but-kept-mounted (invisible)
+                // subtrees stay out of the accessibility tree. No live-region
+                // announcement API exists in this gpui revision, so tooltip
+                // content is not announced on open.
+                .role(Role::Tooltip)
                 .key_context(TOOLTIP_KEY_CONTEXT)
                 .on_action(move |_: &TooltipCloseAction, window, cx| {
                     if let Some(context) = close_context.as_ref() {

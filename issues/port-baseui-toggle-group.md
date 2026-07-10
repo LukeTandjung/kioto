@@ -205,3 +205,49 @@ Add one behavior per file under `crates/base_gpui/src/toggle_group/tests/`.
 - [x] Whether standalone `Toggle` becomes generic (`Toggle<T>`) with a defaulted parameter or the group wraps toggles in a way that keeps standalone use monomorphic; decide during implementation so standalone Toggle stays ergonomic without turbofish noise.
 - [x] Duplicate values in `multiple` mode: Base UI removes only the first occurrence on unpress and never deduplicates on press. Mirror that literally or debug-warn on duplicate registration; confirm during implementation.
 - [ ] Toolbar seam: when a Toolbar port exists, a nested Toggle Group must hand roving focus to the Toolbar (Base UI renders a plain group container inside a Toolbar). Out of scope here; revisit in the future `issues/port-baseui-toolbar.md`. (Update: the Toolbar port now exists with the shared `ToolbarItemMetadata` registration channel and documented flattening contract; the actual `ToolbarChild::ToggleGroup(...)` wiring is still pending.)
+
+## AccessKit accessibility follow-up
+
+Base UI's accessible surface for this component is small and fully documented in the source: `ToggleGroup.tsx` renders one container with `role: 'group'` (deliberately no `aria-orientation`), and the grouped `Toggle.tsx` renders a button with `'aria-pressed': pressed` plus native `disabled`. Map that onto the AccessKit builders available in the pinned gpui revision (`docs/accesskit-gpui-reference.md`) as follows. All work happens in `crates/base_gpui/src/toggle_group/layers/toggle_group.rs` (`ToggleGroup<T>`) and `crates/base_gpui/src/toggle/layers/toggle.rs` (`Toggle<T>`, both the standalone `render` path and `render_grouped`).
+
+### Per accessible part
+
+- **`ToggleGroup<T>` root (`layers/toggle_group.rs`)** — the root `Div` currently renders as `base.children(children)` with **no `.id(...)`**, so it cannot enter the a11y tree. Give it `.id(self.id.clone())` (the keyed id already exists on the struct and is stable across frames) plus:
+  - `.role(Role::Group)` — Base UI's `role="group"`.
+  - `.aria_label(...)` from a new `.aria_label(impl Into<SharedString>)` builder prop on `ToggleGroup<T>` (Base UI users pass `aria-label` through to the group div; we need an explicit prop since arbitrary attributes are out of scope).
+  - Do **not** set `.aria_orientation(...)`: Base UI deliberately renders no `aria-orientation` on the group (already noted in "Out of scope"); mirror that.
+- **Grouped `Toggle<T>` (`render_grouped` in `toggle/layers/toggle.rs`)** — already has `.id(toggle.id)`; add:
+  - `.role(Role::ToggleButton)` (verify the exact accesskit 0.24 variant name at implementation time; fall back to `Role::Button` + toggled state if absent).
+  - `.aria_toggled(if pressed { Toggled::True } else { Toggled::False })` — `pressed` is the membership-derived local already computed via `runtime.toggle_pressed(value.as_ref())`; this is the AccessKit expression of Base UI's `aria-pressed`.
+- **Standalone `Toggle<T>` (`render` path)** — same `Role::ToggleButton` + `.aria_toggled(...)` from `style_state.pressed` (the runtime-owned pressed state from `runtime.state()`). Track it in the Toggle issue too, but wire both paths in one pass since they share the file.
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are needed. `Action::Click` is auto-registered by the existing `.on_click(...)` in both `render` and `render_grouped`, and `Action::Focus` is auto-registered by the existing `.track_focus(&focus_handle...)`. AT-dispatched Click therefore already routes through `grouped_activate` → `ToggleGroupContext::commit_toggle` (the same shared-details veto path pointer and keyboard use).
+- Caveat: the `.on_click` closures early-return unless `matches!(event, ClickEvent::Mouse(_))`. Verify what `ClickEvent` an AT-dispatched `Action::Click` synthesizes in this gpui revision; if it is not a mouse click, the guard silently swallows AT activation and must be adjusted (e.g. also accept the a11y-synthesized variant) so the same `grouped_activate` transition runs.
+- Roving focus needs no extra a11y actions: AT focus lands on the current tab stop via the auto-registered `Focus` action, and arrow/Home/End movement stays keyboard-driven through the existing `ToggleGroupFocus*` actions.
+
+### Labels
+
+- Group label: from the new `ToggleGroup::aria_label(...)` prop (literal string; there is no `aria-labelledby` wiring in this revision — see Gaps).
+- Toggle label: add `.aria_label(impl Into<SharedString>)` to `Toggle<T>` and apply it in both render paths. Toggles are typically icon-only (the Base UI docs example uses SVG icons), so an explicit label is the primary path.
+- Where a toggle's child is visible text created with `text!(...)`, either rely on that text node and skip `.aria_label`, or set `.aria_label` and switch the child to `Text::new_inaccessible(...)` so the name is not announced twice. Pick one convention and apply it in the demo in `crates/base_gpui/src/main.rs`.
+
+### Gaps (no gpui builder in this revision)
+
+- **`disabled` / `aria-disabled`**: Base UI renders the toggle natively `disabled`; gpui has no `.aria_disabled(...)` and `write_a11y_info` sets no disabled flag. Fallback: omit and document. The interaction guards already exist (`grouped_activate` returns early on `own_disabled || group_disabled`, and disabled toggles get `tab_stop(false)` / `tab_index(-1)`), so a disabled toggle is inert to AT actions even though it is not *announced* as disabled. Revisit when gpui grows a `set_disabled` mapping (candidate upstream contribution).
+- **`aria-pressed` as a distinct attribute**: no dedicated builder; `aria_toggled(Toggled::…)` is the documented closest equivalent and is what we use. No further fallback needed.
+- **Relationship props** (`aria-labelledby`, `aria-describedby`, `aria-controls`, `aria-activedescendant`, `aria-haspopup`): Base UI Toggle Group emits none of these itself, but group labelling via `aria-labelledby` is a common consumer pattern; it has no builder, so the literal `.aria_label(...)` string is the only labelling channel. Omit and document.
+- **Live regions / announcements**: not needed by Toggle Group; no gap to track here.
+
+### Checklist
+
+- [ ] Give the `ToggleGroup<T>` root `Div` a stable `.id(self.id.clone())` and `.role(Role::Group)` in `layers/toggle_group.rs`.
+- [ ] Add `.aria_label(...)` builder prop to `ToggleGroup<T>` and forward it to the root element; do not set `aria_orientation`.
+- [ ] Set `.role(Role::ToggleButton)` (or `Role::Button` if the variant is absent in accesskit 0.24) plus `.aria_toggled(...)` from membership-derived `pressed` in `render_grouped`.
+- [ ] Set the same role + `.aria_toggled(...)` from `runtime.state().pressed` in the standalone `Toggle` render path.
+- [ ] Add `.aria_label(...)` builder prop to `Toggle<T>`, applied in both render paths; use `Text::new_inaccessible(...)` for visible toggle text when `.aria_label` is set.
+- [ ] Verify AT-dispatched `Action::Click` is not swallowed by the `ClickEvent::Mouse(_)` guard in the `on_click` handlers; adjust the guard if it is.
+- [ ] Do not add manual `on_a11y_action(Action::Click | Action::Focus, ...)` handlers — they are auto-registered by `.on_click`/`.track_focus`.
+- [ ] Document the missing disabled announcement (no `.aria_disabled` in this gpui revision) in the module docs, noting that disabled toggles are still action-inert.
+- [ ] Windowed test: pressed/unpressed grouped toggles report the correct `Toggled` state, and the group node carries `Role::Group` with its label.

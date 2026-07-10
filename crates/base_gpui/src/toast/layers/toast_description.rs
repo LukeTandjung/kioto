@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, StyleRefinement, Styled,
-    Window,
+    Text, Window,
 };
 
 use crate::toast::child_wiring::ToastPartNode;
@@ -62,8 +62,14 @@ impl<P: Clone + 'static> RenderOnce for ToastDescription<P> {
             None => self.base,
         };
         if self.children.is_empty() {
-            base.child(default_description.unwrap_or_default())
-                .into_any_element()
+            // The root carries a flattened `.aria_label` built from the
+            // record's title/description, so the default text renders
+            // inaccessibly to avoid double-announcing. Caller-supplied
+            // children are left alone.
+            base.child(Text::new_inaccessible(
+                default_description.unwrap_or_default(),
+            ))
+            .into_any_element()
         } else {
             base.children(self.children).into_any_element()
         }

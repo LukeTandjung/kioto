@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, App, Div, ElementId, InteractiveElement as _, IntoElement, MouseButton, ParentElement,
-    RenderOnce, StyleRefinement, Styled, Window,
+    div, AccessibleAction, App, Div, ElementId, InteractiveElement as _, IntoElement, MouseButton,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::otp_field::{layers::OtpSlotElement, OTPFieldContext, OTPFieldInputStyleState};
@@ -56,11 +57,39 @@ impl RenderOnce for OTPFieldInput {
             None => self.base,
         };
         let mouse_context = context.clone();
+        let a11y_click_context = context.clone();
+
+        // Accessibility: the closest AccessKit stand-in for Base UI's per-slot
+        // `<input>`. `disabled` / `readOnly` / `required` / `aria-invalid`
+        // have no a11y builders in this gpui revision (blocked pending gpui
+        // upstream); the disabled fact is conveyed only by the Click action
+        // guard below. `.aria_selected(active)` conveys the virtual active
+        // slot in place of per-slot DOM focus. The label never exposes a
+        // masked slot's real character.
+        let a11y_label: SharedString = if state.filled {
+            if state.masked {
+                SharedString::from("filled")
+            } else {
+                state.value.clone()
+            }
+        } else {
+            SharedString::from("empty")
+        };
 
         base.id(id)
+            .role(Role::TextInput)
+            .aria_label(a11y_label)
+            .aria_position_in_set(index + 1)
+            .aria_size_of_set(state.root.length)
+            .aria_selected(state.active)
             .on_mouse_down(MouseButton::Left, move |_event, window, cx| {
                 if !disabled && editable {
                     mouse_context.activate_slot(index, window, cx);
+                }
+            })
+            .on_a11y_action(AccessibleAction::Click, move |_, window, cx| {
+                if !disabled && editable {
+                    a11y_click_context.activate_slot(index, window, cx);
                 }
             })
             .child(OtpSlotElement::new(

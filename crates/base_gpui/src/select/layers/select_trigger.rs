@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, prelude::FluentBuilder as _, AccessibleAction, App, ClickEvent, Div, ElementId, Entity,
+    FocusHandle, InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 type SelectTriggerStyle<T> = Rc<dyn Fn(SelectTriggerStyleState<T>, Div) -> Div + 'static>;
@@ -24,6 +24,7 @@ pub struct SelectTrigger<T: Clone + Eq + 'static> {
     children: Vec<SelectTriggerChild<T>>,
     context: Option<SelectContext<T>>,
     focus_handle: Option<FocusHandle>,
+    aria_label: Option<SharedString>,
     style_with_state: Option<SelectTriggerStyle<T>>,
 }
 
@@ -35,6 +36,7 @@ impl<T: Clone + Eq + 'static> Default for SelectTrigger<T> {
             children: Vec::new(),
             context: None,
             focus_handle: None,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -90,6 +92,9 @@ impl<T: Clone + Eq + 'static> RenderOnce for SelectTrigger<T> {
         let last_context = context.clone();
         let activate_context = context.clone();
         let close_context = context.clone();
+        let expand_context = context.clone();
+        let collapse_context = context.clone();
+        let aria_label = self.aria_label;
 
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
@@ -99,6 +104,42 @@ impl<T: Clone + Eq + 'static> RenderOnce for SelectTrigger<T> {
         let measure_context = context.clone();
         let trigger = base
             .id(self.id)
+            // AccessKit gaps in this gpui revision: no builders for
+            // `aria-haspopup="listbox"`, `aria-controls`, `aria-labelledby`,
+            // `aria-readonly`, `aria-required`, or `aria-disabled`, so
+            // Role::ComboBox + aria_expanded + a literal label is the best
+            // available signal; disabled/read-only stay behavioral no-ops.
+            .role(Role::ComboBox)
+            .aria_expanded(open)
+            .when_some(aria_label, |this, label| this.aria_label(label))
+            .on_a11y_action(AccessibleAction::Expand, move |_data, window, cx| {
+                if disabled || read_only {
+                    return;
+                }
+                if let Some(context) = expand_context.as_ref() {
+                    context.set_open(
+                        true,
+                        SelectOpenChangeReason::TriggerPress,
+                        SelectOpenChangeSource::Programmatic,
+                        window,
+                        cx,
+                    );
+                }
+            })
+            .on_a11y_action(AccessibleAction::Collapse, move |_data, window, cx| {
+                if disabled || read_only {
+                    return;
+                }
+                if let Some(context) = collapse_context.as_ref() {
+                    context.set_open(
+                        false,
+                        SelectOpenChangeReason::TriggerPress,
+                        SelectOpenChangeSource::Programmatic,
+                        window,
+                        cx,
+                    );
+                }
+            })
             .track_focus(
                 &focus_handle
                     .tab_stop(!disabled)
@@ -289,6 +330,16 @@ impl<T: Clone + Eq + 'static> SelectTrigger<T> {
 
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = id.into();
+        self
+    }
+
+    /// Sets the accessible name announced for the trigger. Base UI relies on
+    /// `aria-labelledby`, which has no gpui equivalent, so the literal string
+    /// is the substitute. When the visible trigger content already matches the
+    /// label, render that content with `Text::new_inaccessible(...)` to avoid
+    /// double-announcing.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

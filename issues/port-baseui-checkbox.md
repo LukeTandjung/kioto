@@ -139,9 +139,47 @@ Expected GPUI implementation files:
 
 ### Accessibility follow-up
 
-- [ ] Once the target GPUI revision supports AccessKit roles/states, map root semantics to `Role::CheckBox`.
-- [ ] Once available, expose checked/unchecked/mixed state through GPUI-native accessibility APIs.
-- [ ] Once available, expose disabled/read-only/required state through GPUI-native accessibility APIs.
+See `## AccessKit accessibility follow-up` below.
+
+## AccessKit accessibility follow-up
+
+The pinned gpui revision exposes AccessKit through `.role(...)` / `.aria_*(...)` builders on `.id(...)` stateful elements (see `docs/accesskit-gpui-reference.md`). Base UI's `CheckboxRoot.tsx` renders `role="checkbox"` with `aria-checked` (`'mixed'` when indeterminate), `aria-readonly`, `aria-required`, `aria-labelledby`, and native `disabled`; `CheckboxIndicator.tsx` is a purely presentational span with no ARIA of its own.
+
+### Per accessible part
+
+- **`CheckboxRoot`** (`crates/base_gpui/src/checkbox/layers/checkbox_root.rs`) — the only accessible part. It already has a stable `.id(self.id)`, so add on the same `base` chain in `render`:
+  - `.role(Role::CheckBox)`.
+  - `.aria_toggled(...)` from the resolved style state (`context.read(cx, |runtime, props| runtime.root_state(props))`): `Toggled::Mixed` when `style_state.indeterminate`, else `Toggled::True` / `Toggled::False` from `style_state.checked` — mirroring Base UI's `aria-checked: computedIndeterminate ? 'mixed' : computedChecked`.
+  - `.aria_label(...)` when a label prop is provided (see Labels below).
+- **`CheckboxIndicator`** (`layers/checkbox_indicator.rs`) — presentational, matching Base UI. Do **not** give it a role; leave it out of the a11y tree.
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are needed. `Action::Click` is auto-registered by the existing `.on_click(...)` (which routes through `request_checkbox_toggle(...)` with `CheckboxCheckedChangeSource::Pointer`), and `Action::Focus` is auto-registered by the existing `.track_focus(&focus_handle)` / `.focusable()`. AT-dispatched Click therefore already flows into the same `CheckboxContext::request_toggle` / `commit_checked` runtime transition as pointer and keyboard input, including the disabled/read-only guards in `CheckboxRuntime::request_toggle`.
+  - Caveat: `on_click` currently early-returns for non-`ClickEvent::Mouse(_)` events. Verify how an AT-dispatched `Action::Click` surfaces in `ClickEvent`; if it is not a mouse variant, the guard must be relaxed (or an explicit `.on_a11y_action(AccessibleAction::Click, ...)` added) so AT activation actually toggles.
+
+### Labels
+
+- Add an `aria_label(impl Into<SharedString>)` builder on `CheckboxRoot` (stored as `Option<SharedString>`, applied via `.aria_label(...)`). There is no `aria-labelledby` id-wiring in gpui, so a literal label string is the only mechanism.
+- When a caller renders a visible text label as a child of `CheckboxRoot` and also sets `aria_label`, the visible text should use `Text::new_inaccessible(...)` instead of `text!(...)` so the label is not announced twice. Document this in the component's `AGENTS.md`/docs; the gallery example should demonstrate it.
+
+### Gaps (no gpui builder in this revision)
+
+- **`disabled` / `aria-disabled`**: no `.aria_disabled(...)` builder and `write_a11y_info` never sets a disabled flag. Fallback: the runtime already refuses toggles while disabled (`CheckboxRuntime::request_toggle`), and `tab_stop(false)` / `tab_index(-1)` already remove disabled checkboxes from the tab order — so AT activation is a no-op, but the node will not *announce* as disabled. Omit and document; track a gpui upstream `set_disabled` addition.
+- **`aria-readonly`** (`read_only` prop): no builder. Fallback: omit; runtime already blocks toggles when read-only. Document the announcement gap.
+- **`aria-required`** (`required` prop): no builder. Fallback: omit; keep `required` in `CheckboxRootStyleState` for future field-level messaging.
+- **`aria-labelledby`**: no id-reference wiring. Fallback: literal `.aria_label(...)` as above.
+- Field integration (`aria-describedby` to field description/error, validity announcements) is blocked on the same relationship/live-region gaps; note it in the Field issue rather than here.
+
+### Checklist
+
+- [ ] Add `.role(Role::CheckBox)` to the `CheckboxRoot` element chain in `checkbox_root.rs`.
+- [ ] Set `.aria_toggled(...)` from `CheckboxRootStyleState`: `Toggled::Mixed` when `indeterminate`, else from `checked`.
+- [ ] Add an `aria_label` builder to `CheckboxRoot` and apply it via `.aria_label(...)`.
+- [ ] Verify AT-dispatched `Action::Click` reaches `request_checkbox_toggle` despite the `ClickEvent::Mouse` guard; add an explicit `on_a11y_action` handler only if it does not.
+- [ ] Document the double-announce rule: visible labels alongside `aria_label` should use `Text::new_inaccessible(...)`.
+- [ ] Document the omitted `aria-disabled` / `aria-readonly` / `aria-required` / `aria-labelledby` semantics as blocked pending gpui upstream builders.
+- [ ] Keep `CheckboxIndicator` out of the a11y tree (no role), matching Base UI's presentational indicator.
 - [ ] Add accessibility tests if GPUI exposes test helpers for AccessKit state.
 
 ### Field/form integration follow-up

@@ -167,6 +167,11 @@ impl<T: Clone + Eq + 'static> AccordionRuntime<T> {
         self.values = unique_values(values);
     }
 
+    /// Returns the number of items registered during the last render pass.
+    pub fn item_count(&self) -> usize {
+        self.items.len()
+    }
+
     /// Reconciles the item metadata observed during the current render pass.
     pub fn sync_children(&mut self, mut items: Vec<AccordionItemMetadata<T>>) {
         items.sort_by_key(AccordionItemMetadata::index);

@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window,
+    div, AccessibleAction, AnyElement, App, Div, ElementId, Entity, FocusHandle,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::dialog::child_wiring::DialogChildWiring;
@@ -30,6 +30,8 @@ pub struct DrawerPopup<P: Clone + 'static = ()> {
     focus_handle: Option<FocusHandle>,
     scoped: bool,
     keep_mounted: bool,
+    role: Role,
+    aria_label: Option<SharedString>,
     style_with_state: Option<DrawerPopupStyle<P>>,
 }
 
@@ -43,6 +45,8 @@ impl<P: Clone + 'static> Default for DrawerPopup<P> {
             focus_handle: None,
             scoped: false,
             keep_mounted: false,
+            role: Role::Dialog,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -105,7 +109,9 @@ impl<P: Clone + 'static> RenderOnce for DrawerPopup<P> {
             return div();
         }
 
+        let open = state.open;
         let close_context = self.context.clone();
+        let collapse_context = self.context.clone();
         let next_context = self.context.clone();
         let previous_context = self.context.clone();
         let trap_focus = state.modal_mode.traps_focus();
@@ -115,13 +121,32 @@ impl<P: Clone + 'static> RenderOnce for DrawerPopup<P> {
             None => self.base,
         };
 
+        // Kept-mounted closed content stays role-less so it is absent from the
+        // accessibility tree (there is no hidden/inert builder in this gpui revision).
+        let mut base = base.id(self.id);
+        if open {
+            base = base.role(self.role);
+            if let Some(aria_label) = self.aria_label {
+                base = base.aria_label(aria_label);
+            }
+        }
+
         div().child(
-            base.id(self.id)
-                .track_focus(&focus_handle.tab_stop(true).tab_index(0))
+            base.track_focus(&focus_handle.tab_stop(true).tab_index(0))
                 .focusable()
                 .key_context(DIALOG_POPUP_KEY_CONTEXT)
                 .on_action(move |_: &DialogCloseAction, window, cx| {
                     if let Some(context) = close_context.as_ref() {
+                        context.dialog().close(
+                            DialogOpenChangeReason::EscapeKey,
+                            DialogOpenChangeSource::Keyboard,
+                            window,
+                            cx,
+                        );
+                    }
+                })
+                .on_a11y_action(AccessibleAction::Collapse, move |_data, window, cx| {
+                    if let Some(context) = collapse_context.as_ref() {
                         context.dialog().close(
                             DialogOpenChangeReason::EscapeKey,
                             DialogOpenChangeSource::Keyboard,
@@ -215,6 +240,19 @@ impl<P: Clone + 'static> DrawerPopup<P> {
 
     pub fn keep_mounted(mut self, keep_mounted: bool) -> Self {
         self.keep_mounted = keep_mounted;
+        self
+    }
+
+    /// Overrides the popup's accessibility role. Defaults to [`Role::Dialog`].
+    pub fn role(mut self, role: Role) -> Self {
+        self.role = role;
+        self
+    }
+
+    /// Sets the popup's accessible name. gpui has no `aria-labelledby`
+    /// builder, so pass the drawer title text explicitly here.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

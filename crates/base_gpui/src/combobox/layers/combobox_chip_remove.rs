@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    div, AnyElement, App, Div, InteractiveElement as _, IntoElement, MouseButton, ParentElement,
-    RenderOnce, StyleRefinement, Styled, Window,
+    div, AccessibleAction, AnyElement, App, Div, InteractiveElement as _, IntoElement, MouseButton,
+    ParentElement, RenderOnce, Role, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window,
 };
 
 use crate::combobox::{
@@ -48,19 +49,41 @@ impl<T: Clone + Eq + 'static> Styled for ComboboxChipRemove<T> {
 impl<T: Clone + Eq + 'static> RenderOnce for ComboboxChipRemove<T> {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let Some(context) = self.context.clone() else {
-            return div();
+            return div().into_any_element();
         };
         let index = self.index.unwrap_or(0);
         let state = context.read(cx, |runtime, props| runtime.chip_remove_state(props));
         let disabled = state.disabled;
+        let chip_label = context.read(cx, |runtime, _| runtime.chip_label(index));
         let press_context = context.clone();
+        let a11y_context = context.clone();
         let has_custom_children = !self.children.is_empty();
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
         };
 
-        let remove = base.on_mouse_down(MouseButton::Left, move |_event, window, cx| {
+        // AccessKit: `.on_mouse_down`-driven, so `Action::Click` is NOT
+        // auto-registered — add it explicitly (skipped while disabled;
+        // disabled state itself is not announced, blocked pending gpui
+        // upstream). The "×" glyph is a plain string child with no a11y id,
+        // so it is not double-announced next to the label.
+        let mut remove = base
+            .id(("combobox-chip-remove", index))
+            .role(Role::Button)
+            .aria_label(format!("Remove {chip_label}"));
+        if !disabled {
+            remove = remove.on_a11y_action(AccessibleAction::Click, move |_data, window, cx| {
+                a11y_context.remove_chip(
+                    index,
+                    ComboboxChangeReason::ChipRemovePress,
+                    ComboboxChangeSource::Keyboard,
+                    window,
+                    cx,
+                );
+            });
+        }
+        let remove = remove.on_mouse_down(MouseButton::Left, move |_event, window, cx| {
             if disabled {
                 return;
             }
@@ -74,9 +97,9 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxChipRemove<T> {
         });
 
         if has_custom_children {
-            remove.children(self.children)
+            remove.children(self.children).into_any_element()
         } else {
-            remove.child("×")
+            remove.child("×").into_any_element()
         }
     }
 }

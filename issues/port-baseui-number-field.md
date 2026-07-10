@@ -396,6 +396,61 @@ Add behavior tests under `crates/base_gpui/src/number_field/tests/` where practi
 - [x] `cargo clippy -p base_gpui --all-targets` passes without `pub_with_shorthand` violations.
 - [x] `ast-grep scan` passes.
 
+## AccessKit accessibility follow-up
+
+Scope: wire the existing `number_field` layers into GPUI's AccessKit tree using only the APIs available in the pinned gpui revision (see `docs/accesskit-gpui-reference.md`). A node is reported only when it has both `.id(...)` and `.role(...)`; all layers already have stable keyed ids via `context.child_id(...)` / user `.id(...)`, so this work is additive on the existing render paths.
+
+### Per accessible part
+
+- `NumberFieldInput` (`layers/number_field_input.rs`): the accessible control. Base UI renders a text `<input inputMode="numeric">`; the closest AccessKit mapping in this revision is `Role::SpinButton` (matching `gpui/examples/a11y.rs`). On the input's rendered root element set:
+  - `.role(Role::SpinButton)`;
+  - `.aria_numeric_value(v)` from `NumberFieldRootStyleState::value` when it is `Some(v)` (the style state is already read in `render` via `context.read(cx, |runtime, props| runtime.input_state(props))`);
+  - `.aria_min_numeric_value(...)` / `.aria_max_numeric_value(...)` from `NumberFieldProps::min()` / `NumberFieldProps::max()` when set;
+  - `.aria_label(...)` from a new `NumberFieldInput::aria_label(...)` builder prop (see Labels below).
+  - The generic `input()` primitive currently exposes no role/aria pass-through, so `Input` needs small forwarding builders (`role`, `aria_label`, numeric-value setters) applied to its stateful root element. Keep them generic on `Input`; Number Field remains the caller that decides the role.
+- `NumberFieldIncrement` / `NumberFieldDecrement` (`layers/number_field_increment.rs`, `layers/number_field_decrement.rs`): `.role(Role::Button)` on the existing `base.id(id)` element, plus `.aria_label("Increase")` / `.aria_label("Decrease")` defaults (mirroring `useNumberFieldButton.ts`), overridable via a new `.aria_label(...)` builder prop.
+- `NumberFieldGroup` (`layers/number_field_group.rs`): `.role(Role::Group)` on its root element, matching Base UI's `role="group"`.
+- `NumberFieldRoot`, `NumberFieldScrubArea`, `NumberFieldScrubAreaCursor`: **no roles**. Base UI's root is a plain `div`, and the scrub parts are `role="presentation"` / `aria-hidden`. In gpui, simply not assigning a role keeps them out of the a11y tree, which is the correct equivalent — no work needed beyond a code comment.
+
+### Actions
+
+- `NumberFieldInput`: add
+  - `.on_a11y_action(AccessibleAction::Increment, ...)` → `context.step(NumberFieldStepDirection::Up, NumberFieldStepAmount::Normal, NumberFieldChangeReason::Keyboard, NumberFieldCommitReason::Keyboard, window, cx)`;
+  - `.on_a11y_action(AccessibleAction::Decrement, ...)` → same with `NumberFieldStepDirection::Down`.
+  These route into the exact runtime command the ArrowUp/ArrowDown keyboard path already uses; do not add a parallel value path. `Action::SetValue` is optional; if added, route through `context.input_changed(...)` + `context.commit(NumberFieldCommitReason::Keyboard, ...)` so parse/clamp/commit rules are reused.
+- `NumberFieldIncrement` / `NumberFieldDecrement`: **nothing to add** — `Action::Click` is auto-registered by the existing `.on_click(...)` handlers, which already call `context.step(...)`. Note: those handlers early-return unless `matches!(event, ClickEvent::Mouse(_))`; verify AT-dispatched clicks are not filtered out by that guard, and relax it if they are.
+- Focus: `Action::Focus` is auto-registered wherever the focus handle is tracked (the input primitive already wires `context.focus_handle()`); do not re-add.
+
+### Labels
+
+- The input's accessible name comes from a literal `.aria_label(...)` string (new builder prop on `NumberFieldInput`, forwarded through `Input`). There is no `aria-labelledby`, so `FieldLabel` cannot name the control by id-reference; callers must pass the label text explicitly. Document this on the builder.
+- Stepper button children are caller-supplied (e.g. `.child("-")` / `.child("+")`); since the buttons carry `.aria_label(...)`, document that visible glyph children should use `Text::new_inaccessible(...)` (not `text!(...)`) to avoid double-announcing, and use it in the gallery/demo.
+- `NumberFieldScrubArea` label text (e.g. `.child("Amount")` in the demo) is presentational in Base UI; keep it inaccessible or leave it as plain text outside the a11y tree (scrub area has no role, so its subtree only leaks if children carry ids + roles).
+
+### Gaps (no gpui builder in this revision)
+
+- `aria-roledescription: "Number field"` (`NumberFieldInput.tsx`): no builder. Fallback: omit; `Role::SpinButton` already conveys the numeric-stepper semantics.
+- `aria-invalid` (input, when Field validation fails): no builder. Fallback: omit + document; track as blocked pending gpui upstream.
+- `aria-labelledby: labelId` (input ← `FieldLabel`): no id-reference wiring. Fallback: literal `.aria_label(...)` as above.
+- `aria-controls: id` (increment/decrement → input, `useNumberFieldButton.ts`): no builder. Fallback: omit + document; group + labels make the relationship inferable.
+- `disabled` / `aria-disabled` and `required`: no `.aria_disabled(...)` / `.aria_required(...)` builders and `write_a11y_info` never sets a disabled flag. Fallback: the runtime already no-ops stepping/typing when `NumberFieldProps::disabled()` / `read_only()` is true, so AT actions are inert; document that disabled state is not *announced*, blocked pending gpui upstream.
+- `aria-readonly`: not applicable — Base UI itself deliberately omits it on the input (`useNumberFieldStepperButton.ts` comment); nothing to do.
+- `aria-hidden` on the root's scrub cursor markup: no builder needed — omit role/id instead.
+
+### Checklist
+
+- [ ] Add generic `role` / `aria_label` / numeric-value forwarding builders to the `input()` primitive root element (no Number Field knowledge in `Input`).
+- [ ] `NumberFieldInput` sets `Role::SpinButton`, `.aria_numeric_value` from runtime `value`, `.aria_min_numeric_value` / `.aria_max_numeric_value` from `NumberFieldProps::min()` / `max()`.
+- [ ] `NumberFieldInput` exposes `.aria_label(...)` and documents the missing `aria-labelledby` wiring.
+- [ ] `NumberFieldInput` registers `AccessibleAction::Increment` / `Decrement` handlers routed through `context.step(...)`.
+- [ ] `NumberFieldIncrement` / `NumberFieldDecrement` set `Role::Button` with default `"Increase"` / `"Decrease"` `.aria_label(...)`, overridable.
+- [ ] Verify AT-dispatched `Action::Click` on the stepper buttons is not dropped by the `ClickEvent::Mouse(_)` guard in their `on_click` handlers.
+- [ ] `NumberFieldGroup` sets `Role::Group`.
+- [ ] `NumberFieldRoot` / `NumberFieldScrubArea` / `NumberFieldScrubAreaCursor` stay roleless, with a comment mapping this to Base UI's `role="presentation"` / `aria-hidden`.
+- [ ] Demo/gallery stepper glyphs use `Text::new_inaccessible(...)`.
+- [ ] Do not re-register `Action::Click` / `Action::Focus` where `on_click` / focus-handle tracking already exists.
+- [ ] Document the gaps above (`aria-invalid`, `aria-controls`, `aria-labelledby`, disabled/required announcement, `aria-roledescription`) in the module docs as blocked pending gpui upstream.
+
 ## Follow-ups
 
 - Locale-aware formatting and parsing.
@@ -404,4 +459,4 @@ Add behavior tests under `crates/base_gpui/src/number_field/tests/` where practi
 - Full browser-like numeric validity parity: `badInput`, `rangeUnderflow`, `rangeOverflow`, `stepMismatch`.
 - Pointer lock and cursor teleport behavior for scrub area.
 - Native form submission / hidden input equivalents if a GPUI Form primitive is added.
-- AccessKit/accessibility wiring once the project revisits GPUI accessibility.
+- AccessKit/accessibility wiring: see the `## AccessKit accessibility follow-up` section above.

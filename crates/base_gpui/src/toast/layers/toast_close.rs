@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, ElementId, InteractiveElement as _, IntoElement, MouseButton,
-    ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _, StyleRefinement,
-    Styled, Window,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::toast::child_wiring::ToastPartNode;
@@ -20,6 +20,7 @@ pub struct ToastClose<P: Clone + 'static = ()> {
     children: Vec<AnyElement>,
     context: Option<ToastContext<P>>,
     toast_id: Option<ToastId>,
+    aria_label: SharedString,
     style_with_state: Option<ToastCloseStyle>,
 }
 
@@ -30,6 +31,7 @@ impl<P: Clone + 'static> Default for ToastClose<P> {
             children: Vec::new(),
             context: None,
             toast_id: None,
+            aria_label: SharedString::from("Close"),
             style_with_state: None,
         }
     }
@@ -59,11 +61,21 @@ impl<P: Clone + 'static> RenderOnce for ToastClose<P> {
             "toast-close-{}",
             toast_id.as_str()
         )));
+        let expanded = state.expanded;
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
         };
-        base.id(element_id)
+        let mut base = base.id(element_id);
+        // AccessKit gap in this gpui revision: no `aria-hidden` builder, so
+        // the collapsed close button drops its role instead (the node leaves
+        // the a11y tree, approximating Base UI's collapsed `aria-hidden`).
+        if expanded {
+            base = base.role(Role::Button);
+        }
+        base.aria_label(self.aria_label)
+            .focusable()
+            .tab_stop(true)
             .on_mouse_down(MouseButton::Left, |_event, _window, cx| {
                 cx.stop_propagation();
             })
@@ -82,6 +94,15 @@ impl<P: Clone + 'static> ToastClose<P> {
 
     pub fn child_any(mut self, child: impl IntoElement) -> Self {
         self.children.push(child.into_any_element());
+        self
+    }
+
+    /// Accessible label for the close button; defaults to "Close". Callers
+    /// rendering a visible text child that duplicates this label should pass
+    /// it as `Text::new_inaccessible(...)` (or override the label) to avoid
+    /// double-announcing.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = label.into();
         self
     }
 

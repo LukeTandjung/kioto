@@ -2,7 +2,7 @@ use std::{rc::Rc, sync::Arc};
 
 use gpui::{
     div, AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
+    IntoElement, ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
     StyleRefinement, Styled, Window,
 };
 
@@ -27,6 +27,8 @@ pub struct DialogPopup<P: Clone + 'static = ()> {
     focus_handle: Option<FocusHandle>,
     scoped: bool,
     keep_mounted: bool,
+    role: Role,
+    aria_label: Option<SharedString>,
     payload_content: Option<DialogPayloadContentBuilder<P>>,
     style_with_state: Option<DialogPopupStyle<P>>,
 }
@@ -41,6 +43,8 @@ impl<P: Clone + 'static> Default for DialogPopup<P> {
             focus_handle: None,
             scoped: false,
             keep_mounted: false,
+            role: Role::Dialog,
+            aria_label: None,
             payload_content: None,
             style_with_state: None,
         }
@@ -77,6 +81,7 @@ impl<P: Clone + 'static> RenderOnce for DialogPopup<P> {
             return div();
         }
 
+        let open = state.open;
         let context = self.context.clone();
         let close_context = context.clone();
         let next_context = context.clone();
@@ -101,9 +106,18 @@ impl<P: Clone + 'static> RenderOnce for DialogPopup<P> {
             None => self.base,
         };
 
+        // Kept-mounted closed content stays role-less so it is absent from the
+        // accessibility tree (there is no hidden/inert builder in this gpui revision).
+        let mut base = base.id(self.id);
+        if open {
+            base = base.role(self.role);
+            if let Some(aria_label) = self.aria_label {
+                base = base.aria_label(aria_label);
+            }
+        }
+
         div().child(
-            base.id(self.id)
-                .track_focus(&focus_handle.tab_stop(true).tab_index(0))
+            base.track_focus(&focus_handle.tab_stop(true).tab_index(0))
                 .focusable()
                 .key_context(DIALOG_POPUP_KEY_CONTEXT)
                 .on_action(move |_: &DialogCloseAction, window, cx| {
@@ -192,6 +206,20 @@ impl<P: Clone + 'static> DialogPopup<P> {
 
     pub fn keep_mounted(mut self, keep_mounted: bool) -> Self {
         self.keep_mounted = keep_mounted;
+        self
+    }
+
+    /// Overrides the popup's accessibility role. Defaults to [`Role::Dialog`];
+    /// Alert Dialog sets [`Role::AlertDialog`].
+    pub fn role(mut self, role: Role) -> Self {
+        self.role = role;
+        self
+    }
+
+    /// Accessible name for the dialog. gpui has no `aria-labelledby` id-reference
+    /// builder, so consumers pass the title string directly.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

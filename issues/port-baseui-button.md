@@ -237,14 +237,86 @@ Switch test layout.
 
 ## AccessKit accessibility follow-up
 
-Base UI Button emits `role="button"` / `aria-disabled` semantics through the DOM.
-GPUI does not currently emit DOM ARIA. When this project updates to a GPUI revision
-with AccessKit support:
+Base UI Button's ARIA surface is small: `role="button"` (implicit on `<button>`,
+explicit when `nativeButton={false}`), the `disabled` attribute when disabled, and
+`aria-disabled="true"` + `tabindex="0"` in the `focusableWhenDisabled` case
+(`Button.tsx` / `useButton.ts` / `useFocusableWhenDisabled.ts`). The pinned gpui
+revision exposes AccessKit through `.role(...)` / `.aria_*(...)` builders on
+`.id(...)` elements (see `docs/accesskit-gpui-reference.md`); wire `ButtonRoot`
+against those.
 
-- [ ] Map `ButtonRoot` to the AccessKit button role.
-- [ ] Expose disabled state (including the focusable-when-disabled case, which in
-      Base UI is `aria-disabled="true"` without the `disabled` attribute) through
-      GPUI-native accessibility APIs.
+### Per accessible part
+
+- **`ButtonRoot`** (`crates/base_gpui/src/button/layers/button_root.rs`): the root
+  already has a stable `.id(self.id)` in `RenderOnce::render`, so it only needs
+  `.role(Role::Button)` on the same `div` chain to appear in the a11y tree. There
+  is no value state, so no `.aria_toggled` / `.aria_selected` / `.aria_expanded` —
+  the only state fields (`ButtonRoot.disabled`, `ButtonRoot.focusable_when_disabled`,
+  and the render-time `ButtonRootStyleState { disabled, focused }`) map to features
+  listed under Gaps, not to any available `aria_*` builder.
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are needed. `Action::Click` is
+  auto-registered by the existing `.on_click(...)` and `Action::Focus` by
+  `.track_focus(...)` / `.focusable()` — do **not** re-add them.
+- Verify the AT-dispatched Click reaches the shared `activate(...)` path so the
+  single disabled guard applies. The current `.on_click` handler early-returns on
+  `!matches!(event, ClickEvent::Mouse(_))`; if an AT-synthesized click does not
+  arrive as `ClickEvent::Mouse(_)`, it is silently dropped. Confirm what variant an
+  `Action::Click` produces and, if needed, widen the match (keyboard already routes
+  through `ButtonActivate`, so the double-fire filter must be kept for keyboard
+  clicks specifically, not all non-mouse clicks).
+- In the non-focusable disabled case the root skips `.track_focus`/`.focusable()`
+  entirely (the `when(tab_stop, ...)` branch), so no `Focus` action is registered —
+  correct: a disabled, non-focusable button should not be AT-focusable either.
+
+### Labels
+
+- Add a `.aria_label(impl Into<SharedString>)` builder prop on `ButtonRoot`
+  (stored alongside `disabled` etc.) and pass it through to the root element when
+  set. Button children are arbitrary `AnyElement`s, so there is no automatic
+  text-content label; callers with icon-only buttons must supply `aria_label`.
+- When a caller sets `aria_label` and also renders a visible text child, the demo
+  and docs should show the child as `Text::new_inaccessible(...)` instead of
+  `text!(...)` to avoid double-announcing. When no `aria_label` is given, a plain
+  `text!(...)` child remains accessible and serves as the computed name.
+
+### Gaps (no gpui builder in this revision)
+
+- **`disabled` / `aria-disabled`**: no `.aria_disabled(...)` builder exists and
+  `write_a11y_info` never sets a disabled flag. This covers both Base UI cases
+  (the `disabled` attribute, and `aria-disabled="true"` under
+  `focusableWhenDisabled`). Fallback: the behavior is already inert (the
+  `activate(...)` guard suppresses Click, and the non-focusable case registers no
+  Focus action), but AT will not announce "dimmed/disabled". Document the
+  limitation in the issue/demo and track as blocked pending a gpui upstream
+  `set_disabled` addition. Do not invent `.aria_disabled`.
+- **Relationship props** (`aria-labelledby`, `aria-describedby`, `aria-haspopup`,
+  etc.): Base UI Button itself emits none, but consumers commonly add them. No
+  builders exist; labels must go through the literal-string `.aria_label(...)`.
+  Omit + document.
+- **`aria-pressed`**: not a Button concern (that is Toggle); note in the future
+  Toggle port that `aria_toggled(Toggled)` is the closest available mapping.
+
+### Checklist
+
+- [ ] Set `.role(Role::Button)` on the `ButtonRoot` root element in
+      `button_root.rs` (same chain as `.id(self.id)`).
+- [ ] Add an `aria_label` builder prop to `ButtonRoot` mapped to
+      `.aria_label(...)` on the root.
+- [ ] Confirm AT-dispatched `Action::Click` (auto-registered via `.on_click`)
+      flows through `activate(...)` and is not dropped by the
+      `ClickEvent::Mouse(_)` filter; adjust the filter if necessary without
+      re-introducing keyboard double-fire.
+- [ ] Do not add explicit `.on_a11y_action(Action::Click | Action::Focus, ...)` —
+      both are auto-registered by `.on_click` / `.track_focus`.
+- [ ] Demo: show an icon-only button using `aria_label`, and a labeled button
+      whose visible text uses `Text::new_inaccessible(...)` when `aria_label` is
+      set.
+- [ ] Document the disabled-state announcement gap (no `.aria_disabled` in this
+      gpui revision) covering both plain `disabled` and
+      `focusable_when_disabled`; mark blocked pending gpui upstream.
 
 ## Uncertain items needing confirmation
 

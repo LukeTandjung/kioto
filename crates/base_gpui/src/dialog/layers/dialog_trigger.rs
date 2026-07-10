@@ -1,9 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
 use gpui::{
-    div, AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, MouseButton, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    div, AccessibleAction, AnyElement, App, Div, ElementId, Entity, FocusHandle,
+    InteractiveElement as _, IntoElement, MouseButton, ParentElement, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::dialog::{
@@ -27,6 +27,7 @@ pub struct DialogTrigger<P: Clone + 'static = ()> {
     disabled: bool,
     payload: Option<P>,
     order: usize,
+    aria_label: Option<SharedString>,
     style_with_state: Option<DialogTriggerStyle<P>>,
 }
 
@@ -43,6 +44,7 @@ impl<P: Clone + 'static> Default for DialogTrigger<P> {
             disabled: false,
             payload: None,
             order: 0,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -110,11 +112,14 @@ impl<P: Clone + 'static> RenderOnce for DialogTrigger<P> {
             });
         state.focused = focus_handle.is_focused(window);
         let disabled = state.disabled;
+        let expanded = state.open && state.active_trigger;
         let click_context = context.clone();
         let open_context = context.clone();
         let close_context = context.clone();
+        let a11y_context = context.clone();
         let click_id = scoped_id.clone();
         let open_id = scoped_id.clone();
+        let a11y_id = scoped_id.clone();
         let click_focus_handle = focus_handle.clone();
 
         let base = match self.style_with_state {
@@ -122,55 +127,76 @@ impl<P: Clone + 'static> RenderOnce for DialogTrigger<P> {
             None => self.base,
         };
 
-        base.id(scoped_id)
-            .track_focus(
-                &focus_handle
-                    .tab_stop(!disabled)
-                    .tab_index(if disabled { -1 } else { 0 }),
-            )
-            .focusable()
-            .key_context(DIALOG_TRIGGER_KEY_CONTEXT)
-            .on_mouse_down(MouseButton::Left, move |_event, window, cx| {
-                cx.stop_propagation();
-                if disabled {
-                    return;
-                }
-                click_focus_handle.focus(window, cx);
-                if let Some(context) = click_context.as_ref() {
-                    context.open_trigger(
-                        click_id.clone(),
-                        DialogOpenChangeReason::TriggerPress,
-                        DialogOpenChangeSource::Pointer,
-                        window,
-                        cx,
-                    );
-                }
-            })
-            .on_action(move |_: &DialogOpenAction, window, cx| {
-                if disabled {
-                    return;
-                }
-                if let Some(context) = open_context.as_ref() {
-                    context.open_trigger(
-                        open_id.clone(),
-                        DialogOpenChangeReason::TriggerPress,
-                        DialogOpenChangeSource::Keyboard,
-                        window,
-                        cx,
-                    );
-                }
-            })
-            .on_action(move |_: &DialogCloseAction, window, cx| {
-                if let Some(context) = close_context.as_ref() {
-                    context.close(
-                        DialogOpenChangeReason::EscapeKey,
-                        DialogOpenChangeSource::Keyboard,
-                        window,
-                        cx,
-                    );
-                }
-            })
-            .children(self.children)
+        let mut base = base
+            .id(scoped_id)
+            .role(Role::Button)
+            .aria_expanded(expanded);
+        if let Some(aria_label) = self.aria_label {
+            base = base.aria_label(aria_label);
+        }
+
+        base.track_focus(
+            &focus_handle
+                .tab_stop(!disabled)
+                .tab_index(if disabled { -1 } else { 0 }),
+        )
+        .focusable()
+        .key_context(DIALOG_TRIGGER_KEY_CONTEXT)
+        .on_mouse_down(MouseButton::Left, move |_event, window, cx| {
+            cx.stop_propagation();
+            if disabled {
+                return;
+            }
+            click_focus_handle.focus(window, cx);
+            if let Some(context) = click_context.as_ref() {
+                context.open_trigger(
+                    click_id.clone(),
+                    DialogOpenChangeReason::TriggerPress,
+                    DialogOpenChangeSource::Pointer,
+                    window,
+                    cx,
+                );
+            }
+        })
+        .on_action(move |_: &DialogOpenAction, window, cx| {
+            if disabled {
+                return;
+            }
+            if let Some(context) = open_context.as_ref() {
+                context.open_trigger(
+                    open_id.clone(),
+                    DialogOpenChangeReason::TriggerPress,
+                    DialogOpenChangeSource::Keyboard,
+                    window,
+                    cx,
+                );
+            }
+        })
+        .on_a11y_action(AccessibleAction::Click, move |_data, window, cx| {
+            if disabled {
+                return;
+            }
+            if let Some(context) = a11y_context.as_ref() {
+                context.open_trigger(
+                    a11y_id.clone(),
+                    DialogOpenChangeReason::TriggerPress,
+                    DialogOpenChangeSource::Unknown,
+                    window,
+                    cx,
+                );
+            }
+        })
+        .on_action(move |_: &DialogCloseAction, window, cx| {
+            if let Some(context) = close_context.as_ref() {
+                context.close(
+                    DialogOpenChangeReason::EscapeKey,
+                    DialogOpenChangeSource::Keyboard,
+                    window,
+                    cx,
+                );
+            }
+        })
+        .children(self.children)
     }
 }
 
@@ -226,6 +252,11 @@ impl<P: Clone + 'static> DialogTrigger<P> {
 
     pub fn handle(mut self, handle: DialogHandle<P>) -> Self {
         self.handle = Some(handle);
+        self
+    }
+
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

@@ -2,7 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, ClickEvent, Div, ElementId, InteractiveElement as _, IntoElement,
-    ParentElement, RenderOnce, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window,
 };
 
 use crate::combobox::{
@@ -20,6 +21,7 @@ pub struct ComboboxTrigger<T: Clone + Eq + 'static> {
     children: Vec<AnyElement>,
     context: Option<ComboboxContext<T>>,
     disabled: bool,
+    aria_label: Option<SharedString>,
     style_with_state: Option<ComboboxTriggerStyle<T>>,
 }
 
@@ -31,6 +33,7 @@ impl<T: Clone + Eq + 'static> Default for ComboboxTrigger<T> {
             children: Vec::new(),
             context: None,
             disabled: false,
+            aria_label: None,
             style_with_state: None,
         }
     }
@@ -58,13 +61,22 @@ impl<T: Clone + Eq + 'static> RenderOnce for ComboboxTrigger<T> {
         });
         let disabled = self.disabled || state.root.disabled;
         let read_only = state.root.read_only;
+        let open = state.root.open;
         let click_context = context.clone();
         let base = match self.style_with_state {
             Some(style_with_state) => style_with_state(state, self.base),
             None => self.base,
         };
 
-        base.id(self.id)
+        // AccessKit: `.on_click` auto-registers `Action::Click`; Base UI's
+        // `aria-haspopup`/`aria-controls` have no gpui builders (documented
+        // gaps in `combobox/mod.rs`).
+        let mut trigger = base.id(self.id).role(Role::Button).aria_expanded(open);
+        if let Some(aria_label) = self.aria_label.clone() {
+            trigger = trigger.aria_label(aria_label);
+        }
+
+        trigger
             .on_click(move |event, window, cx| {
                 if !matches!(event, ClickEvent::Mouse(_)) || disabled || read_only {
                     return;
@@ -101,6 +113,12 @@ impl<T: Clone + Eq + 'static> ComboboxTrigger<T> {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Accessible label for the trigger button (e.g. "Open suggestions").
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 

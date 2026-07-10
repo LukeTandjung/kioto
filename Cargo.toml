@@ -12,12 +12,11 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
-gpui = { git = "https://github.com/zed-industries/zed" }
-gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["font-kit", "wayland", "x11"] }
-gpui-component = { git = "https://github.com/longbridge/gpui-component" }
+gpui = { git = "https://github.com/zed-industries/zed", rev = "1d029c5ff5654fb1b1e8caf4462993c8ee13a133" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "1d029c5ff5654fb1b1e8caf4462993c8ee13a133", features = ["font-kit", "wayland", "x11"] }
 
 [workspace.lints.clippy]
 pub_with_shorthand = "deny"
 
 [patch.crates-io]
-gpui = { git = "https://github.com/zed-industries/zed" }
+gpui = { git = "https://github.com/zed-industries/zed", rev = "1d029c5ff5654fb1b1e8caf4462993c8ee13a133" }

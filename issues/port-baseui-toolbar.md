@@ -242,10 +242,6 @@ Cross-link: when `issues/port-baseui-toggle.md` and `issues/port-baseui-toggle-g
 - [x] Expose `style_with_state(...)` on every part that draws.
 - [x] Map Base UI data attributes (`data-disabled`, `data-orientation`, `data-focusable`) into these typed style-state fields; no DOM attributes, `className`, or CSS variables in the public surface.
 
-### Accessibility follow-up
-
-- [ ] Once the target GPUI revision supports the needed AccessKit APIs, map the root to the AccessKit toolbar role with orientation, groups to the group role, and expose item disabled state; do not port DOM ARIA attributes in this issue. (Blocked on GPUI AccessKit support.)
-
 ### Tests / verification
 
 Add one behavior per file under `crates/base_gpui/src/toolbar/tests/`.
@@ -272,6 +268,50 @@ Add one behavior per file under `crates/base_gpui/src/toolbar/tests/`.
 - [x] Disabled input is skipped when `focusable_when_disabled = false` and does not block vertical/horizontal roving traversal.
 - [x] Separator renders perpendicular to toolbar orientation by default and honors an explicit orientation override.
 - [x] `style_with_state(...)` receives correct root, button, link, input, and group state (including `focusable` on disabled-but-focusable items).
+
+## AccessKit accessibility follow-up
+
+The pinned gpui revision exposes AccessKit through `.role(...)`, `.aria_*(...)`, and `.on_a11y_action(...)` builders (see `docs/accesskit-gpui-reference.md`). An element joins the a11y tree only when it has both a stable `.id(...)` and a `.role(...)`. Base UI Toolbar's ARIA surface is small: `role="toolbar"` + `aria-orientation` on the root (`ToolbarRoot.tsx`), `role="group"` on the group (`ToolbarGroup.tsx`), and `role="separator"` + `aria-orientation` via the reused Separator; buttons/links/inputs get their semantics from the underlying element, with disabled/focusable exposed as data attributes only.
+
+### Per accessible part
+
+- **`ToolbarRoot`** (`layers/toolbar_root.rs`): add `.role(Role::Toolbar)` and `.aria_orientation(...)`, mapping `ToolbarProps::orientation()` (`ToolbarOrientation::Horizontal`/`Vertical`) to `gpui::Orientation::Horizontal`/`Vertical`. The root already carries an `.id(...)` and the `TOOLBAR_KEY_CONTEXT` action wiring; no other aria props apply (root-level `disabled` has no builder — see gaps).
+- **`ToolbarButton`** (`layers/toolbar_button.rs`): add `.role(Role::Button)` on the stateful `div()` that already has `.id(self.id)`, `.track_focus(...)`, and `.on_click(...)`. Optionally set `.aria_position_in_set(index + 1)` / `.aria_size_of_set(...)` from the child-wiring `index` and the runtime's item count if we want "item i of N" announcements; Base UI does not emit these, so treat as optional polish.
+- **`ToolbarLink`** (`layers/toolbar_link.rs`): add `.role(Role::Link)` on the stateful `div()` (same `.id`/`.track_focus`/`.on_click` shape as the button). No other aria props — links are never disabled.
+- **`ToolbarInput`** (`layers/toolbar_input.rs`): no toolbar-side role. The wrapped `Input` (`crates/base_gpui/src/input/`) owns the `Role::TextInput` node per the input port's own AccessKit follow-up; `ToolbarInput` only forwards `disabled` and `tab_stop` as it already does. Do not add a second node around it.
+- **`ToolbarGroup`** (`layers/toolbar_group.rs`): currently renders a bare `div()` with no `.id(...)`, so it cannot appear in the a11y tree. Give it an `.id(...)` builder (stable, keyed like the other parts) and set `.role(Role::Group)` to mirror Base UI's `role="group"`. Merged `disabled` stays style-state-only (see gaps).
+- **`ToolbarSeparator`** (`layers/toolbar_separator.rs`): no toolbar-side work. The wrapped `Separator` owns the a11y node: the separator port sets `.role(Role::Separator)` (verify the exact accesskit 0.24 variant name) plus `.aria_orientation(...)`; the toolbar only feeds it the derived perpendicular `SeparatorOrientation`, which it already does.
+
+### Actions
+
+- No new `.on_a11y_action(...)` handlers are needed. `Action::Click` is auto-registered by the existing `.on_click(...)` on `ToolbarButton` and `ToolbarLink`, and `Action::Focus` by the existing `.track_focus(...)` — do not re-add them. The AT-dispatched Click flows through the same pointer path, which already routes into `activate(...)`/the runtime's `sync_focused_index` tab-stop update and already refuses to fire `on_click` when the button's merged `disabled` is true.
+- Arrow-key roving stays keyboard-only (`ToolbarFocusLeft/Right/Up/Down` actions on the root); AccessKit has no roving-focus action to map, and AT focus movement arrives as `Action::Focus` on the target item, which `track_focus` already handles and which `sync_focused_index` already turns into the new roving tab stop.
+
+### Labels
+
+- Add an `.aria_label(impl Into<SharedString>)` builder to `ToolbarButton` and `ToolbarLink` (stored on the struct, applied in `render`) for icon-only items, matching how callers would otherwise have no accessible name.
+- When a button/link has a visible text child *and* an `.aria_label(...)` is set, the demo/gallery should use `Text::new_inaccessible(...)` for the visible text instead of `text!(...)` so the name is not announced twice. When no `aria_label` is given, keep `text!(...)` so the child text remains the accessible name source.
+- `ToolbarInput` labeling belongs to the input port (placeholder/label handling there); `ToolbarRoot`/`ToolbarGroup` may also take an optional `.aria_label(...)` for named toolbars/groups.
+
+### Gaps (no gpui builder in this revision — do not invent APIs)
+
+- **`disabled` / `aria-disabled`**: no `.aria_disabled(...)` exists and `write_a11y_info` never sets a disabled flag. The merged disabled state (`toolbar || group || item`, computed in `ToolbarButton::render` / `ToolbarInput::render`) stays exposed only through `ToolbarButtonStyleState`/`ToolbarInputStyleState`. Fallback: omit + document; keep the Click handler registered but inert when disabled (it already early-returns), so AT sees a button whose click does nothing rather than a vanishing node. Track an upstream `set_disabled` addition to gpui as the real fix.
+- **Relationship props** (`aria-controls`, `aria-labelledby`, `aria-describedby`, `aria-activedescendant`, `aria-owns`): no builders. Base UI Toolbar itself emits none of these, so nothing is blocked — but the roving tab stop cannot be expressed as `aria-activedescendant`; we rely on real focus movement instead, which is what the port already does.
+- **`aria-haspopup`**: no builder. Relevant only to the deferred trigger-hosting seam (menu/select/dialog triggers inside `ToolbarButton`); note as blocked pending gpui upstream when trigger hosting lands.
+- **Live regions / announcements**: not needed by Toolbar; no action.
+
+### Checklist
+
+- [ ] `ToolbarRoot`: `.role(Role::Toolbar)` + `.aria_orientation(...)` mapped from `ToolbarProps::orientation()`.
+- [ ] `ToolbarButton`: `.role(Role::Button)`; rely on auto-registered Click/Focus from the existing `.on_click`/`.track_focus`.
+- [ ] `ToolbarLink`: `.role(Role::Link)`; rely on auto-registered Click/Focus.
+- [ ] `ToolbarGroup`: add a stable `.id(...)` and `.role(Role::Group)`.
+- [ ] `ToolbarInput`: confirm the reused `Input` provides the `Role::TextInput` node; add no duplicate node in the toolbar layer.
+- [ ] `ToolbarSeparator`: confirm the reused `Separator` sets its role + `.aria_orientation(...)`; toolbar keeps feeding the derived perpendicular orientation.
+- [ ] Add `.aria_label(...)` builders to `ToolbarButton` and `ToolbarLink` (and optionally root/group); document the `Text::new_inaccessible(...)` convention for visible labels when `aria_label` is set.
+- [ ] Document the `disabled` gap in the module docs: merged disabled is style-state-only until gpui gains a disabled a11y builder; disabled items keep inert Click handlers.
+- [ ] Note `aria-haspopup` as blocked pending gpui upstream in the trigger-hosting seam docs.
+- [ ] Verify node ids stay stable across frames (keyed `ElementId`s already used) so roving-focus re-renders do not churn AccessKit nodes.
 
 ## Uncertain / needs confirmation
 

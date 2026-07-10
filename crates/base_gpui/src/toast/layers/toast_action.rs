@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, ElementId, InteractiveElement as _, IntoElement, MouseButton,
-    ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _, StyleRefinement,
-    Styled, Window,
+    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Text, Window,
 };
 
 use crate::toast::child_wiring::ToastPartNode;
@@ -72,6 +72,10 @@ impl<P: Clone + 'static> RenderOnce for ToastAction<P> {
         let on_click = action.on_click();
         let base = base
             .id(element_id)
+            .role(Role::Button)
+            .aria_label(action.label())
+            .focusable()
+            .tab_stop(true)
             .on_mouse_down(MouseButton::Left, |_event, _window, cx| {
                 cx.stop_propagation();
             })
@@ -79,7 +83,10 @@ impl<P: Clone + 'static> RenderOnce for ToastAction<P> {
                 on_click(window, cx);
             });
         if self.children.is_empty() {
-            base.child(action.label()).into_any_element()
+            // The button already carries the label via `.aria_label`; render
+            // the visible text inaccessibly to avoid double-announcing.
+            base.child(Text::new_inaccessible(action.label()))
+                .into_any_element()
         } else {
             base.children(self.children).into_any_element()
         }

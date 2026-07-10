@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     div, AnyElement, App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement,
-    RenderOnce, StyleRefinement, Styled, Window,
+    RenderOnce, Role, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
 };
 
 use crate::dialog::{
@@ -57,7 +57,10 @@ impl<P: Clone + 'static> RenderOnce for DialogTitle<P> {
             None => self.base,
         };
 
-        base.id(self.id).children(self.children)
+        base.id(self.id)
+            .role(Role::Heading)
+            .aria_level(2)
+            .children(self.children)
     }
 }
 

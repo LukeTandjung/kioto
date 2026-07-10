@@ -2,7 +2,7 @@ use std::{rc::Rc, sync::Arc};
 
 use gpui::{
     div, AnyElement, App, ClickEvent, Div, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement as _,
+    IntoElement, ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
     StyleRefinement, Styled, Window,
 };
 
@@ -21,6 +21,7 @@ pub struct PopoverClose<P: Clone + 'static = ()> {
     focus_handle: Option<FocusHandle>,
     scoped: bool,
     disabled: bool,
+    aria_label: SharedString,
     style_with_state: Option<Rc<dyn Fn(PopoverCloseStyleState, Div) -> Div + 'static>>,
 }
 
@@ -34,6 +35,7 @@ impl<P: Clone + 'static> Default for PopoverClose<P> {
             focus_handle: None,
             scoped: false,
             disabled: false,
+            aria_label: SharedString::from("Close"),
             style_with_state: None,
         }
     }
@@ -71,6 +73,11 @@ impl<P: Clone + 'static> RenderOnce for PopoverClose<P> {
         };
 
         base.id(self.id)
+            // AccessKit gap in this gpui revision: no `aria-disabled`
+            // builder, so AT cannot perceive the disabled state; handlers
+            // early-return and tab_index(-1) applies while disabled.
+            .role(Role::Button)
+            .aria_label(self.aria_label)
             .track_focus(
                 &focus_handle
                     .tab_stop(!disabled)
@@ -154,6 +161,14 @@ impl<P: Clone + 'static> PopoverClose<P> {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Accessible label for the close button; defaults to "Close". Any
+    /// visible text that duplicates this label should be rendered with
+    /// `Text::new_inaccessible(...)` to avoid double-announcing.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = label.into();
         self
     }
 

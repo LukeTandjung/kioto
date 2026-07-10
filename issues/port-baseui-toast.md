@@ -555,6 +555,124 @@ Rendered behavior tests (`toast/tests/`):
       > Unchecked: rendered-behavior (windowed) test harness for toast was not built in this pass.
 - [x] `cargo test -p base_gpui toast` passes.
 
+## AccessKit accessibility follow-up
+
+Base UI Toast's accessibility surface (`ToastViewport.tsx`, `ToastRoot.tsx`,
+`ToastClose.tsx`) is: viewport `role="region"` + `aria-live="polite"` +
+`aria-atomic="false"` + `aria-relevant="additions text"` + `aria-label="Notifications"`
+plus a hidden duplicated `role="alert"` tree per toast for announcements; root
+`role="dialog"` (or `"alertdialog"` when `priority === 'high'`) with `aria-modal=false`,
+`tabIndex=0`, `aria-labelledby={titleId}`, `aria-describedby={descriptionId}`, and
+`aria-hidden` on unfocused high-priority roots; close button `aria-hidden` when the
+stack is collapsed and unfocused. Map onto the pinned gpui AccessKit surface
+(`docs/accesskit-gpui-reference.md`) as follows.
+
+### Per accessible part
+
+- **`ToastViewport<P>`** (`layers/toast_viewport.rs`) — already has a stable `.id(self.id)`
+  and `.track_focus(&viewport_focus)`. Add `.role(Role::Group)` (verify whether accesskit
+  0.24 exposes a landmark `Role::Region`; if so prefer it) and a static
+  `.aria_label("Notifications")`, overridable via a new `aria_label(...)` prop on
+  `ToastViewport`. The `aria-live`/`aria-atomic`/`aria-relevant` trio has no builder —
+  see Gaps.
+- **`ToastRoot<P>`** (`layers/toast_root.rs`) — already has a stable per-toast
+  `.id(element_id)` (`toast-root-{id}`). Add `.role(...)` chosen from the toast record's
+  `priority` (`ToastPriority` in `style_state.rs`, read via the runtime's root-state
+  query): `ToastPriority::High` → `Role::AlertDialog`, otherwise `Role::Dialog`. Expose
+  `priority` through `ToastRootStyleState` (it is not there today) so the layer can
+  branch without a second runtime query. `aria-modal=false` needs no mapping (dialog
+  roles in AccessKit are non-modal unless marked; do not set any modal flag).
+- **`ToastTitle<P>`** / **`ToastDescription<P>`** (`layers/toast_title.rs`,
+  `layers/toast_description.rs`) — no role of their own. Their text feeds the root's
+  label/description; see Labels and Gaps (`aria-labelledby`/`aria-describedby` have no
+  builder, so the root carries a flattened `.aria_label`).
+- **`ToastClose<P>`** (`layers/toast_close.rs`) — has `.id(element_id)` + `.on_click`.
+  Add `.role(Role::Button)` and `.aria_label("Close")` (overridable via prop), plus
+  `.focusable()`/`.tab_stop(true)` so keyboard users can reach it (this also
+  auto-registers `Action::Focus`). Base UI's collapsed-state `aria-hidden` toggle has
+  no builder — see Gaps; the closest fallback is to skip `.role(...)` on the collapsed
+  Close (state already available as `expanded` on `ToastRootStyleState`; thread it into
+  `ToastCloseStyleState` or a second close-state field) so the node drops out of the
+  tree, mirroring `aria-hidden`.
+- **`ToastAction<P>`** (`layers/toast_action.rs`) — has `.id(element_id)` + `.on_click`.
+  Add `.role(Role::Button)` and `.focusable()`/`.tab_stop(true)`. Its accessible name
+  comes from `action.label()` when default-rendered (see Labels).
+- **`ToastContent<P>`** / **`ToastPortal<P>`** / **`ToastProvider<P>`** — structural
+  only; assign no role (roleless nodes are not reported; do not use
+  `Role::GenericContainer`).
+
+### Actions
+
+- `Action::Click` is auto-registered by the existing `.on_click` on `ToastClose` and
+  `ToastAction`; `Action::Focus` is auto-registered by `.track_focus(&viewport_focus)`
+  on the viewport and by the `.focusable()` calls added above. None of these need
+  explicit `.on_a11y_action` re-registration.
+- Add `.on_a11y_action(AccessibleAction::Click, ...)` on `ToastRoot` routing into the
+  same `context.close(Some(&toast_id), cx)` path the Escape `ToastCloseAction` handler
+  uses, so AT can dismiss a toast without simulating a swipe. Skip it on `limited`
+  roots (they render inert and return early before handlers are attached — keep the
+  role assignment above that early return but the action below it, so limited toasts
+  stay perceivable but non-actionable, matching the inert posture).
+
+### Labels
+
+- Viewport: literal `.aria_label("Notifications")` default, prop-overridable.
+- Root: since `aria-labelledby`/`aria-describedby` cannot be expressed, set
+  `.aria_label(...)` on the root from the toast record's `title` (and append
+  `description` when present, e.g. `"{title}. {description}"`), read via the runtime
+  root-state query. When that flattened label is set, the default text children rendered
+  by `ToastTitle`/`ToastDescription` (`base.child(default_title...)` /
+  `base.child(default_description...)`) should become `Text::new_inaccessible(...)`
+  instead of plain `SharedString` children, so the title/description are not announced
+  twice. Caller-supplied children are left alone (callers own their duplication).
+- `ToastAction`: when default-rendering `base.child(action.label())`, set
+  `.aria_label(action.label())` on the button and render the visible text via
+  `Text::new_inaccessible(action.label())`.
+- `ToastClose`: `.aria_label("Close")` default; callers rendering a visible text child
+  should pass an inaccessible one or override the label.
+
+### Gaps (no gpui builder in the pinned revision)
+
+- **Live-region announcement** (`aria-live="polite"`, `aria-atomic`, `aria-relevant`,
+  and the hidden duplicated `role="alert"` high-priority tree): no window or element
+  API exists to push announcements. Blocked pending gpui upstream; document that added
+  toasts are not auto-announced and rely on F6 discovery. This is the single biggest
+  a11y divergence for Toast — track it explicitly.
+- **`aria-hidden`** (unfocused high-priority roots; collapsed Close buttons): no
+  builder. Fallback: omit the `.role(...)` call in those states so the node leaves the
+  a11y tree (documented approximation), rather than inventing an `aria_hidden` API.
+- **`aria-labelledby` / `aria-describedby`** (root ↔ title/description id wiring —
+  the dropped `setTitleId`/`setDescriptionId` plumbing): no relationship builders.
+  Fallback: flattened literal `.aria_label` on the root as described in Labels.
+- **`aria-modal=false`**: no builder and none needed; note only that no modal flag is
+  set.
+- **`disabled`/`aria-disabled`**: Toast has no disabled surface in Base UI; nothing to
+  map. Limited/inert toasts are handled by omitting actions, not by a disabled flag.
+
+### Checklist
+
+- [ ] `ToastViewport` sets `Role::Group` (or `Role::Region` if available in accesskit
+      0.24) and a default, prop-overridable `.aria_label("Notifications")`.
+- [ ] `ToastRoot` sets `Role::Dialog`/`Role::AlertDialog` from the record's
+      `ToastPriority`, exposed via a new `priority` field on `ToastRootStyleState`.
+- [ ] `ToastRoot` carries a flattened `.aria_label` built from the record's
+      title/description.
+- [ ] `ToastRoot` adds `.on_a11y_action(AccessibleAction::Click, ...)` routed through
+      the existing `context.close(Some(&toast_id), cx)` path; omitted on `limited`
+      roots.
+- [ ] `ToastClose` and `ToastAction` set `Role::Button`, `.focusable()` +
+      `.tab_stop(true)`, and `.aria_label(...)` (close default `"Close"`, action from
+      `action.label()`); no manual Click/Focus `on_a11y_action` (auto-registered).
+- [ ] Default-rendered title/description/action-label text uses
+      `Text::new_inaccessible(...)` wherever the parent already sets `.aria_label`.
+- [ ] Collapsed Close and unfocused high-priority roots drop their role (documented
+      `aria-hidden` approximation).
+- [ ] Live-region/announcement gap documented as blocked pending gpui upstream, with a
+      pointer from the module docs.
+- [ ] Gallery smoke: verify Toast nodes appear in the AccessKit tree with stable ids
+      across timer ticks and stacking reorders (per-toast keyed `ElementId`s already
+      provide this — confirm, don't regress).
+
 ## Uncertain items to confirm during implementation
 
 - `toast_type` representation: enum (`Loading`/`Success`/`Error`/`Custom(SharedString)`)

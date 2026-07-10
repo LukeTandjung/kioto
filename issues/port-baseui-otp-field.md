@@ -302,7 +302,59 @@ Add behavior tests under `crates/base_gpui/src/otp_field/tests/` and pure unit t
 - RTL-aware Left/Right arrow mirroring once `base_gpui` grows a direction concept.
 - OS/autofill one-time-code integration if GPUI ever exposes a platform hook.
 - Per-slot custom mask characters or input-type overrides beyond the boolean `mask`.
-- AccessKit/accessibility wiring (group semantics, per-slot labels) once GPUI accessibility work is revisited.
+- AccessKit/accessibility wiring — see "AccessKit accessibility follow-up" below.
+
+## AccessKit accessibility follow-up
+
+Ground truth: `docs/accesskit-gpui-reference.md` (pinned gpui revision, accesskit 0.24). Base UI emits `role="group"` + `aria-labelledby`/`aria-describedby` on the root (`OTPFieldRoot.tsx` lines 378–380), and on each slot `<input>`: `aria-label` (non-first slots only), `aria-labelledby`, `aria-invalid`, roving `tabIndex`, `disabled`/`readOnly`/`required`, plus an `aria-hidden` hidden validation input. The hidden input and roving tabindex are already dropped by design (single group focus handle); the rest maps as follows.
+
+### Per accessible part
+
+**`OTPFieldRoot` (layers/otp_field_root.rs, the `base.id(self.id)` element)**
+
+- `.role(Role::Group)` — direct translation of Base UI's `role="group"`.
+- `.aria_label(...)` from a new `aria_label: Option<SharedString>` prop on `OTPFieldProps` with a root builder `.aria_label(...)`. This is the literal-string stand-in for Base UI's `aria-labelledby` id-wiring to `FieldLabel` (no relationship builders exist — see Gaps).
+- Focus: the root already calls `.track_focus(&focus_handle.tab_stop(true))` on the group `FocusHandle` from `OTPFieldContext::focus_handle()`, so `Action::Focus` is auto-registered — do NOT re-add it.
+- No `aria_toggled`/`aria_expanded`/numeric values apply; `focused`, `complete`, `disabled`, `read_only`, `required`, `valid`/`invalid` from `OTPFieldRootStyleState` have no builders (see Gaps).
+
+**`OTPFieldInput` (layers/otp_field_input.rs, the `base.id(id)` slot element)**
+
+- `.role(Role::TextInput)` on each slot — the closest AccessKit role to Base UI's per-slot `<input>`.
+- `.aria_position_in_set(index + 1)` and `.aria_size_of_set(length)` — from the slot's `with_slot_index(...)` index (mirrored in `OTPFieldInputStyleState::index`) and `OTPFieldProps::length()`, so AT announces "slot i of N" in place of DOM order.
+- `.aria_label(...)` — compose per-slot from the slot's state via `OTPFieldContext::read(...)`: the slot character from `OTPFieldInputStyleState::value` when `filled` and `masked == false`; when `masked == true` or unfilled, a neutral placeholder (e.g. "empty"). Never expose the real character of a masked slot in the label.
+- `.aria_selected(state.active)` — surface the virtual active slot (`OTPFieldInputStyleState::active`), since there is no per-slot DOM focus to convey it.
+
+**`otp_slot_element.rs`**: purely painted glyphs/caret — it renders no `text!(...)` nodes, so nothing enters the a11y tree from it and no `Text::new_inaccessible` conversion is needed here.
+
+### Actions
+
+- Slots use `.on_mouse_down(MouseButton::Left, ...)`, NOT `.on_click`, so `Action::Click` is NOT auto-registered on slots. Add `.on_a11y_action(AccessibleAction::Click, ...)` on each `OTPFieldInput` routing into the SAME `OTPFieldContext::activate_slot(index, window, cx)` command the pointer path uses (including the disabled guard, so disabled fields ignore AT clicks exactly like pointer clicks).
+- Root: `Action::Focus` is already covered by `.track_focus` (auto-registered); do not re-add. Optionally add `.on_a11y_action(AccessibleAction::SetValue, ...)` on the root routing the string payload through `OTPFieldContext::paste(text, window, cx)` so AT-dispatched value sets reuse the normalize/distribute/`on_value_invalid` path.
+- Keyboard navigation needs no a11y actions: it already flows through `actions.rs` bindings on the focused group.
+
+### Labels
+
+- The field-level label comes from `FieldLabel` in the Field family; until relationship wiring exists, mirror it manually via the root `.aria_label(...)` prop (documented as the consumer's responsibility, matching Base UI's warning that the first slot's `aria-label` is ignored in favor of the field label).
+- No visible `text!(...)` exists inside OTP Field layers (slot characters are custom-painted), so there is no double-announcement risk and no `Text::new_inaccessible` swap needed within this component.
+
+### Gaps (no gpui builder in this revision — do not invent)
+
+- `aria-labelledby` / `aria-describedby` (root and slots): no relationship builders. Fallback: literal `.aria_label(...)` on the root; `FieldDescription`/`FieldError` linkage is blocked pending gpui upstream and documented as such.
+- `disabled` / `readOnly` / `required` on slots and root: no `.aria_disabled`/equivalent, and `write_a11y_info` never sets a disabled flag. Fallback: skip registering the slot `AccessibleAction::Click` handler while `disabled == true` (mirroring the pointer guard) and document that AT cannot perceive the disabled/read-only/required facts; track `aria-required`/`aria-readonly` as blocked pending gpui upstream.
+- `aria-invalid` (slots when field-invalid): no builder. Fallback: omit + document; revisit when gpui grows an invalid/validation node property.
+- Roving `tabIndex` / per-slot focus: intentionally not ported (single group focus handle); `.aria_selected(active)` is the chosen stand-in for conveying the active slot.
+- Live-region announcement of completion/validation errors: no announcement API. Fallback: omit + document (Field error text remains visual-only).
+
+### Checklist
+
+- [ ] Add `aria_label` to `OTPFieldProps` with an `OTPFieldRoot::aria_label(...)` builder.
+- [ ] `OTPFieldRoot` element sets `.role(Role::Group)` and `.aria_label(...)` from the prop.
+- [ ] Each `OTPFieldInput` element sets `.role(Role::TextInput)`, `.aria_position_in_set(index + 1)`, `.aria_size_of_set(length)`, and `.aria_selected(active)`.
+- [ ] Each `OTPFieldInput` sets a per-slot `.aria_label(...)` that names the slot character when filled and unmasked, and never leaks masked characters.
+- [ ] Add `.on_a11y_action(AccessibleAction::Click, ...)` on `OTPFieldInput` routing to `OTPFieldContext::activate_slot(...)` with the same disabled guard as `on_mouse_down`; do not re-add `Action::Focus` on the root (auto-registered by `.track_focus`).
+- [ ] Route root `AccessibleAction::SetValue` through `OTPFieldContext::paste(...)` (or document why it is omitted).
+- [ ] Keep slot element ids stable across frames (derived from the root keyed id via `OTPFieldContext::child_id(...)`) so AccessKit `NodeId`s do not churn.
+- [ ] Document the gaps above (disabled/read-only/required, `aria-invalid`, `aria-labelledby`/`aria-describedby`, live regions) in the module docs as blocked pending gpui upstream.
 
 ## Uncertain items
 
